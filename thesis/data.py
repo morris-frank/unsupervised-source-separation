@@ -5,6 +5,7 @@ from numpy import ndarray
 from torch import dtype as _dtype
 from .utils import stereo_to_mono
 import random
+from typing import Tuple
 
 
 class MusDB(torch.utils.data.Dataset):
@@ -28,10 +29,10 @@ class MusDB(torch.utils.data.Dataset):
 
         self.db = musdb.DB(root=root, is_wav=is_wav, subsets=subset, split=split)
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.db.tracks) * self.samples_per_track
 
-    def __getitem__(self, item):
+    def __getitem__(self, item: int) -> Tuple[torch.Tensor, torch.Tensor]:
         # Item enumerates the samples ⇒
         track = self.db.tracks[item // self.samples_per_track]
 
@@ -61,7 +62,7 @@ class MusDB(torch.utils.data.Dataset):
 
         return x, y
 
-    def preprocess_audio(self, audio: ndarray):
+    def preprocess_audio(self, audio: ndarray) -> torch.Tensor:
         """
         Preprocess an Numpy audio stream from MusDB to a Tensor
         :param audio:
