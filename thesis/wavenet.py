@@ -21,15 +21,16 @@ class WaveNet(nn.Module):
                  use_conv_bias: bool = False
                  ):
         """
-        :param input_size: The length of the input ⇒ will be used to calculate the dilations
-        :param n_blocks: Number of blocks (2 [WaveNet])
-        :param n_layers: Number of layers in block (== None ⇒ make from input size)
-        :param quantization_channels: Number of outputs (⇒ size of μ-law quantization)
-        :param residual_dims: Num of Channels in the Residual
-        :param dilation_dims: Num of Channels in the Dilation
-        :param skip_dims: Num of Channels in the Skip Connection
-        :param kernel_size: Size of Conv Kernels (2 [WaveNet])
-        :param use_conv_bias: Use bias in the conv layers (== False [WaveNet])
+        Args:
+            input_size: The length of the input ⇒ will be used to calculate the dilations
+            n_blocks: Number of blocks (2 [WaveNet])
+            n_layers: Number of layers in block (== None ⇒ make from input size)
+            quantization_channels: Number of outputs (⇒ size of μ-law quantization)
+            residual_dims: Num of Channels in the Residual
+            dilation_dims: Num of Channels in the Dilation
+            skip_dims: Num of Channels in the Skip Connection
+            kernel_size: Size of Conv Kernels (2 [WaveNet])
+            use_conv_bias: Use bias in the conv layers (== False [WaveNet])
         """
         super(WaveNet, self).__init__()
 
@@ -71,11 +72,15 @@ class WaveNet(nn.Module):
     def _make_conv_list(self, in_channels: int, out_channels: int, kernel_size: int, bias: bool) -> nn.ModuleList:
         """
         Returns an ModuleList of n_blocks × n_layers 1D Convolutions with the parameters
-        :param in_channels:
-        :param out_channels:
-        :param kernel_size:
-        :param bias:
-        :return:
+
+        Args:
+            in_channels:
+            out_channels:
+            kernel_size:
+            bias:
+
+        Returns:
+
         """
         module_list = []
         for _ in range(self.n_blocks * self.n_layers):
