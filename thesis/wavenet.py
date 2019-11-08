@@ -1,10 +1,11 @@
-from typing import Union
+import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-import numpy as np
-from .utils import prime_factorization
+from typing import Union
+
 from .functional import dilate
+from .utils import prime_factorization
 
 
 class WaveNet(nn.Module):

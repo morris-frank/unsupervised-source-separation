@@ -1,9 +1,11 @@
-from typing import Tuple
 import random
-import torch.utils.data
-from torch import dtype as _dtype
+
 import musdb
 import numpy as np
+import torch.utils.data
+from torch import dtype as _dtype
+from typing import Tuple
+
 from .utils import stereo_to_mono
 
 

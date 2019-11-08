@@ -1,7 +1,8 @@
-from typing import List
 import random
-import torch
+
 import numpy as np
+import torch
+from typing import List
 
 
 def stereo_to_mono(stereo: torch.Tensor) -> torch.Tensor:
@@ -34,7 +35,7 @@ def prime_factorization(n: int) -> List[int]:
     """
     i = 2
     factors = []
-    while i**2 <= n:
+    while i ** 2 <= n:
         if n % i:
             i += 1
         else:
