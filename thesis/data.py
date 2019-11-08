@@ -1,11 +1,10 @@
-# import torch
-import torch.utils.data
-import musdb
-from numpy import ndarray
-from torch import dtype as _dtype
-from .utils import stereo_to_mono
-import random
 from typing import Tuple
+import random
+import torch.utils.data
+from torch import dtype as _dtype
+import musdb
+import numpy as np
+from .utils import stereo_to_mono
 
 
 class MusDB(torch.utils.data.Dataset):
@@ -62,7 +61,7 @@ class MusDB(torch.utils.data.Dataset):
 
         return x, y
 
-    def preprocess_audio(self, audio: ndarray) -> torch.Tensor:
+    def preprocess_audio(self, audio: np.ndarray) -> torch.Tensor:
         """
         Preprocess an Numpy audio stream from MusDB to a Tensor
         :param audio:
