@@ -26,3 +26,22 @@ def dilate(x: torch.Tensor, target_dilation: int) -> torch.Tensor:
 def pad1d(x: torch.Tensor, new_l: int, dim: int) -> torch.Tensor:
     # TODO
     return x
+
+
+def time_to_batch(x: torch.Tensor, block_size: int) -> torch.Tensor:
+    assert x.ndim == 3
+    batch_size, channels, length = x.shape
+
+    y = torch.reshape(x, [batch_size, channels, length // block_size, block_size])
+    y = y.permute(0, 3, 1, 2)
+    y = torch.reshape(y, [batch_size * block_size, channels, length // block_size])
+    return y
+
+
+def batch_to_time(x: torch.Tensor, block_size: int) -> torch.Tensor:
+    assert x.ndim == 3
+    batch_size, channels, k = x.shape
+    y = torch.reshape(x, [batch_size // block_size, block_size, channels, k])
+    y = y.permute(0, 2, 3, 1)
+    y = torch.reshape(y, [batch_size // block_size, channels, k * block_size])
+    return y

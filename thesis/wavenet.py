@@ -2,7 +2,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-from typing import Union
+from typing import Optional
 
 from .functional import dilate
 from .utils import prime_factorization
@@ -12,7 +12,7 @@ class WaveNet(nn.Module):
     def __init__(self,
                  input_size: int,
                  n_blocks: int = 2,
-                 n_layers: Union[int, None] = None,
+                 n_layers: Optional[int] = None,
                  quantization_channels: int = 256,
                  residual_dims: int = 32,
                  dilation_dims: int = 32,
@@ -37,7 +37,7 @@ class WaveNet(nn.Module):
         dilation_factors = prime_factorization(input_size)
 
         self.channels = 1  # Number of audio channels? stereo ⇒ == 2 (doesn't work though)
-        self.n_layers = n_layers
+        self.n_layers = len(dilation_factors)
         self.n_blocks = n_blocks
         self.kernel_size = kernel_size
 

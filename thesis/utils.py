@@ -57,3 +57,11 @@ def prime_factorization(n: int) -> List[int]:
     if n > 1:
         factors.append(n)
     return factors
+
+
+def μ_law(x, μ=255):
+    pass
+
+
+def inv_μ_law(x, μ=255):
+    pass
