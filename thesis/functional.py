@@ -3,7 +3,7 @@ import torch
 
 
 def dilate(x: torch.Tensor, target_dilation: int) -> torch.Tensor:
-    prev_dilation, channels, length = x.size()  # n: prev dilation, c: num of channels, l: input length
+    prev_dilation, channels, length = x.size()
 
     if prev_dilation == target_dilation:
         # Already have target size, nothing to dilate
@@ -29,19 +29,40 @@ def pad1d(x: torch.Tensor, new_l: int, dim: int) -> torch.Tensor:
 
 
 def time_to_batch(x: torch.Tensor, block_size: int) -> torch.Tensor:
-    assert x.ndim == 3
+    """
+    Chops of a time-signal into a batch of equally-long signals.
+
+    Args:
+        x: input signal sized [Batch × Channels × Length]
+        block_size: size of the blocks
+
+    Returns:
+        Tensor with size:
+        [Batch * block size × Channels × Length/block_size]
+    """
+    assert x.ndimension() == 3
     batch_size, channels, length = x.shape
 
     y = torch.reshape(x, [batch_size, channels, length // block_size, block_size])
     y = y.permute(0, 3, 1, 2)
     y = torch.reshape(y, [batch_size * block_size, channels, length // block_size])
-    return y
+    return y.contiguous()
 
 
 def batch_to_time(x: torch.Tensor, block_size: int) -> torch.Tensor:
-    assert x.ndim == 3
+    """
+    Inverse of time_to_batch. Concatenates a batched time-signal back to correct time-domain.
+
+    Args:
+        x: The batched input size [Batch * block_size × Channels × Length]
+        block_size: size of the blocks used for encoding
+
+    Returns:
+        Tensor with size: [Batch × channels × Length * block_size]
+    """
+    assert x.ndimension() == 3
     batch_size, channels, k = x.shape
     y = torch.reshape(x, [batch_size // block_size, block_size, channels, k])
     y = y.permute(0, 2, 3, 1)
     y = torch.reshape(y, [batch_size // block_size, channels, k * block_size])
-    return y
+    return y.contiguous()

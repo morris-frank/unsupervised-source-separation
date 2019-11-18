@@ -1,8 +1,9 @@
+import math
 import random
+from typing import List
 
 import numpy as np
 import torch
-from typing import List
 
 
 def stereo_to_mono(stereo: torch.Tensor) -> torch.Tensor:
@@ -59,9 +60,38 @@ def prime_factorization(n: int) -> List[int]:
     return factors
 
 
-def μ_law(x, μ=255):
-    pass
+def encode_μ_law(x: torch.Tensor, μ: int = 255, cast: bool = False) -> torch.Tensor:
+    """
+    Encodes the input tensor element-wise with μ-law encoding
+
+    Args:
+        x: tensor
+        μ: the size of the encoding (number of possible classes)
+        cast: whether to cast to int8
+
+    Returns:
+
+    """
+    out = torch.sign(x) * torch.log(1 + μ * torch.abs(x)) / math.log(1 + μ)
+    out = torch.floor(out * math.ceil(μ / 2))
+    if cast:
+        out = out.type(torch.int8)
+    return out
 
 
-def inv_μ_law(x, μ=255):
-    pass
+def decode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
+    """
+    Applies the element-wise inverse μ-law encoding to the tensor.
+
+    Args:
+        x: input tensor
+        μ: size of the encoding (number of possible classes)
+
+    Returns:
+        the decoded tensor
+    """
+    x = x.type(torch.float32)
+    # out = (x + 0.5) * 2. / (μ + 1)
+    out = x / math.ceil(μ / 2)
+    out = torch.sign(out) / μ * (torch.pow(1 + μ, torch.abs(out)) - 1)
+    return out

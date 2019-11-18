@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from .modules import DilatedConv1d
+from .modules import BlockWiseConv1d
 
 
 class NCTemporalEncoder(nn.Module):
@@ -17,30 +17,30 @@ class NCTemporalEncoder(nn.Module):
 
         self.encoder = []
         self.encoder.append(
-            DilatedConv1d(in_channels=n_channels,
-                          out_channels=hidden_dims,
-                          kernel_size=kernel_size,
-                          causal=False,
-                          block_size=1,
-                          bias=use_bias)
+            BlockWiseConv1d(in_channels=n_channels,
+                            out_channels=hidden_dims,
+                            kernel_size=kernel_size,
+                            causal=False,
+                            block_size=1,
+                            bias=use_bias)
         )
         for idx in range(n_layers):
             dilation = 2**(idx % n_stages)
             self.encoder.extend([
                 nn.ReLU(),
-                DilatedConv1d(in_channels=hidden_dims,
-                              out_channels=hidden_dims,
-                              kernel_size=kernel_size,
-                              causal=False,
-                              block_size=dilation,
-                              bias=use_bias),
+                BlockWiseConv1d(in_channels=hidden_dims,
+                                out_channels=hidden_dims,
+                                kernel_size=kernel_size,
+                                causal=False,
+                                block_size=dilation,
+                                bias=use_bias),
                 nn.ReLU(),
-                DilatedConv1d(in_channels=hidden_dims,
-                              out_channels=hidden_dims,
-                              kernel_size=1,
-                              causal=True,
-                              block_size=1,
-                              bias=use_bias)
+                BlockWiseConv1d(in_channels=hidden_dims,
+                                out_channels=hidden_dims,
+                                kernel_size=1,
+                                causal=True,
+                                block_size=1,
+                                bias=use_bias)
             ])
 
         # Bottleneck

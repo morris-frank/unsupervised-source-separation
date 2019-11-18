@@ -4,7 +4,7 @@ from torch import nn
 from .functional import time_to_batch, batch_to_time
 
 
-class DilatedConv1d(nn.Conv1d):
+class BlockWiseConv1d(nn.Conv1d):
     def __init__(self,
                  in_channels: int,
                  out_channels: int,
@@ -12,9 +12,11 @@ class DilatedConv1d(nn.Conv1d):
                  block_size: int,
                  causal: bool = False,
                  **kwargs):
-        assert kernel_size % 2 != 0  # I dont wanna think about even sized kernels
-        super(DilatedConv1d, self).__init__(in_channels, out_channels, kernel_size, **kwargs)
+        super(BlockWiseConv1d, self).__init__(in_channels, out_channels, kernel_size, **kwargs)
         self.block_size = block_size
+
+        assert kernel_size % 2 != 0
+        assert block_size >= 1
 
         if causal:
             pad = (kernel_size - 1, 0)
@@ -25,6 +27,6 @@ class DilatedConv1d(nn.Conv1d):
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         y = time_to_batch(x, self.block_size)
         y = self.constant_pad(y)
-        y = super(DilatedConv1d, self).forward(y)
+        y = super(BlockWiseConv1d, self).forward(y)
         y = batch_to_time(y, self.block_size)
         return y
