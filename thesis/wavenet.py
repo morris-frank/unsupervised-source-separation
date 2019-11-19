@@ -1,8 +1,9 @@
+from typing import Optional
+
 import numpy as np
 import torch
 from torch import nn
 from torch.nn import functional as F
-from typing import Optional
 
 from .functional import dilate
 from .utils import prime_factorization
