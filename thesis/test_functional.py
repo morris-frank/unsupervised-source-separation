@@ -1,10 +1,6 @@
 import torch
 
-from .functional import time_to_batch, batch_to_time
-
-
-def test_dilate():
-    pass
+from .functional import time_to_batch, batch_to_time, shift1d
 
 
 def test_time_to_batch():
@@ -20,3 +16,17 @@ def test_time_to_batch():
     assert torch.all(x == _ttb)
     assert ttb.is_contiguous()
     assert _ttb.is_contiguous()
+
+
+def test_shift1d():
+    n_batch, n_channel, length = 8, 2, 32
+    x = torch.rand((n_batch, n_channel, length))
+    for shift in [1, 3, 5]:
+        y = shift1d(x, -shift)
+        assert y.shape == x.shape
+        assert torch.all(y[:, :, shift:] == x[:, :, :length - shift])
+        assert y.is_contiguous()
+        y = shift1d(x, shift)
+        assert y.shape == x.shape
+        assert torch.all(y[:, :, :length - shift] == x[:, :, shift:])
+        assert y.is_contiguous()

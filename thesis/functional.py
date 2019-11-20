@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import torch.nn.functional as F
 
 
 def dilate(x: torch.Tensor, target_dilation: int) -> torch.Tensor:
@@ -65,4 +66,23 @@ def batch_to_time(x: torch.Tensor, block_size: int) -> torch.Tensor:
     y = torch.reshape(x, [batch_size // block_size, block_size, channels, k])
     y = y.permute(0, 2, 3, 1)
     y = torch.reshape(y, [batch_size // block_size, channels, k * block_size])
+    return y.contiguous()
+
+
+def shift1d(x: torch.Tensor, shift: int) -> torch.Tensor:
+    """
+    Shifts a Tensor to the left or right and pads with zeros.
+
+    Args:
+        x: Input Tensor [N×C×L]
+        shift: the shift, negative for left shift, positive for right
+
+    Returns:
+        the shifted tensor, same size
+    """
+    assert x.ndimension() == 3
+    length = x.shape[2]
+    pad = [-min(shift, 0), max(shift, 0)]
+    y = F.pad(x, pad)
+    y = y[:, :, pad[1]:pad[1] + length]
     return y.contiguous()
