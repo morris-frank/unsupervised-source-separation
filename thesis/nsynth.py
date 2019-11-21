@@ -15,9 +15,9 @@ class TemporalEncoder(nn.Module):
     """
 
     def __init__(self,
-                 n_channels: int,
+                 channels: int = 1,
                  n_layers: int = 3,
-                 n_stages: int = 10,
+                 n_blocks: int = 10,
                  hidden_dims: int = 128,
                  kernel_size: int = 3,
                  bottleneck_dims: int = 16,
@@ -28,9 +28,9 @@ class TemporalEncoder(nn.Module):
         The Non-Causal Temporal Encoder as described in NSynth [http://arxiv.org/abs/1704.01279].
 
         Args:
-            n_channels: Number of input channels
+            channels: Number of input channels
             n_layers: Number of layers in each stage in the encoder
-            n_stages: Number of stages
+            n_blocks: Number of stages
             hidden_dims: Size of the hidden channels in all layers
             kernel_size: KS for all 1D-convolutions
             bottleneck_dims: Final number of features
@@ -43,14 +43,14 @@ class TemporalEncoder(nn.Module):
 
         self.encoder = []
         self.encoder.append(
-            BlockWiseConv1d(in_channels=n_channels,
+            BlockWiseConv1d(in_channels=channels,
                             out_channels=hidden_dims,
                             kernel_size=kernel_size,
                             causal=False,
                             block_size=1,
                             bias=use_bias)
         )
-        for _, layer in product(range(n_stages), range(n_layers)):
+        for _, layer in product(range(n_blocks), range(n_layers)):
             dilation = 2 ** layer
             self.encoder.extend([
                 nn.ReLU(),
@@ -89,7 +89,7 @@ class WaveNetDecoder(nn.Module):
 
     def __init__(self,
                  n_layers: int = 10,
-                 n_stages: int = 3,
+                 n_blocks: int = 3,
                  width: int = 512,
                  skip_width: int = 256,
                  channels: int = 1,
@@ -106,7 +106,7 @@ class WaveNetDecoder(nn.Module):
 
         Args:
             n_layers: Number of layers in each block
-            n_stages: Number of blocks
+            n_blocks: Number of blocks
             width: The width/size of the hidden layers
             skip_width: The width/size of the skip connections
             channels: Number of input channels
@@ -116,7 +116,7 @@ class WaveNetDecoder(nn.Module):
         """
         super(WaveNetDecoder, self).__init__()
         self.width = width
-        self.n_stages, self.n_layers = n_stages, n_layers
+        self.n_stages, self.n_layers = n_blocks, n_layers
 
         self.initial_dilation = BlockWiseConv1d(in_channels=channels,
                                                 out_channels=width,
@@ -138,7 +138,7 @@ class WaveNetDecoder(nn.Module):
 
     def _make_conv_list(self, in_channels: int, out_channels: int, kernel_size: int) -> nn.ModuleList:
         """
-        A little helper function for generating lists of Convolutions. Will give list of n_stages × n_layers number of
+        A little helper function for generating lists of Convolutions. Will give list of n_blocks × n_layers number of
         convs. If kernel_size is bigger than one we use the BlockWise Conv and calculate the block size from the
         power-2 dilation otherwise we always use the same 1×1-conv1d.
 
@@ -148,7 +148,7 @@ class WaveNetDecoder(nn.Module):
             kernel_size: kernel size
 
         Returns:
-        ModuleList of len self.n_stages * self.n_layers
+        ModuleList of len self.n_blocks * self.n_layers
         """
         conv = nn.Conv1d if kernel_size == 1 else BlockWiseConv1d
         module_list = []
@@ -176,3 +176,19 @@ class WaveNetDecoder(nn.Module):
         skip += self.final_cond(embedding)
         quant_skip = self.final_quant(skip)
         return quant_skip
+
+
+class NSynth(nn.Module):
+    def __init__(self,
+                 channels: int = 1,
+                 bottleneck_dims: int = 16,
+                 quantization_channels: int = 256):
+        super(NSynth, self).__init__()
+        self.encoder = TemporalEncoder(channels=channels, bottleneck_dims=bottleneck_dims)
+        self.decoder = WaveNetDecoder(channels=channels, bottleneck_dims=bottleneck_dims,
+                                      quantization_channels=quantization_channels)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        embedding = self.encoder(x)
+        reconstruction = self.decoder(x, embedding)
+        return reconstruction

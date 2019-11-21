@@ -17,7 +17,7 @@ def test_prime_factorization():
     assert prime_factorization(231) == [3, 7, 11]
 
 
-def test_set_sed():
+def test_set_seed():
     set_seed(42)
     assert np.random.randint(0, 100) == 51
     assert random.randint(0, 100) == 81
