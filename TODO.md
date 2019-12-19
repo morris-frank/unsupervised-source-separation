@@ -5,7 +5,7 @@
 - [ ] Fast-gen code
 - [ ] Implement the Logit mixture from PixelCNN++
 - [ ] Implement VQ-VAE
-- [ ] Freq-plot: Fix it and hue by signal
+- [x] Freq-plot: Fix it and hue by signal
 - [ ] VAE-Noise: during sample-time ⇒ only use μ (no noise)
 
 # Other

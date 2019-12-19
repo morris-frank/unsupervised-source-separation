@@ -104,5 +104,6 @@ class AutoEncoder(nn.Module):
 
     @staticmethod
     def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
-                      device: str) -> Tuple[torch.Tensor, torch.Tensor]:
+                      device: str, progress: float) \
+            -> Tuple[torch.Tensor, torch.Tensor]:
         pass

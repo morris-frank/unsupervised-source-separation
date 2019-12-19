@@ -1,40 +1,52 @@
-from itertools import permutations
-from typing import Tuple
+from typing import Tuple, Callable
 
 import torch
+from torch import distributions as dist
 from torch import nn
 from torch.nn import functional as F
 
 
-def toy_loss_ordered(ns: int, μ: int = 101):
+def sum_of_ce(logits: torch.Tensor, y: torch.Tensor, ns: int, μ: int,
+              device: str) -> torch.Tensor:
+    loss = None
+    for i in range(ns):
+        _loss = F.cross_entropy(logits[:, i * μ:i * μ + μ, :],
+                                y[:, i, :].to(device))
+        loss = loss + _loss if loss else _loss
+    return loss
+
+
+def variation_toy_loss_ordered(ns: int, μ: int = 101,
+                               dβ: float = 1 / 3) -> Callable:
     def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
-                      device: str) -> Tuple[None, torch.Tensor]:
-        logits = model(x)
-        loss = None
-        for i in range(ns):
-            _loss = F.cross_entropy(logits[:, i * μ:i * μ + μ, :],
-                                    y[:, i, :].to(device))
-            loss = loss + _loss if loss else _loss
+                      device: str, progress: float) \
+            -> Tuple[None, torch.Tensor]:
+        logits, x_q, x_q_log_prob = model(x)
+
+        # First Cross-Entropy
+        ce_x = sum_of_ce(logits, y, ns, μ, device)
+
+        # Then Kullback-Leibler
+        zx_p_loc = torch.zeros(x_q.size()).to(device)
+        zx_p_scale = torch.ones(x_q.size()).to(device)
+        pzx = dist.Normal(zx_p_loc, zx_p_scale)
+        kl_zx = torch.sum(pzx.log_prob(x_q) - x_q_log_prob)
+
+        β = min(progress / dβ, 1)
+
+        loss = ce_x - β * kl_zx
         return None, loss
 
     return loss_function
 
 
-def toy_loss_unordered(ns: int, μ: int = 101):
+def toy_loss_ordered(ns: int, μ: int = 101) -> Callable:
     def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
-                      device: str) -> Tuple[None, torch.Tensor]:
+                      device: str, progress: float) \
+            -> Tuple[None, torch.Tensor]:
+        del progress
         logits = model(x)
-
-        loss = None
-        # We have to go through ALL possible assignments
-        for ordering in permutations(range(ns)):
-            order_loss = None
-            for i in range(ns):
-                j = ordering[i]
-                _loss = F.cross_entropy(logits[:, j * μ:j * μ + μ, :],
-                                        y[:, i, :].to(device))
-                order_loss = order_loss + _loss if order_loss else _loss
-            loss = order_loss if (not loss or order_loss < loss) else loss
+        loss = sum_of_ce(logits, y, ns, μ, device)
         return None, loss
 
     return loss_function
