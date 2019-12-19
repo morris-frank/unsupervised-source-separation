@@ -1,6 +1,14 @@
 import torch
+from .functional import encode_μ_law, decode_μ_law, time_to_batch, \
+    batch_to_time, shift1d
 
-from .functional import time_to_batch, batch_to_time, shift1d
+
+def test_μ_law():
+    x = torch.tensor([-1, -0.5, 0, 0.5, 0.9], dtype=torch.float)
+    y = torch.tensor([-128, -113, 0, 112, 125], dtype=torch.int8)
+
+    assert torch.all(encode_μ_law(x, cast=True) == y)
+    assert torch.allclose(decode_μ_law(y), x, atol=0.1)
 
 
 def test_time_to_batch():
@@ -8,7 +16,8 @@ def test_time_to_batch():
     dilation = 8
     x = torch.rand((n_batch, n_channel, length))
     ttb = time_to_batch(x, dilation)
-    assert list(ttb.shape) == [n_batch * dilation, n_channel, length // dilation]
+    assert list(ttb.shape) == [n_batch * dilation, n_channel,
+                               length // dilation]
 
     _ttb = batch_to_time(ttb, dilation)
     assert x.shape == _ttb.shape

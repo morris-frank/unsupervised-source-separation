@@ -1,32 +1,6 @@
-import numpy as np
+import math
 import torch
 import torch.nn.functional as F
-
-
-def dilate(x: torch.Tensor, target_dilation: int) -> torch.Tensor:
-    prev_dilation, channels, length = x.size()
-
-    if prev_dilation == target_dilation:
-        # Already have target size, nothing to dilate
-        return x
-
-    dilation_factor = target_dilation / prev_dilation
-
-    new_l = int(np.ceil(length / dilation_factor) * dilation_factor)
-    if new_l != length:
-        x = pad1d(x, new_l, dim=2)
-
-    # reshape according to dilation
-    x = x.permute(1, 2, 0).contiguous()  # (n, c, l) -> (c, l, n)
-    x = x.view(channels, new_l, target_dilation)
-    x = x.permute(2, 0, 1).contiguous()  # (c, l, n) -> (n, c, l)
-
-    return x
-
-
-def pad1d(x: torch.Tensor, new_l: int, dim: int) -> torch.Tensor:
-    # TODO
-    return x
 
 
 def time_to_batch(x: torch.Tensor, block_size: int) -> torch.Tensor:
@@ -41,18 +15,21 @@ def time_to_batch(x: torch.Tensor, block_size: int) -> torch.Tensor:
         Tensor with size:
         [Batch * block size × Channels × Length/block_size]
     """
-    assert x.ndimension() == 3
-    batch_size, channels, length = x.shape
+    if block_size == 1:
+        return x
 
-    y = torch.reshape(x, [batch_size, channels, length // block_size, block_size])
+    assert x.ndimension() == 3
+    nbatch, c, length = x.shape
+    y = torch.reshape(x, [nbatch, c, length // block_size, block_size])
     y = y.permute(0, 3, 1, 2)
-    y = torch.reshape(y, [batch_size * block_size, channels, length // block_size])
+    y = torch.reshape(y, [nbatch * block_size, c, length // block_size])
     return y.contiguous()
 
 
 def batch_to_time(x: torch.Tensor, block_size: int) -> torch.Tensor:
     """
-    Inverse of time_to_batch. Concatenates a batched time-signal back to correct time-domain.
+    Inverse of time_to_batch. Concatenates a batched time-signal back to
+    correct time-domain.
 
     Args:
         x: The batched input size [Batch * block_size × Channels × Length]
@@ -61,6 +38,9 @@ def batch_to_time(x: torch.Tensor, block_size: int) -> torch.Tensor:
     Returns:
         Tensor with size: [Batch × channels × Length * block_size]
     """
+    if block_size == 1:
+        return x
+
     assert x.ndimension() == 3
     batch_size, channels, k = x.shape
     y = torch.reshape(x, [batch_size // block_size, block_size, channels, k])
@@ -86,3 +66,41 @@ def shift1d(x: torch.Tensor, shift: int) -> torch.Tensor:
     y = F.pad(x, pad)
     y = y[:, :, pad[1]:pad[1] + length]
     return y.contiguous()
+
+
+def encode_μ_law(x: torch.Tensor, μ: int = 255, cast: bool = False)\
+        -> torch.Tensor:
+    """
+    Encodes the input tensor element-wise with μ-law encoding
+
+    Args:
+        x: tensor
+        μ: the size of the encoding (number of possible classes)
+        cast: whether to cast to int8
+
+    Returns:
+
+    """
+    out = torch.sign(x) * torch.log(1 + μ * torch.abs(x)) / math.log(1 + μ)
+    out = torch.floor(out * math.ceil(μ / 2))
+    if cast:
+        out = out.type(torch.int8)
+    return out
+
+
+def decode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
+    """
+    Applies the element-wise inverse μ-law encoding to the tensor.
+
+    Args:
+        x: input tensor
+        μ: size of the encoding (number of possible classes)
+
+    Returns:
+        the decoded tensor
+    """
+    x = x.type(torch.float32)
+    # out = (x + 0.5) * 2. / (μ + 1)
+    out = x / math.ceil(μ / 2)
+    out = torch.sign(out) / μ * (torch.pow(1 + μ, torch.abs(out)) - 1)
+    return out

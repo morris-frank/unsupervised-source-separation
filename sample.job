@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+
+#SBATCH --job-name=nsynth-sample
+#SBATCH --time=0:30:00
+#SBATCH --partition=gpu
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=2
+#SBATCH --ntasks-per-node=1
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:1
+
+
+export LD_LIBRARY_PATH=/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH
+
+cd /home/frankm/nsynth-pytorch
+#srun /home/frankm/.pyenv/shims/python3.7 sample.py --weights models/191203_055000_WaveNetVariationalAutoencoder.pt --sample ../data/nsynth/nsynth-valid/audio/keyboard_acoustic_004-021-025.wav --gpu 0 --vae
+srun /home/frankm/.pyenv/shims/python3.7 sample.py --weights models/191205_035000_WavenetAE.pt --sample ../data/nsynth/nsynth-valid/audio/keyboard_acoustic_004-021-025.wav --gpu 0
