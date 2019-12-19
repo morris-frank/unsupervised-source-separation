@@ -37,20 +37,21 @@ def plot_reconstruction(model, data, ns, length):
 
 
 def prepare_plot_freq_loss(model: WavenetMultiAE, data: ToyDataSet, ns: int,
-                           μ: int):
-    d = {'shape': [], 'loss': [], 'periodicity': []}
+                           μ: int, destroy: float = 0.) -> pd.DataFrame:
+    d = {'shape': [], 'loss': [], 'periodicity': [], 'destroy': []}
     for n in trange(len(data.data)):
         mix, stems = data[n]
         prms = data.data[n]['params']
 
-        logits = model(mix.unsqueeze(0))
+        logits = model.test_forward(mix.unsqueeze(0), destroy=destroy)
         for i in range(ns):
             d['shape'].append(prms[i]['shape'])
+            d['destroy'].append(destroy)
             d['periodicity'].append(prms[i]['φ'])
             d['loss'].append(F.cross_entropy(logits[:, i * μ:(i + 1) * μ, :],
                                              stems[None, i, :]).item())
     df = pd.DataFrame(data=d)
-    pd.to_pickle(df, 'freq_plot.npy')
+    return df
 
 
 def plot_freq_loss(thres=4):

@@ -1,3 +1,4 @@
+from .functional import destroy_along_axis
 from typing import Tuple
 import torch
 from torch import nn
@@ -42,6 +43,11 @@ class WavenetMultiVAE(AutoEncoder):
         self.decoders = nn.ModuleList(
             [WaveNetDecoder(**decoder_args) for _ in range(n)])
 
+    def _decode(self, x: torch.Tensor, embedding: torch.Tensor) -> torch.Tensor:
+        x = shift1d(x, -1)
+        logits = [dec(x, embedding) for dec in self.decoders]
+        return torch.cat(logits, dim=1)
+
     def forward(self, x: torch.Tensor) \
             -> Tuple[torch.Tensor, dist.Normal, torch.Tensor]:
         embedding = self.encoder(x)
@@ -53,7 +59,16 @@ class WavenetMultiVAE(AutoEncoder):
         x_q = q.rsample()
         x_q_log_prob = q.log_prob(x_q)
 
-        x = shift1d(x, -1)
-        logits = [dec(x, x_q) for dec in self.decoders]
-        return torch.cat(logits, dim=1), x_q, x_q_log_prob
+        logits = self._decode(x, x_q)
+        return logits, x_q, x_q_log_prob
+
+    def test_forward(self, x: torch.Tensor, destroy: float) -> torch.Tensor:
+        embedding = self.encoder(x)
+        q_loc = embedding[:, :self.bottleneck_dims, :]
+        q_loc = destroy_along_axis(q_loc, destroy)
+
+        logits = self._decode(x, q_loc)
+        return logits, None, None
+
+
 

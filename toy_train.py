@@ -10,7 +10,7 @@ from toy.vae import WavenetMultiVAE
 def main(args):
     model_class = WavenetMultiVAE if args.vae else WavenetMultiAE
     args.nit = 50000
-    args.nbatch = 10
+    args.nbatch = 8
     μ = 100
     ns = 4
     loss_function = toy_loss_vae(ns, μ + 1) if args.vae else toy_loss(ns, μ + 1)

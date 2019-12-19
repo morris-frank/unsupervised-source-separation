@@ -5,6 +5,7 @@ from nsynth.decoder import WaveNetDecoder
 from nsynth.encoder import TemporalEncoder
 from nsynth.functional import shift1d
 from nsynth.modules import AutoEncoder
+from .functional import destroy_along_axis
 
 
 class WavenetMultiAE(AutoEncoder):
@@ -30,6 +31,7 @@ class WavenetMultiAE(AutoEncoder):
         :param gen: Is this generation ?
         """
         super(WavenetMultiAE, self).__init__()
+        self.bottleneck_dims = bottleneck_dims
         self.encoder = TemporalEncoder(bottleneck_dims=bottleneck_dims,
                                        channels=channels, width=encoder_width,
                                        n_layers=n_layers, n_blocks=n_blocks)
@@ -42,8 +44,16 @@ class WavenetMultiAE(AutoEncoder):
         self.decoders = nn.ModuleList(
             [WaveNetDecoder(**decoder_args) for _ in range(n)])
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        embedding = self.encoder(x)
+    def _decode(self, x: torch.Tensor, embedding: torch.Tensor) -> torch.Tensor:
         x = shift1d(x, -1)
         logits = [dec(x, embedding) for dec in self.decoders]
         return torch.cat(logits, dim=1)
+
+    def test_forward(self, x: torch.Tensor, destroy: float = 0) -> torch.Tensor:
+        embedding = self.encoder(x)
+        embedding = destroy_along_axis(embedding, destroy)
+        return self._decode(x, embedding)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        embedding = self.encoder(x)
+        return self._decode(x, embedding)

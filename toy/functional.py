@@ -1,4 +1,14 @@
+import random
 import torch
+
+
+def destroy_along_axis(x: torch.Tensor, amount: float) -> torch.Tensor:
+    if amount == 0:
+        return x
+    length = x.shape[1]
+    for i in random.sample(range(length), int(amount * length)):
+        x[:, i, :] = 0.
+    return x
 
 
 def toy2argmax(logits, ns):

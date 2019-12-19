@@ -1,9 +1,13 @@
 from argparse import ArgumentParser
 from os import path
 
+import pandas as pd
+
 from nsynth.sampling import load_model
 from toy.plot import plot_reconstruction, prepare_plot_freq_loss
-from toy_train import ToyDataSet, WavenetMultiAE
+from toy.data import ToyDataSet
+from toy.ae import WavenetMultiAE
+from toy.vae import WavenetMultiVAE
 
 
 def main():
@@ -14,10 +18,14 @@ def main():
     parser.add_argument('-μ', type=int, default=100)
     parser.add_argument('--mode', type=str, default='example')
     parser.add_argument('--length', type=int, default=500)
+    parser.add_argument('--vae', action='store_true')
     args = parser.parse_args()
 
+    model = WavenetMultiVAE if args.vae else WavenetMultiAE
+    fname = 'freq_plot_vae.npy' if args.vae else 'freq_plot_ae.npy'
+
     crop = 3 * 2 ** 10
-    model = WavenetMultiAE(args.ns, 16, 64, 64, 10, 3, args.μ + 1, 1, False)
+    model = model(args.ns, 16, 64, 64, 10, 3, args.μ + 1, 1, False)
     model = load_model(args.weights, 'cpu', model)
 
     data = ToyDataSet(args.data, crop=crop)
@@ -25,7 +33,10 @@ def main():
     if args.mode.startswith('ex'):
         plot_reconstruction(model, data, args.ns, args.length)
     elif args.mode.startswith('freq'):
-        prepare_plot_freq_loss(model, data, args.ns, args.μ + 1)
+        dfs = [prepare_plot_freq_loss(model, data, args.ns, args.μ + 1, destroy)
+               for destroy in [0, 0.5, 1]]
+        df = pd.concat(dfs)
+        pd.to_pickle(df, fname)
 
 
 if __name__ == '__main__':
