@@ -1,5 +1,8 @@
 from nsynth.config import make_config
 from nsynth.training import train
+from toy.ae import WavenetMultiAE
+from toy.data import ToyDataSet
+from toy.optim import toy_loss_ordered as toy_loss
 
 
 def main(args):
@@ -17,7 +20,7 @@ def main(args):
                           μ=μ).loader(args.nbatch)
 
     train(model=model,
-          loss_function=toy_loss_ordered(ns, μ + 1),
+          loss_function=toy_loss(ns, μ + 1),
           gpu=args.gpu,
           trainset=traindata,
           testset=testdata,
