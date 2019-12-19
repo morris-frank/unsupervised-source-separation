@@ -55,5 +55,5 @@ class WavenetMultiVAE(AutoEncoder):
 
         x = shift1d(x, -1)
         logits = [dec(x, x_q) for dec in self.decoders]
-        return logits, x_q, x_q_log_prob
+        return torch.cat(logits, dim=1), x_q, x_q_log_prob
 

@@ -12,7 +12,7 @@ def main(args):
     args.nit = 50000
     args.nbatch = 10
     μ = 100
-    ns = 3
+    ns = 4
     loss_function = toy_loss_vae(ns, μ + 1) if args.vae else toy_loss(ns, μ + 1)
 
     model = model_class(ns, 16, 64, 64, 10, 3, μ + 1, 1, False)
