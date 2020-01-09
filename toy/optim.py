@@ -16,6 +16,35 @@ def sum_of_ce(logits: torch.Tensor, y: torch.Tensor, ns: int, μ: int,
     return loss
 
 
+def sample_kl(x_q: dist.Normal, x_q_log_prob: torch.Tensor,
+              device: str) -> torch.Tensor:
+    zx_p_loc = torch.zeros(x_q.size()).to(device)
+    zx_p_scale = torch.ones(x_q.size()).to(device)
+    pzx = dist.Normal(zx_p_loc, zx_p_scale)
+    kl_zx = torch.sum(pzx.log_prob(x_q) - x_q_log_prob)
+    return kl_zx
+
+
+def single_vae_toy_loss(dβ: float = 1 / 3) -> Callable:
+    def loss_function(model: nn.Module, x: Tuple[torch.Tensor, torch.Tensor],
+                      y: torch.Tensor, device: str, progress: float) -> Tuple[
+        None, torch.Tensor]:
+        mixes, labels = x
+        logits, x_q, x_q_log_prob = model(mixes, labels)
+
+        ce_x = F.cross_entropy(logits, y.to(device))
+
+        kl_zx = sample_kl(x_q, x_q_log_prob, device)
+
+        β = min(progress / dβ, 1)
+
+        loss = ce_x - β * kl_zx
+
+        return None, loss
+
+    return loss_function
+
+
 def variation_toy_loss_ordered(ns: int, μ: int = 101,
                                dβ: float = 1 / 3) -> Callable:
     def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
@@ -27,10 +56,7 @@ def variation_toy_loss_ordered(ns: int, μ: int = 101,
         ce_x = sum_of_ce(logits, y, ns, μ, device)
 
         # Then Kullback-Leibler
-        zx_p_loc = torch.zeros(x_q.size()).to(device)
-        zx_p_scale = torch.ones(x_q.size()).to(device)
-        pzx = dist.Normal(zx_p_loc, zx_p_scale)
-        kl_zx = torch.sum(pzx.log_prob(x_q) - x_q_log_prob)
+        kl_zx = sample_kl(x_q, x_q_log_prob, device)
 
         β = min(progress / dβ, 1)
 
