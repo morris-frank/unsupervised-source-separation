@@ -1,70 +1,117 @@
-from itertools import product
-
 import torch
 from torch import nn
+from torch.nn import functional as F
 
-from .modules import BlockWiseConv1d
+from .functional import dilate, range_product
 
 
 class TemporalEncoder(nn.Module):
-    """
-    The Non-Causal Temporal Encoder as described in original NSynth
-    [http://arxiv.org/abs/1704.01279].
-    """
-
-    def __init__(self,
-                 channels: int = 1,
-                 n_layers: int = 10,
-                 n_blocks: int = 3,
-                 width: int = 128,
-                 kernel_size: int = 3,
-                 bottleneck_dims: int = 16,
-                 hop_length: int = 512):
+    def __init__(self, in_channels: int = 1, out_channels: int = 16,
+                 n_blocks: int = 3, n_layers: int = 10, width: int = 128,
+                 kernel_size: int = 3, pool_size: int = 512):
         """
-        :param channels: Number of input channels
-        :param n_layers: Number of layers in each stage in the encoder
-        :param n_blocks: Number of stages
-        :param width: Size of the hidden channels in all layers
-        :param kernel_size: KS for all 1D-convolutions
-        :param bottleneck_dims: Final number of features
-        :param hop_length: Final bottleneck pooling
+
+        Args:
+            in_channels: Number of input channels
+            out_channels: Number of output channels
+            n_blocks: Number of dilation blocks / stages
+            n_layers: Number of layers in each stage / block
+            width: Width of the hidden layers
+            kernel_size: General Kernel size for the convs
+            pool_size: Size of avg pooling before the output
         """
         super(TemporalEncoder, self).__init__()
 
-        self.init = BlockWiseConv1d(in_channels=channels,
-                                    out_channels=width,
-                                    kernel_size=kernel_size,
-                                    causal=False,
-                                    block_size=1)
+        assert kernel_size % 2 != 0
+        pad = (kernel_size - 1) // 2
+
+        # Go from input channels to hidden width:
+        self.init = nn.Conv1d(in_channels, width, kernel_size, padding=pad)
+        # Go from hidden width to final output channels
+        self.final = nn.Sequential(
+            nn.Conv1d(width, out_channels, 1),
+            nn.AvgPool1d(kernel_size=pool_size)
+        )
+
         self.residuals = []
-        for _, layer in product(range(n_blocks), range(n_layers)):
+        for _, layer in range_product(n_blocks, n_layers):
             self.residuals.append(nn.Sequential(
                 nn.ReLU(),
-                BlockWiseConv1d(in_channels=width,
-                                out_channels=width,
-                                kernel_size=kernel_size,
-                                causal=False,
-                                block_size=2 ** layer),
+                nn.Conv1d(width, width, kernel_size, padding=pad),
                 nn.ReLU(),
-                BlockWiseConv1d(in_channels=width,
-                                out_channels=width,
-                                kernel_size=1,
-                                block_size=1)
+                nn.Conv1d(width, width, 1)
             ))
         self.residuals = nn.ModuleList(self.residuals)
 
-        # Bottleneck
-        self.final = nn.Sequential(
-            BlockWiseConv1d(in_channels=width,
-                            out_channels=bottleneck_dims,
-                            kernel_size=1,
-                            block_size=1),
-            nn.AvgPool1d(kernel_size=hop_length)
-        )
+        # TODO: replace with prime factors
+        self.dilations = [2 ** l for _, l in range_product(n_blocks, n_layers)]
+        self.dilations.append(1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        embedding = self.init(x)
-        for residual in self.residuals:
-            embedding = embedding + residual(embedding)
-        embedding = self.final(embedding)
-        return embedding
+        y = self.init(x)
+        for i, residual in enumerate(self.residuals):
+            # Increase dilation by one step
+            y = dilate(y, new=self.dilations[i], old=self.dilations[i - 1])
+            y = y + residual(y)
+        # Remove the compound dilations
+        y = dilate(y, new=self.dilations[-1], old=self.dilations[-2])
+        y = self.final(y)
+        return y
+
+
+class ConditionalTemporalEncoder(nn.Module):
+    def __init__(self, n_classes: int, in_channels: int = 1,
+                 out_channels: int = 16, n_blocks: int = 3, n_layers: int = 10,
+                 width: int = 128, kernel_size: int = 3, pool_size: int = 512):
+        super(ConditionalTemporalEncoder, self).__init__()
+
+        assert kernel_size % 2 != 0
+        pad = (kernel_size - 1) // 2
+
+        self.n_classes = n_classes
+
+        self.init = nn.Conv1d(in_channels, width, kernel_size, padding=pad)
+        self.final = nn.Sequential(
+            nn.Conv1d(width, out_channels, 1),
+            nn.AvgPool1d(kernel_size=pool_size)
+        )
+
+        self.residuals_front, self.residuals_back = [], []
+        self.conditionals = []
+        for _, layer in range_product(n_blocks, n_layers):
+            self.residuals_front.append(nn.Sequential(
+                nn.ReLU(),
+                nn.Conv1d(width, width, kernel_size, padding=pad)
+            ))
+            self.conditionals.append(nn.Sequential(
+                nn.Linear(n_classes, width, bias=False)
+            ))
+            self.residuals_back.append(nn.Sequential(
+                nn.ReLU(),
+                nn.Conv1d(width, width, 1)
+            ))
+        self.residuals_front = nn.ModuleList(self.residuals_front)
+        self.residuals_back = nn.ModuleList(self.residuals_back)
+        self.conditionals = nn.ModuleList(self.conditionals)
+
+        # TODO: replace with prime factors
+        self.dilations = [2 ** l for _, l in
+                          range_product(n_blocks, n_layers)]
+        self.dilations.append(1)
+
+    def forward(self, x: torch.Tensor, labels: torch.Tensor,
+                device: str = 'cpu') -> torch.Tensor:
+        assert x.shape[0] == labels.numel()
+        targets = F.one_hot(labels, self.n_classes).to(device)
+
+        y = self.init(x)
+        for i, front, cond, back in enumerate(
+                zip(self.residuals_front, self.conditionals,
+                    self.residuals_back)):
+            # Increase dilation by one step
+            y = dilate(y, new=self.dilations[i], old=self.dilations[i - 1])
+            y = y + back(front(y) + cond(targets))
+        # Remove the compound dilations
+        y = dilate(y, new=self.dilations[-1], old=self.dilations[-2])
+        y = self.final(y)
+        return y

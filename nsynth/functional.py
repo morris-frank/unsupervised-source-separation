@@ -1,6 +1,36 @@
 import math
 import torch
 import torch.nn.functional as F
+from itertools import product
+
+
+def range_product(*args: int):
+    """
+    Gives an iterator over the product of the ranges of the given integers.
+    Args:
+        *args: A number of Integers
+
+    Returns:
+
+    """
+    return product(*map(range, args))
+
+
+def dilate(x: torch.Tensor, new: int, old: int = 1) -> torch.Tensor:
+    """
+    :param x: The input Tensor
+    :param new: The new dilation we want
+    :param old: The dilation x already has
+    """
+    [N, C, L] = x.shape  # N == Batch size × old
+    dilation = new / old
+    if dilation == 1:
+        return x
+    L, N = int(L / dilation), int(N * dilation)
+    x = x.permute(1, 2, 0)
+    x = torch.reshape(x, [C, L, N])
+    x = x.permute(2, 0, 1)
+    return x.contiguous()
 
 
 def time_to_batch(x: torch.Tensor, block_size: int) -> torch.Tensor:

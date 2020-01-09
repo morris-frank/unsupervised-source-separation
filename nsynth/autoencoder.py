@@ -32,9 +32,10 @@ class WavenetAE(AutoEncoder):
         :param gen: Is this generation ?
         """
         super(WavenetAE, self).__init__()
-        self.encoder = TemporalEncoder(bottleneck_dims=bottleneck_dims,
-                                       channels=channels, width=encoder_width,
-                                       n_layers=n_layers, n_blocks=n_blocks)
+        self.encoder = TemporalEncoder(in_channels=channels,
+                                       out_channels=bottleneck_dims,
+                                       n_blocks=n_blocks, n_layers=n_layers,
+                                       width=encoder_width)
         self.decoder = WaveNetDecoder(bottleneck_dims=bottleneck_dims,
                                       channels=channels, width=decoder_width,
                                       n_layers=n_layers, n_blocks=n_blocks,
