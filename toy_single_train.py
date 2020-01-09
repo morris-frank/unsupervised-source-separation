@@ -8,7 +8,7 @@ from toy.vae import ConditionalWavenetVAE
 def main(args):
     # TODO implement for AE not VAE
     args.nit = 50000
-    args.nbatch = 8
+    args.nbatch = 20
     μ = 100
     ns = 4
     loss_function = single_vae_toy_loss()
