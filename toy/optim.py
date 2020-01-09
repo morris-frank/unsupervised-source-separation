@@ -32,7 +32,7 @@ def single_vae_toy_loss(dβ: float = 1 / 3) -> Callable:
         mixes, labels = x
         logits, x_q, x_q_log_prob = model(mixes, labels)
 
-        ce_x = F.cross_entropy(logits, y.to(device))
+        ce_x = F.cross_entropy(logits, y[:, 0, :].to(device))
 
         kl_zx = sample_kl(x_q, x_q_log_prob, device)
 
