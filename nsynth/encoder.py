@@ -103,15 +103,19 @@ class ConditionalTemporalEncoder(nn.Module):
 
     def forward(self, x: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         assert x.shape[0] == labels.numel()
-        targets = F.one_hot(labels, self.n_classes).to(self.device)
+        targets = F.one_hot(labels, self.n_classes).float().to(self.device)
 
         y = self.init(x)
-        for i, front, cond, back in enumerate(
+        for i, (front, cond, back) in enumerate(
                 zip(self.residuals_front, self.conditionals,
                     self.residuals_back)):
             # Increase dilation by one step
             y = dilate(y, new=self.dilations[i], old=self.dilations[i - 1])
-            y = y + back(front(y) + cond(targets))
+            c = cond(targets)[..., None]
+            # As we compound dilate the y we have to repeat the conditional
+            # along the batch dimension
+            c = c.repeat(y.shape[0] // c.shape[0], 1, 1)
+            y = y + back(front(y) + c)
         # Remove the compound dilations
         y = dilate(y, new=self.dilations[-1], old=self.dilations[-2])
         y = self.final(y)
