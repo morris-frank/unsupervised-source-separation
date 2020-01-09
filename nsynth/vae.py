@@ -73,4 +73,4 @@ class WavenetVAE(AutoEncoder):
         kl_zx = torch.sum(pzx.log_prob(x_q) - x_q_log_prob)
 
         loss = ce_x - kl_zx
-        return logits, loss
+        return loss, logits

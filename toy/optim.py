@@ -27,8 +27,8 @@ def sample_kl(x_q: dist.Normal, x_q_log_prob: torch.Tensor,
 
 def single_vae_toy_loss(dβ: float = 1 / 3) -> Callable:
     def loss_function(model: nn.Module, x: Tuple[torch.Tensor, torch.Tensor],
-                      y: torch.Tensor, device: str, progress: float) -> Tuple[
-        None, torch.Tensor]:
+                      y: torch.Tensor, device: str, progress: float) \
+            -> Tuple[torch.Tensor, None]:
         mixes, labels = x
         logits, x_q, x_q_log_prob = model(mixes, labels)
 
@@ -40,7 +40,7 @@ def single_vae_toy_loss(dβ: float = 1 / 3) -> Callable:
 
         loss = ce_x - β * kl_zx
 
-        return None, loss
+        return loss, None
 
     return loss_function
 
@@ -49,7 +49,7 @@ def variation_toy_loss_ordered(ns: int, μ: int = 101,
                                dβ: float = 1 / 3) -> Callable:
     def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
                       device: str, progress: float) \
-            -> Tuple[None, torch.Tensor]:
+            -> Tuple[torch.Tensor, None]:
         logits, x_q, x_q_log_prob = model(x)
 
         # First Cross-Entropy
@@ -61,7 +61,7 @@ def variation_toy_loss_ordered(ns: int, μ: int = 101,
         β = min(progress / dβ, 1)
 
         loss = ce_x - β * kl_zx
-        return None, loss
+        return loss, None
 
     return loss_function
 
@@ -69,10 +69,10 @@ def variation_toy_loss_ordered(ns: int, μ: int = 101,
 def toy_loss_ordered(ns: int, μ: int = 101) -> Callable:
     def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
                       device: str, progress: float) \
-            -> Tuple[None, torch.Tensor]:
+            -> Tuple[torch.Tensor, None]:
         del progress
         logits = model(x)
         loss = sum_of_ce(logits, y, ns, μ, device)
-        return None, loss
+        return loss, None
 
     return loss_function

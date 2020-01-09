@@ -55,4 +55,4 @@ class WavenetAE(AutoEncoder):
         del progress
         logits = model(x)
         loss = F.cross_entropy(logits, y.to(device))
-        return logits, loss
+        return loss, logits
