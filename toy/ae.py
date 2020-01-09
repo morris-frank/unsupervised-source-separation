@@ -32,9 +32,10 @@ class WavenetMultiAE(AutoEncoder):
         """
         super(WavenetMultiAE, self).__init__()
         self.bottleneck_dims = bottleneck_dims
-        self.encoder = TemporalEncoder(bottleneck_dims=bottleneck_dims,
-                                       channels=channels, width=encoder_width,
-                                       n_layers=n_layers, n_blocks=n_blocks)
+        self.encoder = TemporalEncoder(in_channels=channels,
+                                       out_channels=bottleneck_dims,
+                                       n_blocks=n_blocks, n_layers=n_layers,
+                                       width=encoder_width)
 
         decoder_args = dict(bottleneck_dims=bottleneck_dims,
                             channels=channels, width=decoder_width,
