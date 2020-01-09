@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+#SBATCH --job-name=vae-toy_train
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=2
+#SBATCH --ntasks-per-node=1
+#SBATCH --time=10:00:00
+#SBATCH --mem=10000M
+#SBATCH --partition=gpu
+#SBATCH --gres=gpu:1
+
+export LD_LIBRARY_PATH=/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH
+
+cd /home/frankm/thesis
+srun /home/frankm/.pyenv/shims/python3.7 toy_single_train.py --datadir=/home/frankm/data/nsynth-toy/ --board --gpu 0 --vae

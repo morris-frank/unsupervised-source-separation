@@ -1,12 +1,13 @@
 from argparse import ArgumentParser
-from os import path
+from os import path, makedirs
+from os.path import basename
 
 import pandas as pd
 
 from nsynth.sampling import load_model
-from toy.plot import plot_reconstruction, prepare_plot_freq_loss
-from toy.data import ToyDataSet
 from toy.ae import WavenetMultiAE
+from toy.data import ToyDataSet
+from toy.plot import plot_reconstruction, prepare_plot_freq_loss
 from toy.vae import WavenetMultiVAE
 
 
@@ -21,8 +22,9 @@ def main():
     parser.add_argument('--vae', action='store_true')
     args = parser.parse_args()
 
+    makedirs('./figures', exist_ok=True)
     model = WavenetMultiVAE if args.vae else WavenetMultiAE
-    fname = 'freq_plot_vae.npy' if args.vae else 'freq_plot_ae.npy'
+    fname = f'figures/{basename(args.weights)[:-3]}_freq_plot.npy'
 
     crop = 3 * 2 ** 10
     model = model(args.ns, 16, 64, 64, 10, 3, args.μ + 1, 1, False)
