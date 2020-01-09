@@ -60,9 +60,10 @@ class TemporalEncoder(nn.Module):
 
 
 class ConditionalTemporalEncoder(nn.Module):
-    def __init__(self, n_classes: int, device: str, in_channels: int = 1,
+    def __init__(self, n_classes: int, in_channels: int = 1,
                  out_channels: int = 16, n_blocks: int = 3, n_layers: int = 10,
-                 width: int = 128, kernel_size: int = 3, pool_size: int = 512):
+                 width: int = 128, kernel_size: int = 3, pool_size: int = 512,
+                 device: str = 'cpu'):
         super(ConditionalTemporalEncoder, self).__init__()
 
         assert kernel_size % 2 != 0

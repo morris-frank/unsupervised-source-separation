@@ -15,7 +15,10 @@ def main(args):
     ns = 4
     loss_function = toy_loss_vae(ns, μ + 1) if args.vae else toy_loss(ns, μ + 1)
 
-    model = model_class(ns, 16, 64, 64, 10, 3, μ + 1, 1, False)
+    model = model_class(n=ns, bottleneck_dims=16, encoder_width=64,
+                        decoder_width=64, n_layers=10, n_blocks=3,
+                        quantization_channels=μ + 1,
+                        channels=1, gen=False)
     crop = 3 * 2 ** 10
 
     traindata = ToyDataSet(f'{args.datadir}/toy_train_4.npy', crop=crop,

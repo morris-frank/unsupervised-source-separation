@@ -15,8 +15,10 @@ def main(args):
 
     device = f'cuda:{args.gpu[0]}' if args.gpu else 'cpu'
 
-    model = ConditionalWavenetVAE(ns, device, 16, 64, 64, 10, 3, μ + 1, 1,
-                                  False)
+    model = ConditionalWavenetVAE(n=ns, bottleneck_dims=16, encoder_width=64,
+                                  decoder_width=64, n_layers=10, n_blocks=3,
+                                  quantization_channels=μ + 1,
+                                  channels=1, gen=False, device=device)
     crop = 3 * 2 ** 10
 
     traindata = ToyDataSetSingle(f'{args.datadir}/toy_train_4.npy', crop=crop,

@@ -70,7 +70,7 @@ class WavenetMultiVAE(WavenetVAE):
 
 
 class ConditionalWavenetVAE(WavenetVAE):
-    def __init__(self, n: int, device: str, *args, **kwargs):
+    def __init__(self, n: int, *args, device: str = 'cpu', **kwargs):
         super(ConditionalWavenetVAE, self).__init__(*args, **kwargs)
         self.encoder = ConditionalTemporalEncoder(n_classes=n, device=device,
                                                   **self.encoder_params)
