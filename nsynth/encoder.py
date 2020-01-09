@@ -60,7 +60,7 @@ class TemporalEncoder(nn.Module):
 
 
 class ConditionalTemporalEncoder(nn.Module):
-    def __init__(self, n_classes: int, in_channels: int = 1,
+    def __init__(self, n_classes: int, device: str, in_channels: int = 1,
                  out_channels: int = 16, n_blocks: int = 3, n_layers: int = 10,
                  width: int = 128, kernel_size: int = 3, pool_size: int = 512):
         super(ConditionalTemporalEncoder, self).__init__()
@@ -69,6 +69,7 @@ class ConditionalTemporalEncoder(nn.Module):
         pad = (kernel_size - 1) // 2
 
         self.n_classes = n_classes
+        self.device = device
 
         self.init = nn.Conv1d(in_channels, width, kernel_size, padding=pad)
         self.final = nn.Sequential(
@@ -99,10 +100,9 @@ class ConditionalTemporalEncoder(nn.Module):
                           range_product(n_blocks, n_layers)]
         self.dilations.append(1)
 
-    def forward(self, x: torch.Tensor, labels: torch.Tensor,
-                device: str = 'cpu') -> torch.Tensor:
+    def forward(self, x: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         assert x.shape[0] == labels.numel()
-        targets = F.one_hot(labels, self.n_classes).to(device)
+        targets = F.one_hot(labels, self.n_classes).to(self.device)
 
         y = self.init(x)
         for i, front, cond, back in enumerate(

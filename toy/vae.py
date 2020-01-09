@@ -70,23 +70,22 @@ class WavenetMultiVAE(WavenetVAE):
 
 
 class ConditionalWavenetVAE(WavenetVAE):
-    def __init__(self, n: int, *args, **kwargs):
+    def __init__(self, n: int, device: str, *args, **kwargs):
         super(ConditionalWavenetVAE, self).__init__(*args, **kwargs)
-        self.encoder = ConditionalTemporalEncoder(n_classes=n,
+        self.encoder = ConditionalTemporalEncoder(n_classes=n, device=device,
                                                   **self.encoder_params)
         self.decoder = WaveNetDecoder(**self.decoder_params)
 
-    def forward(self, x: torch.Tensor, labels: torch.Tensor,
-                device: str = 'cpu'):
-        embedding = self.encoder(x, labels, device)
+    def forward(self, x: torch.Tensor, labels: torch.Tensor):
+        embedding = self.encoder(x, labels)
         x_q, x_q_log_prob = self._latent(embedding)
         logits = self._decode(x, x_q)
 
         return logits, x_q, x_q_log_prob
 
     def test_forward(self, x: torch.Tensor, labels: torch.Tensor,
-                     destroy: float = 0, device: str = 'cpu'):
-        embedding = self.encoder(x, labels, device)
+                     destroy: float = 0):
+        embedding = self.encoder(x, labels)
         q_loc = embedding[:, :self.bottleneck_dims, :]
         if destroy > 0:
             q_loc = destroy_along_axis(q_loc, destroy)

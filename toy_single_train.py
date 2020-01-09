@@ -13,7 +13,10 @@ def main(args):
     ns = 4
     loss_function = single_vae_toy_loss()
 
-    model = ConditionalWavenetVAE(ns, 16, 64, 64, 10, 3, μ + 1, 1, False)
+    device = f'cuda:{args.gpu[0]}' if args.gpu else 'cpu'
+
+    model = ConditionalWavenetVAE(ns, device, 16, 64, 64, 10, 3, μ + 1, 1,
+                                  False)
     crop = 3 * 2 ** 10
 
     traindata = ToyDataSetSingle(f'{args.datadir}/toy_train_4.npy', crop=crop,
