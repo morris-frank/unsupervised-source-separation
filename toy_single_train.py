@@ -11,7 +11,7 @@ def main(args):
     args.nbatch = 20
     μ = 100
     ns = 4
-    loss_function = single_vae_toy_loss()
+    loss_function = single_vae_toy_loss(β=1.1)
 
     device = f'cuda:{args.gpu[0]}' if args.gpu else 'cpu'
 
