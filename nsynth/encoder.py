@@ -83,7 +83,7 @@ class ConditionalTemporalEncoder(nn.Module):
         for _, layer in range_product(n_blocks, n_layers):
             self.residuals_front.append(nn.Sequential(
                 nn.ReLU(),
-                nn.Conv1d(width, width, kernel_size, padding=pad)
+                nn.Conv1d(width, width, kernel_size, padding=pad, bias=False)
             ))
             self.conditionals.append(nn.Sequential(
                 nn.Linear(n_classes, width, bias=False)
