@@ -1,7 +1,7 @@
 from nsynth.config import make_config
 from nsynth.training import train
 from toy.data import ToyDataSetSingle
-from toy.optim import single_vae_toy_loss
+from toy.optim import vae_loss
 from toy.vae import ConditionalWavenetVAE
 
 
@@ -11,7 +11,7 @@ def main(args):
     args.nbatch = 20
     μ = 100
     ns = 4
-    loss_function = single_vae_toy_loss(β=1.1)
+    loss_function = vae_loss(β=2, dβ=0)
 
     device = f'cuda:{args.gpu[0]}' if args.gpu else 'cpu'
 

@@ -25,7 +25,26 @@ def sample_kl(x_q: dist.Normal, x_q_log_prob: torch.Tensor,
     return kl_zx
 
 
-def single_vae_toy_loss(β: float = 1, dβ: float = 1 / 3) -> Callable:
+def vqvae_loss(β: float = 1.1) -> Callable:
+    def loss_function(model: nn.Module, x: Tuple[torch.Tensor, torch.Tensor],
+                      y: torch.Tensor, device: str, progress: float):
+        mixes, labels = x
+        x_tilde, z_e_x, z_q_x = model(mixes, labels)
+
+        # Reconstruction loss
+        loss_recons = F.mse_loss(x_tilde, y[:, 0, :].to(device))
+        # Vector quantization objective
+        loss_vq = F.mse_loss(z_q_x, z_e_x.detach())
+        # Commitment objective
+        loss_commit = F.mse_loss(z_e_x, z_q_x.detach())
+
+        loss = loss_recons + loss_vq + β * loss_commit
+        return loss, None
+
+    return loss_function
+
+
+def vae_loss(β: float = 1, dβ: float = 1 / 3) -> Callable:
     def loss_function(model: nn.Module, x: Tuple[torch.Tensor, torch.Tensor],
                       y: torch.Tensor, device: str, progress: float) \
             -> Tuple[torch.Tensor, None]:
@@ -36,7 +55,7 @@ def single_vae_toy_loss(β: float = 1, dβ: float = 1 / 3) -> Callable:
 
         kl_zx = sample_kl(x_q, x_q_log_prob, device)
 
-        it_β = min(progress / dβ, 1) * β
+        it_β = β if dβ == 0 else min(progress / dβ, 1) * β
 
         loss = ce_x - it_β * kl_zx
 
@@ -45,8 +64,8 @@ def single_vae_toy_loss(β: float = 1, dβ: float = 1 / 3) -> Callable:
     return loss_function
 
 
-def variation_toy_loss_ordered(ns: int, μ: int = 101,
-                               dβ: float = 1 / 3, β: float = 1.) -> Callable:
+def multivae_loss(ns: int, μ: int = 101,
+                  dβ: float = 1 / 3, β: float = 1.) -> Callable:
     def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
                       device: str, progress: float) \
             -> Tuple[torch.Tensor, None]:
@@ -58,7 +77,7 @@ def variation_toy_loss_ordered(ns: int, μ: int = 101,
         # Then Kullback-Leibler
         kl_zx = sample_kl(x_q, x_q_log_prob, device)
 
-        it_β = β * min(progress / dβ, 1)
+        it_β = β if dβ == 0 else β * min(progress / dβ, 1)
 
         loss = ce_x - it_β * kl_zx
         return loss, None
@@ -66,7 +85,7 @@ def variation_toy_loss_ordered(ns: int, μ: int = 101,
     return loss_function
 
 
-def toy_loss_ordered(ns: int, μ: int = 101) -> Callable:
+def multiae_loss(ns: int, μ: int = 101) -> Callable:
     def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
                       device: str, progress: float) \
             -> Tuple[torch.Tensor, None]:

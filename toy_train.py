@@ -2,8 +2,7 @@ from nsynth.config import make_config
 from nsynth.training import train
 from toy.ae import WavenetMultiAE
 from toy.data import ToyDataSet
-from toy.optim import toy_loss_ordered as toy_loss
-from toy.optim import variation_toy_loss_ordered as toy_loss_vae
+from toy.optim import multiae_loss, multivae_loss
 from toy.vae import WavenetMultiVAE
 
 
@@ -13,7 +12,12 @@ def main(args):
     args.nbatch = 8
     μ = 100
     ns = 4
-    loss_function = toy_loss_vae(ns, μ + 1) if args.vae else toy_loss(ns, μ + 1)
+    β = 2
+    dβ = 0  # Removes annealing β
+    if args.vae:
+        loss_function = multivae_loss(ns, μ + 1, β=β, dβ=dβ)
+    else:
+        loss_function = multiae_loss(ns, μ + 1)
 
     model = model_class(n=ns, bottleneck_dims=16, encoder_width=64,
                         decoder_width=64, n_layers=10, n_blocks=3,
