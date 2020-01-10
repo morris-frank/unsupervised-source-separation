@@ -38,7 +38,8 @@ def main():
         plot_reconstruction(model, data, args.ns, args.length,
                             single=args.single)
     elif args.mode.startswith('freq'):
-        dfs = [prepare_plot_freq_loss(model, data, args.ns, args.μ + 1, destroy)
+        dfs = [prepare_plot_freq_loss(model, data, args.ns, args.μ + 1, destroy,
+                                      single=args.single)
                for destroy in [0, 0.5, 1]]
         df = pd.concat(dfs)
         pd.to_pickle(df, fname)
