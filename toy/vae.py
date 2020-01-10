@@ -8,7 +8,7 @@ from torch.nn import functional as F
 from nsynth.decoder import WaveNetDecoder
 from nsynth.encoder import TemporalEncoder, ConditionalTemporalEncoder
 from nsynth.functional import shift1d
-from nsynth.modules import AutoEncoder, VQEmbedding
+from nsynth.modules import AutoEncoder
 from .functional import destroy_along_axis
 
 
