@@ -8,7 +8,7 @@ from nsynth.sampling import load_model
 from toy.ae import WavenetMultiAE
 from toy.data import ToyDataSet
 from toy.plot import plot_reconstruction, prepare_plot_freq_loss
-from toy.vae import WavenetMultiVAE
+from toy.vae import WavenetMultiVAE, ConditionalWavenetVAE
 
 
 def main():
@@ -20,10 +20,12 @@ def main():
     parser.add_argument('--mode', type=str, default='example')
     parser.add_argument('--length', type=int, default=500)
     parser.add_argument('--vae', action='store_true')
+    parser.add_argument('--single', action='store_true')
     args = parser.parse_args()
 
     makedirs('./figures', exist_ok=True)
     model = WavenetMultiVAE if args.vae else WavenetMultiAE
+    model = ConditionalWavenetVAE if args.single else model
     fname = f'figures/{basename(args.weights)[:-3]}_freq_plot.npy'
 
     crop = 3 * 2 ** 10
@@ -33,7 +35,8 @@ def main():
     data = ToyDataSet(args.data, crop=crop)
 
     if args.mode.startswith('ex'):
-        plot_reconstruction(model, data, args.ns, args.length)
+        plot_reconstruction(model, data, args.ns, args.length,
+                            single=args.single)
     elif args.mode.startswith('freq'):
         dfs = [prepare_plot_freq_loss(model, data, args.ns, args.μ + 1, destroy)
                for destroy in [0, 0.5, 1]]

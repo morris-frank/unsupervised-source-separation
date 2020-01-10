@@ -4,6 +4,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
+import torch
 from torch.nn import functional as F
 from tqdm import trange
 
@@ -23,12 +24,25 @@ def fig_reconstruction(mix, stems, pred, ns, length):
     return fig
 
 
-def plot_reconstruction(model, data, ns, length):
+def meta_forward(model, mix, ns, single, destroy=0.):
+    with torch.no_grad():
+        if single:
+            logits = [
+                model.test_forward(mix, torch.tensor([i]), destroy=destroy)
+                for i in range(ns)]
+            logits = torch.cat(logits, 1)
+        else:
+            logits = model.test_forward(mix, destroy=destroy)
+    return logits
+
+
+def plot_reconstruction(model, data, ns, length, single=False):
     N = len(data)
+    model.eval()
     while True:
         mix, stems = data[randint(0, N)]
         mix = mix.unsqueeze(0)
-        logits = model(mix)
+        logits = meta_forward(model, mix, ns, single)
         pred = toy2argmax(logits, ns)
         fig = fig_reconstruction(mix, stems, pred, ns, length)
         plt.show()
@@ -37,13 +51,15 @@ def plot_reconstruction(model, data, ns, length):
 
 
 def prepare_plot_freq_loss(model: WavenetMultiAE, data: ToyDataSet, ns: int,
-                           μ: int, destroy: float = 0.) -> pd.DataFrame:
+                           μ: int, destroy: float = 0.,
+                           single: bool = False) -> pd.DataFrame:
     d = {'shape': [], 'loss': [], 'periodicity': [], 'destroy': []}
+    model.eval()
     for n in trange(len(data.data)):
         mix, stems = data[n]
         prms = data.data[n]['params']
 
-        logits = model.test_forward(mix.unsqueeze(0), destroy=destroy)
+        logits = meta_forward(model, mix, ns, single, destroy)
         for i in range(ns):
             d['shape'].append(prms[i]['shape'])
             d['destroy'].append(destroy)

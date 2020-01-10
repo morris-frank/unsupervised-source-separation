@@ -8,7 +8,7 @@ from torch.nn import functional as F
 from nsynth.decoder import WaveNetDecoder
 from nsynth.encoder import TemporalEncoder, ConditionalTemporalEncoder
 from nsynth.functional import shift1d
-from nsynth.modules import AutoEncoder
+from nsynth.modules import AutoEncoder, VQEmbedding
 from .functional import destroy_along_axis
 
 
@@ -55,10 +55,11 @@ class WavenetMultiVAE(WavenetVAE):
         logits = self._decode(x, x_q)
         return logits, x_q, x_q_log_prob
 
-    def test_forward(self, x: torch.Tensor, destroy: float) -> torch.Tensor:
+    def test_forward(self, x: torch.Tensor, destroy: float = 0) -> torch.Tensor:
         embedding = self.encoder(x)
         q_loc = embedding[:, :self.bottleneck_dims, :]
-        q_loc = destroy_along_axis(q_loc, destroy)
+        if destroy > 0:
+            q_loc = destroy_along_axis(q_loc, destroy)
 
         logits = self._decode(x, q_loc)
         return logits
