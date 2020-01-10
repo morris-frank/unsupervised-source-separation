@@ -28,7 +28,8 @@ def meta_forward(model, mix, ns, single, destroy=0.):
     with torch.no_grad():
         if single:
             logits = [
-                model.test_forward(mix, torch.tensor([i]), destroy=destroy)
+                model.test_forward(mix, torch.tensor([i]),
+                                   destroy=destroy)
                 for i in range(ns)]
             logits = torch.cat(logits, 1)
         else:
@@ -52,14 +53,18 @@ def plot_reconstruction(model, data, ns, length, single=False):
 
 def prepare_plot_freq_loss(model: WavenetMultiAE, data: ToyDataSet, ns: int,
                            μ: int, destroy: float = 0.,
-                           single: bool = False) -> pd.DataFrame:
+                           single: bool = False,
+                           device: str = 'cpu') -> pd.DataFrame:
     d = {'shape': [], 'loss': [], 'periodicity': [], 'destroy': []}
+    model = model.to(device)
     model.eval()
     for n in trange(len(data.data)):
         mix, stems = data[n]
+        mix = mix.unsqueeze(0)
         prms = data.data[n]['params']
 
-        logits = meta_forward(model, mix, ns, single, destroy)
+        logits = meta_forward(model, mix.to(device), ns, single, destroy)
+        logits = logits.cpu()
         for i in range(ns):
             d['shape'].append(prms[i]['shape'])
             d['destroy'].append(destroy)
@@ -70,7 +75,9 @@ def prepare_plot_freq_loss(model: WavenetMultiAE, data: ToyDataSet, ns: int,
     return df
 
 
-def plot_freq_loss(thres=4):
-    df = pd.read_pickle('freq_plot.npy')
+def plot_freq_loss(fname):
+    df = pd.read_pickle(fname)
+    df.destroy = df.destroy.astype('category')
+    zer = df.destroy.iloc[0]
     sns.scatterplot(x='periodicity', y='loss', hue='shape', data=df)
     plt.show()
