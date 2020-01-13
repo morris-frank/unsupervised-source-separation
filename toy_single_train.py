@@ -15,7 +15,7 @@ def main(args):
 
     device = f'cuda:{args.gpu[0]}' if args.gpu else 'cpu'
 
-    model = ConditionalWavenetVQVAE(n=ns, K=1, D=512, n_blocks=3, n_layers=10,
+    model = ConditionalWavenetVQVAE(n_sources=ns, K=1, D=512, n_blocks=3, n_layers=10,
                                     encoder_width=64, decoder_width=32,
                                     in_channels=1, out_channels=μ + 1,
                                     device=device)

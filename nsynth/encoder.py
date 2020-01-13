@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torch.nn import functional as F
 
 from .functional import dilate, range_product
 
@@ -59,10 +58,11 @@ class TemporalEncoder(nn.Module):
         return y
 
 
+# TODO make conditioning like in decoder: flexible
 class ConditionalTemporalEncoder(nn.Module):
     def __init__(self, n_classes: int, in_channels: int = 1,
                  out_channels: int = 16, n_blocks: int = 3, n_layers: int = 10,
-                 width: int = 128, kernel_size: int = 3, pool_size: int = 512,
+                 width: int = 128, kernel_size: int = 3, pool_size: int = 1,
                  device: str = 'cpu'):
         super(ConditionalTemporalEncoder, self).__init__()
 
@@ -75,7 +75,7 @@ class ConditionalTemporalEncoder(nn.Module):
         self.init = nn.Conv1d(in_channels, width, kernel_size, padding=pad)
         self.final = nn.Sequential(
             nn.Conv1d(width, out_channels, 1),
-            nn.AvgPool1d(kernel_size=pool_size)
+            # TODO: pooling optional
         )
 
         self.residuals_front, self.residuals_back = [], []
@@ -98,8 +98,7 @@ class ConditionalTemporalEncoder(nn.Module):
 
         # TODO: replace with prime factors
         self.dilations = [2 ** l for _, l in
-                          range_product(n_blocks, n_layers)]
-        self.dilations.append(1)
+                          range_product(n_blocks, n_layers)] + [1]
 
     def forward(self, x: torch.Tensor, condit: torch.Tensor) -> torch.Tensor:
 

@@ -105,28 +105,23 @@ class ConditionalWavenetVAE(WavenetVAE):
 
 
 class ConditionalWavenetVQVAE(nn.Module):
-
-    def __init__(self,
-                 n: int,
-                 K: int = 1,
-                 D: int = 512,
-                 n_blocks: int = 3,
-                 n_layers: int = 10,
-                 encoder_width: int = 256,
-                 decoder_width: int = 256,
-                 in_channels: int = 1,
-                 out_channels: int = 256,
+    def __init__(self, n_sources: int, K: int = 1, D: int = 512,
+                 n_blocks: int = 3, n_layers: int = 10,
+                 encoder_width: int = 256, decoder_width: int = 256,
+                 in_channels: int = 1, out_channels: int = 256,
                  device: str = 'cpu', ):
         super(ConditionalWavenetVQVAE, self).__init__()
         self.device = device
+        self.n_sources = n_sources
         self.encoder_params = dict(in_channels=in_channels, out_channels=D,
                                    n_blocks=n_blocks, n_layers=n_layers,
-                                   width=encoder_width, n_classes=n,
+                                   width=encoder_width, n_classes=n_sources,
                                    device=device)
 
         self.decoder_params = dict(in_channels=in_channels,
                                    out_channels=out_channels,
-                                   conditional_dims=[D, n],
+                                   conditional_dims=[(D, False),
+                                                     (n_sources, True)],
                                    n_blocks=n_blocks, n_layers=n_layers,
                                    skip_width=decoder_width,
                                    residual_width=2 * decoder_width)
@@ -137,7 +132,7 @@ class ConditionalWavenetVQVAE(nn.Module):
         self.codebook = VQEmbedding(K, D)
 
     def _condition(self, labels: torch.Tensor) -> torch.Tensor:
-        return F.one_hot(labels, self.n).float().to(self.device)
+        return F.one_hot(labels, self.n_sources).float().to(self.device)
 
     def encode(self, x: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         source_cond = self._condition(labels)
