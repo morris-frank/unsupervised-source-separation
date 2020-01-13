@@ -25,9 +25,9 @@ def main(args):
                         channels=1, gen=False)
     crop = 3 * 2 ** 10
 
-    traindata = ToyDataSet(f'{args.datadir}/toy_train_4.npy', crop=crop,
+    traindata = ToyDataSet(f'{args.datadir}/toy_train.npy', crop=crop,
                            μ=μ).loader(args.nbatch)
-    testdata = ToyDataSet(f'{args.datadir}/toy_test_4.npy', crop=crop,
+    testdata = ToyDataSet(f'{args.datadir}/toy_test.npy', crop=crop,
                           μ=μ).loader(args.nbatch)
 
     train(model=model,

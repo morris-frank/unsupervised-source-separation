@@ -5,10 +5,10 @@ from torch import distributions as dist
 from torch import nn
 from torch.nn import functional as F
 
-from nsynth.decoder import WaveNetDecoder
+from nsynth.decoder import WaveNetDecoder, WavenetDecoder
 from nsynth.encoder import TemporalEncoder, ConditionalTemporalEncoder
 from nsynth.functional import shift1d
-from nsynth.modules import AutoEncoder
+from nsynth.modules import AutoEncoder, VQEmbedding
 from .functional import destroy_along_axis
 
 
@@ -76,9 +76,13 @@ class ConditionalWavenetVAE(WavenetVAE):
         self.encoder = ConditionalTemporalEncoder(n_classes=n, device=device,
                                                   **self.encoder_params)
         self.decoder = WaveNetDecoder(**self.decoder_params)
+        self.n, self.device = n, device
+
+    def _condition(self, labels: torch.Tensor) -> torch.Tensor:
+        return F.one_hot(labels, self.n).float().to(self.device)
 
     def forward(self, x: torch.Tensor, labels: torch.Tensor):
-        embedding = self.encoder(x, labels)
+        embedding = self.encoder(x, self._condition(labels))
         x_q, x_q_log_prob = self._latent(embedding)
         logits = self._decode(x, x_q)
 
@@ -86,7 +90,7 @@ class ConditionalWavenetVAE(WavenetVAE):
 
     def test_forward(self, x: torch.Tensor, labels: torch.Tensor,
                      destroy: float = 0):
-        embedding = self.encoder(x, labels)
+        embedding = self.encoder(x, self._condition(labels))
         q_loc = embedding[:, :self.bottleneck_dims, :]
         if destroy > 0:
             q_loc = destroy_along_axis(q_loc, destroy)
@@ -98,3 +102,60 @@ class ConditionalWavenetVAE(WavenetVAE):
         x = shift1d(x, -1)
         logits = self.decoder(x, embedding)
         return logits
+
+
+class ConditionalWavenetVQVAE(nn.Module):
+
+    def __init__(self,
+                 n: int,
+                 K: int = 1,
+                 D: int = 512,
+                 n_blocks: int = 3,
+                 n_layers: int = 10,
+                 encoder_width: int = 256,
+                 decoder_width: int = 256,
+                 in_channels: int = 1,
+                 out_channels: int = 256,
+                 device: str = 'cpu', ):
+        super(ConditionalWavenetVQVAE, self).__init__()
+        self.device = device
+        self.encoder_params = dict(in_channels=in_channels, out_channels=D,
+                                   n_blocks=n_blocks, n_layers=n_layers,
+                                   width=encoder_width, n_classes=n,
+                                   device=device)
+
+        self.decoder_params = dict(in_channels=in_channels,
+                                   out_channels=out_channels,
+                                   conditional_dims=[D, n],
+                                   n_blocks=n_blocks, n_layers=n_layers,
+                                   skip_width=decoder_width,
+                                   residual_width=2 * decoder_width)
+
+        self.encoder = ConditionalTemporalEncoder(**self.encoder_params)
+
+        self.decoder = WavenetDecoder(**self.decoder_params)
+        self.codebook = VQEmbedding(K, D)
+
+    def _condition(self, labels: torch.Tensor) -> torch.Tensor:
+        return F.one_hot(labels, self.n).float().to(self.device)
+
+    def encode(self, x: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+        source_cond = self._condition(labels)
+        embedding = self.encoder(x, source_cond)
+        latents = self.codebook(embedding)
+        return latents
+
+    def decode(self, x: torch.Tensor, embedding: torch.Tensor,
+               labels: torch.Tensor) -> torch.Tensor:
+        # (B, D, H, W)
+        source_cond = self._condition(labels)
+        z_q_x = self.codebook.embedding(embedding).permute(0, 3, 1, 2)
+        x_tilde = self.decoder(x, [z_q_x, source_cond])
+        return x_tilde
+
+    def forward(self, x: torch.Tensor, labels: torch.Tensor):
+        source_cond = self._condition(labels)
+        embedding = self.encoder(x, source_cond)
+        z_q_x_st, z_q_x = self.codebook.straight_through(embedding)
+        x_tilde = self.decoder(x, [z_q_x_st, source_cond])
+        return x_tilde, embedding, z_q_x

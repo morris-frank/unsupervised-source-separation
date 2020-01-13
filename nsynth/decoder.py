@@ -7,6 +7,7 @@ from torch.nn import functional as F
 from tqdm import trange
 
 from .modules import BlockWiseConv1d, DilatedQueue
+from .functional import range_product, dilate
 
 
 class WaveNetDecoder(nn.Module):
@@ -151,7 +152,7 @@ class WaveNetDecoder(nn.Module):
             gates = torch.tanh(dilated[:, self.width:, :])
             pre_res = filters * gates
 
-            x = x + l_residual(pre_res)  # Is this correct????
+            x = x + l_residual(pre_res)
             skip = skip + l_skip(pre_res)
 
         skip = self.final_skip(skip)
@@ -187,3 +188,87 @@ class WaveNetDecoder(nn.Module):
             generation[i] = c.cpu()
             inp = c.view(1, 1, 1)
         return generation
+
+
+class WavenetDecoder(nn.Module):
+    def __init__(self,
+                 in_channels: int = 1,
+                 out_channels: int = 256,
+                 n_blocks: int = 3,
+                 n_layers: int = 10,
+                 residual_width: int = 512,
+                 skip_width: int = 256,
+                 conditional_dims=None,
+                 kernel_size: int = 3):
+        super(WavenetDecoder, self).__init__()
+        if conditional_dims is None:
+            conditional_dims = [16]
+        self.n_conds = len(conditional_dims)
+        self.n_blocks, self.n_layers = n_blocks, n_layers
+
+        self.dilations = [2**l for l in range(1, n_layers+1)]
+
+        self.init_conv = nn.Conv1d(in_channels, residual_width, kernel_size)
+        self.init_skip = nn.Conv1d(residual_width, skip_width, 1)
+
+        self.filter_conv = self._make_conv_list(
+            residual_width, residual_width, kernel_size)
+        self.gate_conv = self._make_conv_list(
+            residual_width, residual_width, kernel_size)
+        self.skip_conv = self._make_conv_list(
+            residual_width, skip_width, 1)
+        self.feat_conv = self._make_conv_list(
+            residual_width, residual_width, 1)
+
+        self.filter_cond_conv = []
+        self.gate_cond_conv = []
+        for dim in conditional_dims:
+            self.filter_cond_conv.append(
+                self._make_conv_list(dim, residual_width, 1)
+            )
+            self.gate_cond_conv.append(
+                self._make_conv_list(dim, residual_width, 1)
+            )
+
+        self.final_skip = nn.Sequential(
+            nn.ReLU(),
+            nn.Conv1d(skip_width, skip_width, 1)
+        )
+
+        self.final = nn.Sequential(
+            nn.ReLU(),
+            nn.Conv1d(skip_width, out_channels, 1)
+        )
+
+    def _make_conv_list(self, in_channels: int, out_channels: int,
+                        kernel_size: int) -> nn.ModuleList:
+        module_list = []
+        for _, layer in range_product(self.n_blocks, self.n_layers):
+            module_list.append(
+                nn.Conv1d(in_channels, out_channels, kernel_size,
+                          bias=False)
+            )
+        return nn.ModuleList(module_list)
+
+    def forward(self, x: torch.Tensor, conditionals: List[torch.Tensor]) -> torch.Tensor:
+        assert len(conditionals) == self.n_conds
+        feat = self.init_conv(x)
+        skip = self.init_skip(feat)
+
+        for b, l in range_product(self.n_blocks, self.n_layers):
+            dilated = dilate(feat, new=self.dilations[l], old=self.dilations[l-1])
+
+            f = self.filter_conv[b*l](dilated)
+            g = self.gate_conv[b*l](dilated)
+            # Now add all the conditionals to the filters and gates
+            for i in range(self.n_conds):
+                f = f + self.filter_cond_conv[i][b*l](conditionals[i])
+                g = g + self.gate_cond_conv[i][b*l](conditionals[i])
+            residual = torch.sigmoid(f) * torch.tanh(g)
+
+            feat = dilated + self.feat_conc[b*l](residual)
+            skip = skip + self.skip_conv[b*l](residual)
+
+        skip = self.final_skip(skip)
+        out = self.final(skip)
+        return out

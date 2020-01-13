@@ -2,7 +2,7 @@ from nsynth.config import make_config
 from nsynth.training import train
 from toy.data import ToyDataSetSingle
 from toy.optim import vae_loss
-from toy.vae import ConditionalWavenetVAE
+from toy.vae import ConditionalWavenetVQVAE
 
 
 def main(args):
@@ -15,15 +15,15 @@ def main(args):
 
     device = f'cuda:{args.gpu[0]}' if args.gpu else 'cpu'
 
-    model = ConditionalWavenetVAE(n=ns, bottleneck_dims=16, encoder_width=64,
-                                  decoder_width=64, n_layers=10, n_blocks=3,
-                                  quantization_channels=μ + 1,
-                                  channels=1, gen=False, device=device)
+    model = ConditionalWavenetVQVAE(n=ns, K=1, D=512, n_blocks=3, n_layers=10,
+                                    encoder_width=64, decoder_width=32,
+                                    in_channels=1, out_channels=μ + 1,
+                                    device=device)
     crop = 3 * 2 ** 10
 
-    traindata = ToyDataSetSingle(f'{args.datadir}/toy_train_4.npy', crop=crop,
+    traindata = ToyDataSetSingle(f'{args.datadir}/toy_train.npy', crop=crop,
                                  μ=μ).loader(args.nbatch)
-    testdata = ToyDataSetSingle(f'{args.datadir}/toy_test_4.npy', crop=crop,
+    testdata = ToyDataSetSingle(f'{args.datadir}/toy_test.npy', crop=crop,
                                 μ=μ).loader(args.nbatch)
 
     train(model=model,
