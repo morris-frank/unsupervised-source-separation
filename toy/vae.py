@@ -137,7 +137,6 @@ class ConditionalWavenetVQVAE(nn.Module):
     def encode(self, x: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         source_cond = self._condition(labels)
         embedding = self.encoder(x, source_cond)
-        import ipdb; ipdb.set_trace()
         latents = self.codebook(embedding)
         return latents
 
@@ -160,7 +159,6 @@ class ConditionalWavenetVQVAE(nn.Module):
                      destroy: float = 0):
         source_cond = self._condition(labels)
         embedding = self.encoder(x, source_cond)
-        embedding = self.codebook(embedding)
         if destroy > 0:
             embedding = destroy_along_axis(embedding, destroy)
         x_tilde = self.decoder(x, [embedding, source_cond])

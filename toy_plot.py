@@ -33,7 +33,7 @@ def main():
         model = model(args.ns, 16, 64, 64, 10, 3, args.μ + 1, 1, False)
     else:
         model = ConditionalWavenetVQVAE(
-            n_sources=args.ns, K=1, D=512, n_blocks=3, n_layers=10,
+            n_sources=args.ns, K=4, D=512, n_blocks=3, n_layers=10,
             encoder_width=64, decoder_width=32, in_channels=1,
             out_channels=args.μ + 1, device=args.device)
     model = load_model(args.weights, 'cpu', model)

@@ -43,7 +43,7 @@ def plot_reconstruction(model, data, ns, length, single=False):
     while True:
         mix, stems = data[randint(0, N)]
         mix = mix.unsqueeze(0)
-        logits = meta_forward(model, mix, ns, single, 1)
+        logits = meta_forward(model, mix, ns, single)
         pred = toy2argmax(logits, ns)
         fig = fig_reconstruction(mix, stems, pred, ns, length)
         plt.show()

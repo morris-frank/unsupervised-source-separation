@@ -7,7 +7,10 @@ def destroy_along_axis(x: torch.Tensor, amount: float) -> torch.Tensor:
         return x
     length = x.shape[1]
     for i in random.sample(range(length), int(amount * length)):
-        x[:, i, :] = 0.
+        if x.ndim == 3:
+            x[:, i, :] = 0.
+        else:
+            x[:, i] = 0.
     return x
 
 
