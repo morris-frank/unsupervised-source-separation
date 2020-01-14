@@ -6,7 +6,6 @@ from toy.vae import ConditionalWavenetVQVAE
 
 
 def main(args):
-    # TODO implement for AE not VAE
     args.nit = 50000
     args.nbatch = 20
     μ = 100
