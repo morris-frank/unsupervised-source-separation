@@ -31,7 +31,6 @@ def vqvae_loss(β: float = 1.1) -> Callable:
         del progress
         mixes, labels = x
         x_tilde, z_e_x, z_q_x = model(mixes, labels)
-        print(f"x^:{x_tilde.shape} - y: {y.shape}")
         # Reconstruction loss
         loss_recons = F.cross_entropy(x_tilde, y[:, 0, :].to(device))
         # Vector quantization objective
