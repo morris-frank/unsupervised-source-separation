@@ -1,6 +1,7 @@
 from argparse import ArgumentParser
 from os import path, makedirs
 from os.path import basename
+import os.path
 
 import pandas as pd
 
@@ -22,6 +23,7 @@ def main():
     parser.add_argument('--vae', action='store_true')
     parser.add_argument('--single', action='store_true')
     parser.add_argument('--device', type=str, default='cpu')
+    parser.add_argument('--destroy', type=float, default=0.5)
     args = parser.parse_args()
 
     makedirs('./figures', exist_ok=True)
@@ -44,10 +46,12 @@ def main():
         plot_reconstruction(model, data, args.ns, args.length,
                             single=args.single)
     elif args.mode.startswith('freq'):
-        dfs = [prepare_plot_freq_loss(model, data, args.ns, args.μ + 1, destroy,
-                                      single=args.single, device=args.device)
-               for destroy in [0, 0.5, 1]]
-        df = pd.concat(dfs)
+        df = prepare_plot_freq_loss(model, data, args.ns, args.μ + 1,
+                                    args.destroy,
+                                    single=args.single, device=args.device)
+        if os.path.exists(fname):
+            _df = pd.read_pickle(fname)
+            df = pd.concat([df, _df])
         pd.to_pickle(df, fname)
 
 
