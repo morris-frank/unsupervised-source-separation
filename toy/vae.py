@@ -120,8 +120,8 @@ class ConditionalWavenetVQVAE(nn.Module):
 
         self.decoder_params = dict(in_channels=in_channels,
                                    out_channels=out_channels,
-                                   conditional_dims=[(D, False),
-                                                     (n_sources, True)],
+                                   conditional_dims=[(D, False),],
+                                                     #  (n_sources, True)],
                                    n_blocks=n_blocks, n_layers=n_layers,
                                    skip_width=decoder_width,
                                    residual_width=2 * decoder_width)
@@ -152,7 +152,7 @@ class ConditionalWavenetVQVAE(nn.Module):
         source_cond = self._condition(labels)
         embedding = self.encoder(x, source_cond)
         z_q_x_st, z_q_x = self.codebook.straight_through(embedding)
-        x_tilde = self.decoder(x, [z_q_x_st, source_cond])
+        x_tilde = self.decoder(x, [z_q_x_st])
         return x_tilde, embedding, z_q_x
 
     def test_forward(self, x: torch.Tensor, labels: torch.Tensor,
