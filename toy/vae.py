@@ -137,6 +137,7 @@ class ConditionalWavenetVQVAE(nn.Module):
     def encode(self, x: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
         source_cond = self._condition(labels)
         embedding = self.encoder(x, source_cond)
+        import ipdb; ipdb.set_trace()
         latents = self.codebook(embedding)
         return latents
 
@@ -144,7 +145,7 @@ class ConditionalWavenetVQVAE(nn.Module):
                labels: torch.Tensor) -> torch.Tensor:
         # (B, D, H, W)
         source_cond = self._condition(labels)
-        z_q_x = self.codebook.embedding(embedding).permute(0, 3, 1, 2)
+        z_q_x = self.codebook.embedding(embedding).permute(0, 2, 1)
         x_tilde = self.decoder(x, [z_q_x, source_cond])
         return x_tilde
 
@@ -154,3 +155,13 @@ class ConditionalWavenetVQVAE(nn.Module):
         z_q_x_st, z_q_x = self.codebook.straight_through(embedding)
         x_tilde = self.decoder(x, [z_q_x_st, source_cond])
         return x_tilde, embedding, z_q_x
+
+    def test_forward(self, x: torch.Tensor, labels: torch.Tensor,
+                     destroy: float = 0):
+        source_cond = self._condition(labels)
+        embedding = self.encoder(x, source_cond)
+        embedding = self.codebook(embedding)
+        if destroy > 0:
+            embedding = destroy_along_axis(embedding, destroy)
+        x_tilde = self.decoder(x, [embedding, source_cond])
+        return x_tilde
