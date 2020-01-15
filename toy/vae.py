@@ -161,5 +161,5 @@ class ConditionalWavenetVQVAE(nn.Module):
         embedding = self.encoder(x, source_cond)
         if destroy > 0:
             embedding = destroy_along_axis(embedding, destroy)
-        x_tilde = self.decoder(x, [embedding, source_cond])
+        x_tilde = self.decoder(x, [embedding])
         return x_tilde

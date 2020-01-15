@@ -15,6 +15,22 @@ from .functional import toy2argmax
 mpl.use('TkAgg')
 
 
+def fig_summary(fname: str):
+    df = pd.read_pickle(fname)
+    df.destroy = df.destroy.astype('category')
+    zer = df[df.destroy == 0.0].iloc[0].destroy
+
+    fig, axs = plt.subplots(3, 1)
+    axs = axs.flatten()
+
+    sns.scatterplot(x='periodicity', y='loss', hue='destroy', data=df,
+                    palette=['r', 'g', 'b'], ax=axs[0])
+    sns.boxplot(x="destroy", y="loss", hue="shape", data=df, ax=axs[1])
+    sns.scatterplot(x='periodicity', y='loss', hue='shape',
+                    data=df[df.destroy == zer], ax=axs[2])
+    return fig
+
+
 def fig_reconstruction(mix, stems, pred, ns, length):
     fig, axs = plt.subplots(ns + 1, 2, sharex='all')
     for i in range(ns):
@@ -55,7 +71,7 @@ def prepare_plot_freq_loss(model: WavenetMultiAE, data: ToyDataSet, ns: int,
                            μ: int, destroy: float = 0.,
                            single: bool = False,
                            device: str = 'cpu') -> pd.DataFrame:
-    d = {'shape': [], 'loss': [], 'periodicity': [], 'destroy': []}
+    d = {'n': [], 'shape': [], 'loss': [], 'periodicity': [], 'destroy': []}
     model = model.to(device)
     model.eval()
     for n in trange(len(data.data)):
@@ -66,6 +82,7 @@ def prepare_plot_freq_loss(model: WavenetMultiAE, data: ToyDataSet, ns: int,
         logits = meta_forward(model, mix.to(device), ns, single, destroy)
         logits = logits.cpu()
         for i in range(ns):
+            d['n'].append(n)
             d['shape'].append(prms[i]['shape'])
             d['destroy'].append(destroy)
             d['periodicity'].append(prms[i]['φ'])

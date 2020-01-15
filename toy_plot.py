@@ -1,6 +1,6 @@
 from argparse import ArgumentParser
-from os import path, makedirs
-from os.path import basename
+from os import makedirs
+from os.path import basename, abspath
 import os.path
 
 import pandas as pd
@@ -14,8 +14,8 @@ from toy.vae import WavenetMultiVAE, ConditionalWavenetVQVAE
 
 def main():
     parser = ArgumentParser()
-    parser.add_argument('--weights', type=path.abspath, required=True)
-    parser.add_argument('--data', type=path.abspath, required=True)
+    parser.add_argument('--weights', type=abspath, required=True)
+    parser.add_argument('--data', type=abspath, required=True)
     parser.add_argument('-ns', type=int, default=4)
     parser.add_argument('-μ', type=int, default=100)
     parser.add_argument('--mode', type=str, default='example')
