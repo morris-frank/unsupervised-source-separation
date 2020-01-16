@@ -71,7 +71,7 @@ def make_config(version: str) -> ArgumentParser:
     gmodel.add_argument('-nb', type=int, default=3, dest='n_blocks',
                         help='Number of blocks.')
     gmodel.add_argument('-nc', type=int, default=256, dest='out_channels',
-                        help='Number of in_channels to quantize the output with.')
+                        help='Number of in_channels to quant the output with.')
     gmodel.add_argument('-vae', action='store_true',
                         help='Whether to use the VAE model.')
     return parser

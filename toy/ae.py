@@ -47,12 +47,14 @@ class WavenetMultiAE(AutoEncoder):
         self.decoders = nn.ModuleList(
             [WavenetDecoder(**decoder_args) for _ in range(n)])
 
-    def _decode(self, x: torch.Tensor, embedding: torch.Tensor) -> torch.Tensor:
+    def _decode(self, x: torch.Tensor, embedding: torch.Tensor) \
+            -> torch.Tensor:
         x = shift1d(x, -1)
         logits = [dec(x, [embedding]) for dec in self.decoders]
         return torch.cat(logits, dim=1)
 
-    def test_forward(self, x: torch.Tensor, destroy: float = 0) -> torch.Tensor:
+    def test_forward(self, x: torch.Tensor, destroy: float = 0) \
+            -> torch.Tensor:
         embedding = self.encoder(x)
         embedding = destroy_along_axis(embedding, destroy)
         return self._decode(x, embedding)

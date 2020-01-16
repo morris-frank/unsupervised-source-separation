@@ -113,6 +113,6 @@ def prepare_plot_freq_loss(model: WavenetMultiAE, data: ToyDataSet, ns: int,
 def plot_freq_loss(fname):
     df = pd.read_pickle(fname)
     df.destroy = df.destroy.astype('category')
-    zer = df.destroy.iloc[0]
+    # zer = df.destroy.iloc[0]
     sns.scatterplot(x='periodicity', y='loss', hue='shape', data=df)
     plt.show()

@@ -13,13 +13,16 @@ def load_model(fp: str, device: str, model: nn.Module, train: bool = False) \
         -> nn.Module:
     """
 
-    :param fp:
-    :param device:
-    :param model:
-    :param train:
-    :return:
+    Args:
+        fp:
+        device:
+        model:
+        train:
+
+    Returns:
+
     """
-    #TODO: DEPRECATE THE model arg
+    # TODO: DEPRECATE THE model arg
     save_point = torch.load(fp, map_location=torch.device(device))
     state_dict = save_point['model_state_dict']
 
@@ -43,8 +46,11 @@ def load_model(fp: str, device: str, model: nn.Module, train: bool = False) \
 def load_audio(fp: str) -> torch.Tensor:
     """
 
-    :param fp:
-    :return:
+    Args:
+        fp:
+
+    Returns:
+
     """
     raw, sr = librosa.load(fp, mono=True, sr=None)
     assert sr == 16000
@@ -57,9 +63,14 @@ def generate(model: AutoEncoder, x: torch.Tensor, length: int, device: str) \
         -> Tuple[torch.Tensor, torch.Tensor]:
     """
 
-    :param model:
-    :param x:
-    :return:
+    Args:
+        model:
+        x:
+        length:
+        device:
+
+    Returns:
+
     """
     model.eval()
     decoder = model.decoder

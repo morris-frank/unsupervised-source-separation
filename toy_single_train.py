@@ -22,8 +22,8 @@ def main(args):
 
     traindata = ToyDataSetSingle(f'{args.datadir}/toy_train_large.npy',
                                  crop=crop, μ=μ).loader(args.n_batch)
-    testdata = ToyDataSetSingle(f'{args.datadir}/toy_test_large.npy', crop=crop,
-                                μ=μ).loader(args.n_batch)
+    testdata = ToyDataSetSingle(f'{args.datadir}/toy_test_large.npy',
+                                crop=crop, μ=μ).loader(args.n_batch)
 
     train(model=model,
           loss_function=loss_function,

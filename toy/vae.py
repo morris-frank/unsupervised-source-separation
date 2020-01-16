@@ -57,7 +57,8 @@ class WavenetMultiVAE(WavenetVAE):
         logits = self._decode(x, x_q)
         return logits, x_q, x_q_log_prob
 
-    def test_forward(self, x: torch.Tensor, destroy: float = 0) -> torch.Tensor:
+    def test_forward(self, x: torch.Tensor, destroy: float = 0) \
+            -> torch.Tensor:
         embedding = self.encoder(x)
         q_loc = embedding[:, :self.latent_width, :]
         if destroy > 0:
@@ -66,7 +67,8 @@ class WavenetMultiVAE(WavenetVAE):
         logits = self._decode(x, q_loc)
         return logits
 
-    def _decode(self, x: torch.Tensor, embedding: torch.Tensor) -> torch.Tensor:
+    def _decode(self, x: torch.Tensor, embedding: torch.Tensor) \
+            -> torch.Tensor:
         x = shift1d(x, -1)
         logits = [dec(x, embedding) for dec in self.decoders]
         return torch.cat(logits, dim=1)
@@ -103,7 +105,8 @@ class ConditionalWavenetVAE(WavenetVAE):
         logits = self._decode(x, q_loc)
         return logits
 
-    def _decode(self, x: torch.Tensor, embedding: torch.Tensor) -> torch.Tensor:
+    def _decode(self, x: torch.Tensor, embedding: torch.Tensor) \
+            -> torch.Tensor:
         x = shift1d(x, -1)
         logits = self.decoder(x, embedding)
         return logits
