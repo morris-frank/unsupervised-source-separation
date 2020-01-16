@@ -1,34 +1,29 @@
 from nsynth.config import make_config
 from nsynth.training import train
-from toy.ae import WavenetMultiAE
-from toy.data import ToyDataSet
-from toy.optim import multiae_loss, multivae_loss
-from toy.vae import WavenetMultiVAE
+from toy.data import ToyDataSetSingle
+from toy.optim import vqvae_loss
+from toy.vae import ConditionalWavenetVQVAE
 
 
 def main(args):
-    model_class = WavenetMultiVAE if args.vae else WavenetMultiAE
     args.epochs = 50000
-    args.n_batch = 8
+    args.n_batch = 20
     μ = 100
-    ns = 4
-    β = 2
-    dβ = 0  # Removes annealing β
-    if args.vae:
-        loss_function = multivae_loss(ns, μ + 1, β=β, dβ=dβ)
-    else:
-        loss_function = multiae_loss(ns, μ + 1)
+    ns = 8
+    loss_function = vqvae_loss()
 
-    model = model_class(n=ns, latent_width=16, encoder_width=64,
-                        decoder_width=64, n_layers=10, n_blocks=3,
-                        out_channels=μ + 1,
-                        channels=1, gen=False)
+    device = f'cuda:{args.gpu[0]}' if args.gpu else 'cpu'
+
+    model = ConditionalWavenetVQVAE(n_sources=ns, K=ns, D=512, n_blocks=3,
+                                    n_layers=10, encoder_width=64,
+                                    decoder_width=32, in_channels=1,
+                                    out_channels=μ + 1, device=device)
     crop = 3 * 2 ** 10
 
-    traindata = ToyDataSet(f'{args.datadir}/toy_train.npy', crop=crop,
-                           μ=μ).loader(args.nbatch)
-    testdata = ToyDataSet(f'{args.datadir}/toy_test.npy', crop=crop,
-                          μ=μ).loader(args.nbatch)
+    traindata = ToyDataSetSingle(f'{args.datadir}/toy_train_large.npy',
+                                 crop=crop, μ=μ).loader(args.n_batch)
+    testdata = ToyDataSetSingle(f'{args.datadir}/toy_test_large.npy',
+                                crop=crop, μ=μ).loader(args.n_batch)
 
     train(model=model,
           loss_function=loss_function,
@@ -37,7 +32,7 @@ def main(args):
           testset=testdata,
           paths={'save': './models_toy/', 'log': './log_toy/'},
           iterpoints={'print': args.it_print, 'save': args.it_save,
-                      'test': args.ittest},
+                      'test': args.it_test},
           n_it=args.epochs,
           use_board=args.board,
           use_manual_scheduler=args.original_lr_scheduler,
