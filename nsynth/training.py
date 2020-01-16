@@ -106,7 +106,6 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
                 'loss': loss,
                 'args': model_args,
             }, save_path.format(it))
-            exit()
 
         # TEST THE MODEL
         if it % iterpoints['test'] == 0 or it == n_it - 1:
