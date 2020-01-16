@@ -1,10 +1,10 @@
 # Code
 
-- [x] NSynth with probabilistic latent space
-- [x] Generation code
 - [ ] Fast-gen code
 - [ ] Implement the Logit mixture from PixelCNN++
-- [ ] Implement VQ-VAE
+- [x] Implement VQ-VAE
+- [x] NSynth with probabilistic latent space
+- [x] Generation code
 - [x] Freq-plot: Fix it and hue by signal
 - [x] VAE-Noise: during sample-time ⇒ only use μ (no noise)
 
