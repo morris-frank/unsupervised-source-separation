@@ -11,8 +11,8 @@ class TemporalEncoder(nn.Module):
         """
 
         Args:
-            in_channels: Number of input channels
-            out_channels: Number of output channels
+            in_channels: Number of input in_channels
+            out_channels: Number of output in_channels
             n_blocks: Number of dilation blocks / stages
             n_layers: Number of layers in each stage / block
             width: Width of the hidden layers
@@ -24,9 +24,9 @@ class TemporalEncoder(nn.Module):
         assert kernel_size % 2 != 0
         pad = (kernel_size - 1) // 2
 
-        # Go from input channels to hidden width:
+        # Go from input in_channels to hidden width:
         self.init = nn.Conv1d(in_channels, width, kernel_size, padding=pad)
-        # Go from hidden width to final output channels
+        # Go from hidden width to final output in_channels
         self.final = nn.Sequential(
             nn.Conv1d(width, out_channels, 1),
             nn.AvgPool1d(kernel_size=pool_size)

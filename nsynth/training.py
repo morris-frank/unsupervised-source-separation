@@ -81,7 +81,7 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
             x, y = next(iloader)
 
         model.train()
-        loss, _ = loss_function(model, x, y, device, it/n_it)
+        loss, _ = loss_function(model, x, y, device, it / n_it)
         model.zero_grad()
         loss.backward()
         optimizer.step()

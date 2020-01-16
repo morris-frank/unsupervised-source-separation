@@ -6,8 +6,8 @@ from toy.vae import ConditionalWavenetVQVAE
 
 
 def main(args):
-    args.nit = 50000
-    args.nbatch = 20
+    args.epochs = 50000
+    args.n_batch = 20
     μ = 100
     ns = 8
     loss_function = vqvae_loss()
@@ -21,9 +21,9 @@ def main(args):
     crop = 3 * 2 ** 10
 
     traindata = ToyDataSetSingle(f'{args.datadir}/toy_train_large.npy',
-                                 crop=crop, μ=μ).loader(args.nbatch)
+                                 crop=crop, μ=μ).loader(args.n_batch)
     testdata = ToyDataSetSingle(f'{args.datadir}/toy_test_large.npy', crop=crop,
-                                μ=μ).loader(args.nbatch)
+                                μ=μ).loader(args.n_batch)
 
     train(model=model,
           loss_function=loss_function,
@@ -31,9 +31,9 @@ def main(args):
           trainset=traindata,
           testset=testdata,
           paths={'save': './models_toy/', 'log': './log_toy/'},
-          iterpoints={'print': args.itprint, 'save': args.itsave,
-                      'test': args.ittest},
-          n_it=args.nit,
+          iterpoints={'print': args.it_print, 'save': args.it_save,
+                      'test': args.it_test},
+          n_it=args.epochs,
           use_board=args.board,
           use_manual_scheduler=args.original_lr_scheduler,
           save_suffix=f'det_{ns}'

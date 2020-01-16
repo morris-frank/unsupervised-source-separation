@@ -8,8 +8,8 @@ from toy.vae import WavenetMultiVAE
 
 def main(args):
     model_class = WavenetMultiVAE if args.vae else WavenetMultiAE
-    args.nit = 50000
-    args.nbatch = 8
+    args.epochs = 50000
+    args.n_batch = 8
     μ = 100
     ns = 4
     β = 2
@@ -19,9 +19,9 @@ def main(args):
     else:
         loss_function = multiae_loss(ns, μ + 1)
 
-    model = model_class(n=ns, bottleneck_dims=16, encoder_width=64,
+    model = model_class(n=ns, latent_width=16, encoder_width=64,
                         decoder_width=64, n_layers=10, n_blocks=3,
-                        quantization_channels=μ + 1,
+                        out_channels=μ + 1,
                         channels=1, gen=False)
     crop = 3 * 2 ** 10
 
@@ -36,9 +36,9 @@ def main(args):
           trainset=traindata,
           testset=testdata,
           paths={'save': './models_toy/', 'log': './log_toy/'},
-          iterpoints={'print': args.itprint, 'save': args.itsave,
+          iterpoints={'print': args.it_print, 'save': args.it_save,
                       'test': args.ittest},
-          n_it=args.nit,
+          n_it=args.epochs,
           use_board=args.board,
           use_manual_scheduler=args.original_lr_scheduler,
           save_suffix=f'det_{ns}'
