@@ -102,8 +102,10 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
                 'it': it,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
-                'loss': loss
+                'loss': loss,
+                'args': model.args,
             }, save_path.format(it))
+            exit()
 
         # TEST THE MODEL
         if it % iterpoints['test'] == 0 or it == n_it - 1:

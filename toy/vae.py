@@ -111,6 +111,8 @@ class ConditionalWavenetVQVAE(nn.Module):
                  in_channels: int = 1, out_channels: int = 256,
                  device: str = 'cpu', ):
         super(ConditionalWavenetVQVAE, self).__init__()
+        self.args = locals().copy()
+        del self.args['self']
         self.device = device
         self.n_sources = n_sources
         self.encoder_params = dict(in_channels=in_channels, out_channels=D,

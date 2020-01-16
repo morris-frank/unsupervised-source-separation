@@ -20,14 +20,32 @@ def fig_summary(fname: str):
     df.destroy = df.destroy.astype('category')
     zer = df[df.destroy == 0.0].iloc[0].destroy
 
-    fig, axs = plt.subplots(3, 1)
-    axs = axs.flatten()
+    fig = plt.figure(figsize=(5, 8))
 
+    ax1 = fig.add_subplot(3, 2, 1)
+    plt.title('Influence of the latent embedding')
     sns.scatterplot(x='periodicity', y='loss', hue='destroy', data=df,
-                    palette=['r', 'g', 'b'], ax=axs[0])
-    sns.boxplot(x="destroy", y="loss", hue="shape", data=df, ax=axs[1])
+                    palette=['r', 'g', 'b'], ax=ax1)
+
+    ax2 = fig.add_subplot(3, 2, 3)
+    plt.title('Mean loss over different destroy and source shapes')
+    sns.boxplot(x="destroy", y="loss", hue="shape", data=df, ax=ax2)
+
+    ax3 = fig.add_subplot(3, 2, 5)
+    plt.title('Loss over shapes @ no destroy ')
     sns.scatterplot(x='periodicity', y='loss', hue='shape',
-                    data=df[df.destroy == zer], ax=axs[2])
+                    data=df[df.destroy == zer], ax=ax3)
+
+    ax4 = fig.add_subplot(2, 2, 2)
+    plt.title('Mean period/loss for a sample @ no destroy')
+    rdf = df[df.destroy == zer].groupby('n').agg('mean')
+    sns.relplot(x="periodicity", y="loss", data=rdf, ax=ax4)
+
+    ax5 = fig.add_subplot(2, 2, 4)
+    plt.title('Sum period/loss for a sample @ no destroy')
+    rdf = df[df.destroy == zer].groupby('n').agg('sum')
+    sns.relplot(x="periodicity", y="loss", data=rdf, ax=ax5)
+
     return fig
 
 

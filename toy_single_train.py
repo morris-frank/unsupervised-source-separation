@@ -9,20 +9,20 @@ def main(args):
     args.nit = 50000
     args.nbatch = 20
     μ = 100
-    ns = 4
+    ns = 8
     loss_function = vqvae_loss()
 
     device = f'cuda:{args.gpu[0]}' if args.gpu else 'cpu'
 
-    model = ConditionalWavenetVQVAE(n_sources=ns, K=4, D=512, n_blocks=3, n_layers=10,
-                                    encoder_width=64, decoder_width=32,
-                                    in_channels=1, out_channels=μ + 1,
-                                    device=device)
+    model = ConditionalWavenetVQVAE(n_sources=ns, K=ns, D=512, n_blocks=3,
+                                    n_layers=10, encoder_width=64,
+                                    decoder_width=32, in_channels=1,
+                                    out_channels=μ + 1, device=device)
     crop = 3 * 2 ** 10
 
-    traindata = ToyDataSetSingle(f'{args.datadir}/toy_train.npy', crop=crop,
-                                 μ=μ).loader(args.nbatch)
-    testdata = ToyDataSetSingle(f'{args.datadir}/toy_test.npy', crop=crop,
+    traindata = ToyDataSetSingle(f'{args.datadir}/toy_train_large.npy',
+                                 crop=crop, μ=μ).loader(args.nbatch)
+    testdata = ToyDataSetSingle(f'{args.datadir}/toy_test_large.npy', crop=crop,
                                 μ=μ).loader(args.nbatch)
 
     train(model=model,
