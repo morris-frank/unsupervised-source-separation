@@ -17,6 +17,7 @@ class WavenetVAE(AutoEncoder):
                  encoder_width: int, decoder_width: int, n_blocks: int = 3,
                  n_layers: int = 10):
         super(WavenetVAE, self).__init__()
+
         self.latent_width = latent_width
         self.encoder_params = dict(in_channels=in_channels,
                                    out_channels=2 * latent_width,
@@ -42,6 +43,8 @@ class WavenetVAE(AutoEncoder):
 class WavenetMultiVAE(WavenetVAE):
     def __init__(self, n: int, *args, **kwargs):
         super(WavenetMultiVAE, self).__init__(*args, **kwargs)
+        self.args = locals().copy()
+        del self.args['self']
 
         self.encoder = TemporalEncoder(**self.encoder_params)
         self.decoders = nn.ModuleList(
@@ -72,6 +75,9 @@ class WavenetMultiVAE(WavenetVAE):
 class ConditionalWavenetVAE(WavenetVAE):
     def __init__(self, n: int, *args, device: str = 'cpu', **kwargs):
         super(ConditionalWavenetVAE, self).__init__(*args, **kwargs)
+        self.args = locals().copy()
+        del self.args['self']
+
         self.encoder = ConditionalTemporalEncoder(n_classes=n, device=device,
                                                   **self.encoder_params)
         self.decoder = WavenetDecoder(**self.decoder_params)
@@ -112,6 +118,7 @@ class ConditionalWavenetVQVAE(nn.Module):
         super(ConditionalWavenetVQVAE, self).__init__()
         self.args = locals().copy()
         del self.args['self']
+
         self.device = device
         self.n_sources = n_sources
         self.encoder_params = dict(in_channels=in_channels, out_channels=D,

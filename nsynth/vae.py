@@ -31,6 +31,9 @@ class WavenetVAE(AutoEncoder):
         :param n_layers: number of layers in encoder and decoder
         """
         super(WavenetVAE, self).__init__()
+        self.args = locals().copy()
+        del self.args['self']
+
         self.latent_width = latent_width
         self.encoder = TemporalEncoder(
             in_channels=in_channels, out_channels=2 * latent_width,

@@ -29,6 +29,9 @@ class WavenetMultiAE(AutoEncoder):
         :param out_channels:
         """
         super(WavenetMultiAE, self).__init__()
+        self.args = locals().copy()
+        del self.args['self']
+
         self.latent_width = latent_width
         self.encoder = TemporalEncoder(
             in_channels=in_channels, out_channels=latent_width,

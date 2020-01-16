@@ -31,6 +31,9 @@ class WavenetAE(AutoEncoder):
         :param n_layers: number of layers in each block of encoder and decoder
         """
         super(WavenetAE, self).__init__()
+        self.args = locals().copy()
+        del self.args['self']
+
         self.encoder = TemporalEncoder(
             in_channels=in_channels, out_channels=latent_width,
             n_blocks=n_blocks, n_layers=n_layers, width=encoder_width
