@@ -3,15 +3,36 @@ import torch
 
 
 def destroy_along_axis(x: torch.Tensor, amount: float) -> torch.Tensor:
+    """
+
+    Args:
+        x:
+        amount:
+
+    Returns:
+
+    """
     if amount == 0:
         return x
     length = x.shape[1]
     for i in random.sample(range(length), int(amount * length)):
-        x[:, i, :] = 0.
+        if x.ndim == 3:
+            x[:, i, :] = 0.
+        else:
+            x[:, i] = 0.
     return x
 
 
 def toy2argmax(logits, ns):
+    """
+
+    Args:
+        logits:
+        ns:
+
+    Returns:
+
+    """
     μ = 101
     signals = []
     for i in range(ns):

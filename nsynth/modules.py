@@ -4,60 +4,7 @@ import torch
 from torch import dtype as torch_dtype
 from torch import nn
 
-from .functional import time_to_batch, batch_to_time
-
-
-class BlockWiseConv1d(nn.Conv1d):
-    """
-    Block-wise 1D-Convolution as used in original NSynth
-    [http://arxiv.org/abs/1704.01279].
-    """
-
-    def __init__(self,
-                 in_channels: int,
-                 out_channels: int,
-                 kernel_size: int = 1,
-                 block_size: int = 1,
-                 causal: bool = False,
-                 **kwargs):
-        """
-        Block-wise 1D-Convolution as used in original NSynth
-        [http://arxiv.org/abs/1704.01279].
-        Args:
-            in_channels: Num of Channels of the Input
-            out_channels: Num of Filters in the Convolution
-            kernel_size: Size of the Filters
-            block_size: Length of the Blocks we split the input into,
-                with block size == 1 ⇒ same as nn.Conv1d!
-            causal: Whether to do it Causal or not
-            **kwargs:
-        """
-        super(BlockWiseConv1d, self).__init__(in_channels, out_channels,
-                                              kernel_size, **kwargs)
-        self.block_size = block_size
-
-        assert kernel_size % 2 != 0
-        assert block_size >= 1
-
-        if causal:
-            pad = (kernel_size - 1, 0)
-        else:
-            pad = ((kernel_size - 1) // 2, (kernel_size - 1) // 2)
-        self.pad = nn.ConstantPad1d(pad, 0)
-
-        self.weight_init()
-
-    def weight_init(self):
-        weight, bias = self.weight, self.bias
-        self.weight = nn.init.xavier_uniform_(weight)
-        self.bias = nn.init.constant_(bias, 0.)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        y = time_to_batch(x, self.block_size)
-        y = self.pad(y)
-        y = super(BlockWiseConv1d, self).forward(y)
-        y = batch_to_time(y, self.block_size)
-        return y
+from .functions import VectorQuantization, VectorQuantizationStraightThrough
 
 
 class DilatedQueue:
@@ -94,6 +41,31 @@ class DilatedQueue:
         self.idx_en, self.idx_de = 0, 0
         self.data = torch.zeros((self.channels, self.size),
                                 dtype=self.dtype).to(device)
+
+
+class VQEmbedding(nn.Module):
+    def __init__(self, K, D):
+        super(VQEmbedding, self).__init__()
+        self.embedding = nn.Embedding(K, D)
+        self.embedding.weight.data.uniform_(-1. / K, 1. / K)
+
+    def forward(self, z_e_x):
+        z_e_x_ = z_e_x.permute(0, 2, 1).contiguous()
+        latents = VectorQuantization.apply(z_e_x_, self.embedding.weight)
+        return latents
+
+    def straight_through(self, z_e_x):
+        z_e_x_ = z_e_x.permute(0, 2, 1).contiguous()
+        z_q_x_, indices = VectorQuantizationStraightThrough.apply(
+            z_e_x_, self.embedding.weight.detach())
+        z_q_x = z_q_x_.permute(0, 2, 1).contiguous()
+
+        z_q_x_bar_flatten = torch.index_select(self.embedding.weight,
+                                               dim=0, index=indices)
+        z_q_x_bar_ = z_q_x_bar_flatten.view_as(z_e_x_)
+        z_q_x_bar = z_q_x_bar_.permute(0, 2, 1).contiguous()
+
+        return z_q_x, z_q_x_bar
 
 
 class AutoEncoder(nn.Module):

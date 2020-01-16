@@ -58,6 +58,7 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
     os.makedirs(paths['save'], exist_ok=True)
     save_path = f'{paths["save"]}/{datetime.today():%y%m%d}_{{:06}}_' \
                 f'{type(model).__name__}_{save_suffix}.pt'
+    model_args = model.args
 
     # Move model to device(s):
     device = f'cuda:{gpu[0]}' if gpu else 'cpu'
@@ -80,7 +81,7 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
             x, y = next(iloader)
 
         model.train()
-        loss, _ = loss_function(model, x, y, device, it/n_it)
+        loss, _ = loss_function(model, x, y, device, it / n_it)
         model.zero_grad()
         loss.backward()
         optimizer.step()
@@ -102,7 +103,8 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
                 'it': it,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
-                'loss': loss
+                'loss': loss,
+                'args': model_args,
             }, save_path.format(it))
 
         # TEST THE MODEL

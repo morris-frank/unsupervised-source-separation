@@ -1,10 +1,6 @@
 from argparse import ArgumentParser
 from os import path
 
-from .autoencoder import WavenetAE
-from .modules import AutoEncoder
-from .vae import WavenetVAE
-
 
 def make_config(version: str) -> ArgumentParser:
     parser = ArgumentParser()
@@ -17,9 +13,9 @@ def make_config(version: str) -> ArgumentParser:
                                  '(containing the split directories.)')
 
         gtrain = parser.add_argument_group('Training options')
-        gtrain.add_argument('--nit', type=int, default=250000,
+        gtrain.add_argument('-ne', type=int, default=250000, dest='epochs',
                             help='Number of batches to train for.')
-        gtrain.add_argument('--nbatch', type=int, default=32,
+        gtrain.add_argument('-nb', type=int, default=32, dest='n_batch',
                             help='The batch size.')
         gtrain.add_argument('--crop_length', type=int, default=6144,
                             help='Length of the actual training sub-samples'
@@ -35,11 +31,11 @@ def make_config(version: str) -> ArgumentParser:
                                  'dataset.')
 
         glog = parser.add_argument_group('Logging options')
-        glog.add_argument('--itprint', type=int, default=20,
+        glog.add_argument('-ip', type=int, default=20, dest='it_print',
                           help='Frequency of loss print.')
-        glog.add_argument('--itsave', type=int, default=5000,
+        glog.add_argument('-is', type=int, default=5000, dest='it_save',
                           help='Frequency of model checkpoints.')
-        glog.add_argument('--ittest', type=int, default=500,
+        glog.add_argument('-it', type=int, default=500, dest='it_test',
                           help='Frequency of running the test set.')
         glog.add_argument('--savedir', type=path.abspath, default='./models/',
                           help='Path to save the checkpoints to.')
@@ -64,34 +60,18 @@ def make_config(version: str) -> ArgumentParser:
                           help='Path to the saved weight file.')
 
     gmodel = parser.add_argument_group('Model options')
-    gmodel.add_argument('--bottleneck_dims', type=int, default=16,
+    gmodel.add_argument('-wl', type=int, default=16, dest='latent_width',
                         help='Size ot the Autoencoder Bottleneck.')
-    gmodel.add_argument('--encoder_width', type=int, default=128,
+    gmodel.add_argument('-we', type=int, default=128, dest='encoder_width',
                         help='Dimensions of the encoders hidden layers.')
-    gmodel.add_argument('--decoder_width', type=int, default=512,
+    gmodel.add_argument('-wd', type=int, default=512, dest='decoder_width',
                         help='Dimensions of the decoders hidden layers.')
-    gmodel.add_argument('--nlayers', type=int, default=10, dest='n_layers',
+    gmodel.add_argument('-nl', type=int, default=10, dest='n_layers',
                         help='Number of dilation layers in each block.')
-    gmodel.add_argument('--nblocks', type=int, default=3, dest='n_blocks',
+    gmodel.add_argument('-nb', type=int, default=3, dest='n_blocks',
                         help='Number of blocks.')
-    gmodel.add_argument('--quant', type=int, default=256,
-                        dest='quantization_channels',
-                        help='Number of channels to quantise with.')
-    gmodel.add_argument('--vae', action='store_true',
+    gmodel.add_argument('-nc', type=int, default=256, dest='out_channels',
+                        help='Number of in_channels to quant the output with.')
+    gmodel.add_argument('-vae', action='store_true',
                         help='Whether to use the VAE model.')
     return parser
-
-
-def make_model(args) -> AutoEncoder:
-    model_class = WavenetVAE if args.vae else WavenetAE
-
-    args.decoder_gen = args.decoder_gen if 'decoder_gen' in args else False
-
-    # Build model
-    model = model_class(bottleneck_dims=args.bottleneck_dims,
-                        encoder_width=args.encoder_width,
-                        decoder_width=args.decoder_width,
-                        n_layers=args.n_layers, n_blocks=args.n_blocks,
-                        quantization_channels=args.quantization_channels,
-                        gen=args.decoder_gen)
-    return model

@@ -15,6 +15,40 @@ from .functional import toy2argmax
 mpl.use('TkAgg')
 
 
+def fig_summary(fname: str):
+    df = pd.read_pickle(fname)
+    df.destroy = df.destroy.astype('category')
+    zer = df[df.destroy == 0.0].iloc[0].destroy
+
+    fig = plt.figure(figsize=(5, 8))
+
+    ax1 = fig.add_subplot(3, 2, 1)
+    plt.title('Influence of the latent embedding')
+    sns.scatterplot(x='periodicity', y='loss', hue='destroy', data=df,
+                    palette=['r', 'g', 'b'], ax=ax1)
+
+    ax2 = fig.add_subplot(3, 2, 3)
+    plt.title('Mean loss over different destroy and source shapes')
+    sns.boxplot(x="destroy", y="loss", hue="shape", data=df, ax=ax2)
+
+    ax3 = fig.add_subplot(3, 2, 5)
+    plt.title('Loss over shapes @ no destroy ')
+    sns.scatterplot(x='periodicity', y='loss', hue='shape',
+                    data=df[df.destroy == zer], ax=ax3)
+
+    ax4 = fig.add_subplot(2, 2, 2)
+    plt.title('Mean period/loss for a sample @ no destroy')
+    rdf = df[df.destroy == zer].groupby('n').agg('mean')
+    sns.relplot(x="periodicity", y="loss", data=rdf, ax=ax4)
+
+    ax5 = fig.add_subplot(2, 2, 4)
+    plt.title('Sum period/loss for a sample @ no destroy')
+    rdf = df[df.destroy == zer].groupby('n').agg('sum')
+    sns.relplot(x="periodicity", y="loss", data=rdf, ax=ax5)
+
+    return fig
+
+
 def fig_reconstruction(mix, stems, pred, ns, length):
     fig, axs = plt.subplots(ns + 1, 2, sharex='all')
     for i in range(ns):
@@ -55,7 +89,7 @@ def prepare_plot_freq_loss(model: WavenetMultiAE, data: ToyDataSet, ns: int,
                            μ: int, destroy: float = 0.,
                            single: bool = False,
                            device: str = 'cpu') -> pd.DataFrame:
-    d = {'shape': [], 'loss': [], 'periodicity': [], 'destroy': []}
+    d = {'n': [], 'shape': [], 'loss': [], 'periodicity': [], 'destroy': []}
     model = model.to(device)
     model.eval()
     for n in trange(len(data.data)):
@@ -66,6 +100,7 @@ def prepare_plot_freq_loss(model: WavenetMultiAE, data: ToyDataSet, ns: int,
         logits = meta_forward(model, mix.to(device), ns, single, destroy)
         logits = logits.cpu()
         for i in range(ns):
+            d['n'].append(n)
             d['shape'].append(prms[i]['shape'])
             d['destroy'].append(destroy)
             d['periodicity'].append(prms[i]['φ'])
@@ -78,6 +113,6 @@ def prepare_plot_freq_loss(model: WavenetMultiAE, data: ToyDataSet, ns: int,
 def plot_freq_loss(fname):
     df = pd.read_pickle(fname)
     df.destroy = df.destroy.astype('category')
-    zer = df.destroy.iloc[0]
+    # zer = df.destroy.iloc[0]
     sns.scatterplot(x='periodicity', y='loss', hue='shape', data=df)
     plt.show()

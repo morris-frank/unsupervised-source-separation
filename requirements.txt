@@ -1,3 +1,4 @@
+pandas
 musdb==0.3.1
 numpy>=1.17.3
 stempeg==0.1.8

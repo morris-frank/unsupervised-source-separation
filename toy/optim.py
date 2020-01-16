@@ -28,11 +28,11 @@ def sample_kl(x_q: dist.Normal, x_q_log_prob: torch.Tensor,
 def vqvae_loss(β: float = 1.1) -> Callable:
     def loss_function(model: nn.Module, x: Tuple[torch.Tensor, torch.Tensor],
                       y: torch.Tensor, device: str, progress: float):
+        del progress
         mixes, labels = x
         x_tilde, z_e_x, z_q_x = model(mixes, labels)
-
         # Reconstruction loss
-        loss_recons = F.mse_loss(x_tilde, y[:, 0, :].to(device))
+        loss_recons = F.cross_entropy(x_tilde, y[:, 0, :].to(device))
         # Vector quantization objective
         loss_vq = F.mse_loss(z_q_x, z_e_x.detach())
         # Commitment objective

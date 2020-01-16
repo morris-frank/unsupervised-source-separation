@@ -1,6 +1,6 @@
 import matplotlib as mpl
 
-from .autoencoder import WavenetAE
+from .ae import WavenetAE
 from .config import make_config
 from .scheduler import ManualMultiStepLR
 from .vae import WavenetVAE

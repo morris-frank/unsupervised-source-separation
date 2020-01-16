@@ -49,8 +49,8 @@ class ToyDataSetSingle(ToyDataSet):
     def __init__(self, *args, **kwargs):
         super(ToyDataSetSingle, self).__init__(*args, **kwargs)
 
-    def __getitem__(self, item: int) -> Tuple[
-        Tuple[torch.Tensor, int], torch.Tensor]:
+    def __getitem__(self, item: int) \
+            -> Tuple[Tuple[torch.Tensor, int], torch.Tensor]:
         mix, sources = super(ToyDataSetSingle, self).__getitem__(item)
         t = random.randint(0, sources.shape[0] - 1)
         source = sources[None, t, :]
