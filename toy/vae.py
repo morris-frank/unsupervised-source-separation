@@ -46,7 +46,11 @@ class WavenetMultiVAE(WavenetVAE):
         super(WavenetMultiVAE, self).__init__(*args, **kwargs)
         self.params = clean_init_args(locals().copy())
 
-        self.encoder = TemporalEncoder(**self.encoder_params)
+        self.encoder = TemporalEncoder(conditional_dims=[self.latent_width],
+                                       **self.encoder_params)
+
+        self.decoder_params['conditional_dims'] = [(self.latent_width, False),
+                                                   (self.latent_width, False)]
         self.decoders = nn.ModuleList(
             [WavenetDecoder(**self.decoder_params) for _ in range(n)])
 
@@ -72,43 +76,6 @@ class WavenetMultiVAE(WavenetVAE):
         x = shift1d(x, -1)
         logits = [dec(x, embedding) for dec in self.decoders]
         return torch.cat(logits, dim=1)
-
-
-class ConditionalWavenetVAE(WavenetVAE):
-    def __init__(self, n: int, *args, device: str = 'cpu', **kwargs):
-        super(ConditionalWavenetVAE, self).__init__(*args, **kwargs)
-        self.params = clean_init_args(locals().copy())
-
-        self.encoder = TemporalEncoder(conditional_dims=[n], device=device,
-                                       **self.encoder_params)
-        self.decoder = WavenetDecoder(**self.decoder_params)
-        self.n, self.device = n, device
-
-    def _condition(self, labels: torch.Tensor) -> torch.Tensor:
-        return F.one_hot(labels, self.n).float().to(self.device)
-
-    def forward(self, x: torch.Tensor, labels: torch.Tensor):
-        embedding = self.encoder(x, self._condition(labels))
-        x_q, x_q_log_prob = self._latent(embedding)
-        logits = self._decode(x, x_q)
-
-        return logits, x_q, x_q_log_prob
-
-    def test_forward(self, x: torch.Tensor, labels: torch.Tensor,
-                     destroy: float = 0):
-        embedding = self.encoder(x, [self._condition(labels)])
-        q_loc = embedding[:, :self.latent_width, :]
-        if destroy > 0:
-            q_loc = destroy_along_axis(q_loc, destroy)
-
-        logits = self._decode(x, q_loc)
-        return logits
-
-    def _decode(self, x: torch.Tensor, embedding: torch.Tensor) \
-            -> torch.Tensor:
-        x = shift1d(x, -1)
-        logits = self.decoder(x, embedding)
-        return logits
 
 
 class ConditionalWavenetVQVAE(nn.Module):

@@ -1,8 +1,8 @@
 import math
+from itertools import product
+
 import torch
 import torch.nn.functional as F
-from itertools import product
-from typing import List
 
 
 def range_product(*args: int):

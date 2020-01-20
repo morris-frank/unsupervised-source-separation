@@ -10,7 +10,7 @@ class TemporalEncoder(nn.Module):
     def __init__(self, in_channels: int = 1, out_channels: int = 16,
                  n_blocks: int = 3, n_layers: int = 10, width: int = 128,
                  conditional_dims: List[int] = None, kernel_size: int = 3,
-                 pool_size: int = 1, device: str = 'cpu'):
+                 pool_size: int = 1):
         super(TemporalEncoder, self).__init__()
         assert kernel_size % 2 != 0
         pad = (kernel_size - 1) // 2
@@ -21,8 +21,6 @@ class TemporalEncoder(nn.Module):
 
         conditional_dims = conditional_dims or []
         self.n_conds = len(conditional_dims)
-
-        self.device = device
 
         self.init = nn.Conv1d(in_channels, width, kernel_size, padding=pad)
         self.final = nn.Sequential(
