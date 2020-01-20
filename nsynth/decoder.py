@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Union
 
 import torch
 from torch import nn
@@ -7,15 +7,10 @@ from .functional import range_product, dilate
 
 
 class WavenetDecoder(nn.Module):
-    def __init__(self,
-                 in_channels: int = 1,
-                 out_channels: int = 256,
-                 n_blocks: int = 3,
-                 n_layers: int = 10,
-                 residual_width: int = 512,
-                 skip_width: int = 256,
-                 conditional_dims=None,
-                 kernel_size: int = 3):
+    def __init__(self, in_channels: int = 1, out_channels: int = 256,
+                 n_blocks: int = 3, n_layers: int = 10,
+                 residual_width: int = 512, skip_width: int = 256,
+                 conditional_dims: List[int] = None, kernel_size: int = 3):
         super(WavenetDecoder, self).__init__()
         if conditional_dims is None:
             conditional_dims = [(16, False)]
@@ -85,7 +80,8 @@ class WavenetDecoder(nn.Module):
         return cond
 
     def forward(self, x: torch.Tensor,
-                conditionals: List[torch.Tensor]) -> torch.Tensor:
+                conditionals: Union[torch.Tensor, List[torch.Tensor]]) \
+            -> torch.Tensor:
         if isinstance(conditionals, torch.Tensor):
             conditionals = [conditionals]
         assert len(conditionals) == self.n_conds

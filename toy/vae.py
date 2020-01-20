@@ -80,7 +80,8 @@ class ConditionalWavenetVAE(WavenetVAE):
         self.args = locals().copy()
         del self.args['self']
 
-        self.encoder = ConditionalTemporalEncoder(n_classes=n, device=device,
+        self.encoder = ConditionalTemporalEncoder(conditional_dims=[n],
+                                                  device=device,
                                                   **self.encoder_params)
         self.decoder = WavenetDecoder(**self.decoder_params)
         self.n, self.device = n, device
@@ -97,7 +98,7 @@ class ConditionalWavenetVAE(WavenetVAE):
 
     def test_forward(self, x: torch.Tensor, labels: torch.Tensor,
                      destroy: float = 0):
-        embedding = self.encoder(x, self._condition(labels))
+        embedding = self.encoder(x, [self._condition(labels)])
         q_loc = embedding[:, :self.latent_width, :]
         if destroy > 0:
             q_loc = destroy_along_axis(q_loc, destroy)
@@ -126,8 +127,8 @@ class ConditionalWavenetVQVAE(nn.Module):
         self.n_sources = n_sources
         self.encoder_params = dict(in_channels=in_channels, out_channels=D,
                                    n_blocks=n_blocks, n_layers=n_layers,
-                                   width=encoder_width, n_classes=n_sources,
-                                   device=device)
+                                   width=encoder_width, device=device,
+                                   conditional_dims=[n_sources])
 
         self.decoder_params = dict(in_channels=in_channels,
                                    out_channels=out_channels,
@@ -145,23 +146,9 @@ class ConditionalWavenetVQVAE(nn.Module):
     def _condition(self, labels: torch.Tensor) -> torch.Tensor:
         return F.one_hot(labels, self.n_sources).float().to(self.device)
 
-    def encode(self, x: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
-        source_cond = self._condition(labels)
-        embedding = self.encoder(x, source_cond)
-        latents = self.codebook(embedding)
-        return latents
-
-    def decode(self, x: torch.Tensor, embedding: torch.Tensor,
-               labels: torch.Tensor) -> torch.Tensor:
-        # (B, D, H, W)
-        source_cond = self._condition(labels)
-        z_q_x = self.codebook.embedding(embedding).permute(0, 2, 1)
-        x_tilde = self.decoder(x, [z_q_x, source_cond])
-        return x_tilde
-
     def forward(self, x: torch.Tensor, labels: torch.Tensor):
         source_cond = self._condition(labels)
-        embedding = self.encoder(x, source_cond)
+        embedding = self.encoder(x, [source_cond])
         z_q_x_st, z_q_x = self.codebook.straight_through(embedding)
         x_tilde = self.decoder(x, [z_q_x_st])
         return x_tilde, embedding, z_q_x
@@ -169,7 +156,7 @@ class ConditionalWavenetVQVAE(nn.Module):
     def test_forward(self, x: torch.Tensor, labels: torch.Tensor,
                      destroy: float = 0):
         source_cond = self._condition(labels)
-        embedding = self.encoder(x, source_cond)
+        embedding = self.encoder(x, [source_cond])
         if destroy > 0:
             embedding = destroy_along_axis(embedding, destroy)
         x_tilde = self.decoder(x, [embedding])
