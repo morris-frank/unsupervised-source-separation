@@ -6,7 +6,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from nsynth.decoder import WavenetDecoder
-from nsynth.encoder import TemporalEncoder, ConditionalTemporalEncoder
+from nsynth.encoder import TemporalEncoder
 from nsynth.functional import shift1d
 from nsynth.modules import AutoEncoder, VQEmbedding
 from .functional import destroy_along_axis
@@ -80,9 +80,8 @@ class ConditionalWavenetVAE(WavenetVAE):
         self.args = locals().copy()
         del self.args['self']
 
-        self.encoder = ConditionalTemporalEncoder(conditional_dims=[n],
-                                                  device=device,
-                                                  **self.encoder_params)
+        self.encoder = TemporalEncoder(conditional_dims=[n], device=device,
+                                       **self.encoder_params)
         self.decoder = WavenetDecoder(**self.decoder_params)
         self.n, self.device = n, device
 
@@ -138,7 +137,7 @@ class ConditionalWavenetVQVAE(nn.Module):
                                    skip_width=decoder_width,
                                    residual_width=2 * decoder_width)
 
-        self.encoder = ConditionalTemporalEncoder(**self.encoder_params)
+        self.encoder = TemporalEncoder(**self.encoder_params)
 
         self.decoder = WavenetDecoder(**self.decoder_params)
         self.codebook = VQEmbedding(K, D)

@@ -16,10 +16,10 @@ class WavenetDecoder(nn.Module):
             conditional_dims = [(16, False)]
 
         assert kernel_size % 2 != 0
+        pad = (kernel_size - 1) // 2
         self.n_conds = len(conditional_dims)
         self.n_blocks, self.n_layers = n_blocks, n_layers
 
-        # TODO: prime factors
         self.dilations = [2 ** l for _, l in
                           range_product(n_blocks, n_layers)] + [1]
 
@@ -27,24 +27,35 @@ class WavenetDecoder(nn.Module):
                                    padding=(kernel_size - 1) // 2)
         self.init_skip = nn.Conv1d(residual_width, skip_width, 1)
 
-        self.filter_conv = self._make_module_list(
-            residual_width, residual_width, kernel_size)
-        self.gate_conv = self._make_module_list(
-            residual_width, residual_width, kernel_size)
-        self.skip_conv = self._make_module_list(
-            residual_width, skip_width, 1)
-        self.feat_conv = self._make_module_list(
-            residual_width, residual_width, 1)
+        self.filter_conv, self.gate_conv = nn.ModuleList(), nn.ModuleList()
+        self.skip_conv, self.feat_conv = nn.ModuleList(), nn.ModuleList()
+        self.filter_cond_conv = nn.ModuleList(
+            nn.ModuleList for _ in range(self.n_conds))
+        self.gate_cond_conv = nn.ModuleList(
+            nn.ModuleList for _ in range(self.n_conds))
+        for _, _ in range_product(self.n_blocks, self.n_layers):
+            self.filter_conv.append(
+                nn.Conv1d(residual_width, residual_width, kernel_size,
+                          padding=pad, bias=False))
+            self.gate_conv.append(
+                nn.Conv1d(residual_width, residual_width, kernel_size,
+                          padding=pad, bias=False))
+            self.skip_conv.append(
+                nn.Conv1d(residual_width, skip_width, 1, bias=False))
+            self.feat_conv.append(
+                nn.Conv1d(residual_width, residual_width, 1, bias=False))
 
-        self.filter_cond_conv = nn.ModuleList()
-        self.gate_cond_conv = nn.ModuleList()
-        for dim, lin in conditional_dims:
-            self.filter_cond_conv.append(
-                self._make_module_list(dim, residual_width, 1, lin)
-            )
-            self.gate_cond_conv.append(
-                self._make_module_list(dim, residual_width, 1, lin)
-            )
+            for i, (dim, linear) in enumerate(conditional_dims):
+                if linear:
+                    self.filter_cond_conv[i].append(
+                        nn.Linear(dim, residual_width))
+                    self.gate_cond_conv[i].append(
+                        nn.Linear(dim, residual_width))
+                else:
+                    self.filter_cond_conv[i].append(
+                        nn.Conv1d(dim, residual_width, 1, bias=False))
+                    self.gate_cond_conv[i].append(
+                        nn.Conv1d(dim, residual_width, 1, bias=False))
 
         self.final_skip = nn.Sequential(
             nn.ReLU(),
@@ -55,20 +66,6 @@ class WavenetDecoder(nn.Module):
             nn.ReLU(),
             nn.Conv1d(skip_width, out_channels, 1)
         )
-
-    def _make_module_list(self, in_channels: int, out_channels: int,
-                          kernel_size: int, linear: bool = False) \
-            -> nn.ModuleList:
-        module_list = []
-        pad = (kernel_size - 1) // 2
-        for _, layer in range_product(self.n_blocks, self.n_layers):
-            if linear:
-                ly = nn.Linear(in_channels, out_channels)
-            else:
-                ly = nn.Conv1d(in_channels, out_channels, kernel_size,
-                               bias=False, padding=pad)
-            module_list.append(ly)
-        return nn.ModuleList(module_list)
 
     @staticmethod
     def _scale_cond(cond: torch.Tensor, dilation: int, channels: int):

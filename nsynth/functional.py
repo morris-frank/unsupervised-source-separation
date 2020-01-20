@@ -2,6 +2,7 @@ import math
 import torch
 import torch.nn.functional as F
 from itertools import product
+from typing import List
 
 
 def range_product(*args: int):
@@ -52,7 +53,7 @@ def shift1d(x: torch.Tensor, shift: int) -> torch.Tensor:
     return y.contiguous()
 
 
-def encode_μ_law(x: torch.Tensor, μ: int = 255, cast: bool = False)\
+def encode_μ_law(x: torch.Tensor, μ: int = 255, cast: bool = False) \
         -> torch.Tensor:
     """
     Encodes the input tensor element-wise with μ-law encoding
