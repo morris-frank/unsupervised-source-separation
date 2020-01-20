@@ -8,6 +8,7 @@ from torch.nn import functional as F
 from .decoder import WavenetDecoder
 from .encoder import TemporalEncoder
 from .functional import shift1d
+from .utils import clean_init_args
 from .modules import AutoEncoder
 
 
@@ -31,8 +32,7 @@ class WavenetVAE(AutoEncoder):
         :param n_layers: number of layers in encoder and decoder
         """
         super(WavenetVAE, self).__init__()
-        self.args = locals().copy()
-        del self.args['self']
+        self.params = clean_init_args(locals().copy())
 
         self.latent_width = latent_width
         self.encoder = TemporalEncoder(

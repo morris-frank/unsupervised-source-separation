@@ -9,6 +9,7 @@ from nsynth.decoder import WavenetDecoder
 from nsynth.encoder import TemporalEncoder
 from nsynth.functional import shift1d
 from nsynth.modules import AutoEncoder, VQEmbedding
+from nsynth.utils import clean_init_args
 from .functional import destroy_along_axis
 
 
@@ -43,8 +44,7 @@ class WavenetVAE(AutoEncoder):
 class WavenetMultiVAE(WavenetVAE):
     def __init__(self, n: int, *args, **kwargs):
         super(WavenetMultiVAE, self).__init__(*args, **kwargs)
-        self.args = locals().copy()
-        del self.args['self']
+        self.params = clean_init_args(locals().copy())
 
         self.encoder = TemporalEncoder(**self.encoder_params)
         self.decoders = nn.ModuleList(
@@ -77,8 +77,7 @@ class WavenetMultiVAE(WavenetVAE):
 class ConditionalWavenetVAE(WavenetVAE):
     def __init__(self, n: int, *args, device: str = 'cpu', **kwargs):
         super(ConditionalWavenetVAE, self).__init__(*args, **kwargs)
-        self.args = locals().copy()
-        del self.args['self']
+        self.params = clean_init_args(locals().copy())
 
         self.encoder = TemporalEncoder(conditional_dims=[n], device=device,
                                        **self.encoder_params)
@@ -119,8 +118,7 @@ class ConditionalWavenetVQVAE(nn.Module):
                  in_channels: int = 1, out_channels: int = 256,
                  device: str = 'cpu', ):
         super(ConditionalWavenetVQVAE, self).__init__()
-        self.args = locals().copy()
-        del self.args['self']
+        self.params = clean_init_args(locals().copy())
 
         self.device = device
         self.n_sources = n_sources

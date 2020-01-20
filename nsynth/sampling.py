@@ -26,11 +26,11 @@ def load_model(fp: str, device: str, model: nn.Module, train: bool = False) \
     save_point = torch.load(fp, map_location=torch.device(device))
     state_dict = save_point['model_state_dict']
 
-    if 'args' in save_point:
-        kwargs = save_point['args'].copy()
-        del kwargs['__class__']
-        del kwargs['device']
-        model = save_point['args']['__class__'](**kwargs)
+    if 'params' in save_point:
+        _class = save_point['params']['__class__']
+        args = save_point['params']['args'].copy()
+        kwargs = save_point['params']['kwargs'].copy()
+        model = _class(*args, **kwargs)
 
     if next(iter(state_dict.keys())).startswith('module.'):
         _state_dict = OrderedDict({k[7:]: v for k, v in state_dict.items()})

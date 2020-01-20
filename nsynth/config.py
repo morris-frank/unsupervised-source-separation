@@ -66,9 +66,9 @@ def make_config(version: str) -> ArgumentParser:
                         help='Dimensions of the encoders hidden layers.')
     gmodel.add_argument('-wd', type=int, default=512, dest='decoder_width',
                         help='Dimensions of the decoders hidden layers.')
-    gmodel.add_argument('-nl', type=int, default=10, dest='n_layers',
+    gmodel.add_argument('-nlayer', type=int, default=10, dest='n_layers',
                         help='Number of dilation layers in each block.')
-    gmodel.add_argument('-nb', type=int, default=3, dest='n_blocks',
+    gmodel.add_argument('-nblock', type=int, default=3, dest='n_blocks',
                         help='Number of blocks.')
     gmodel.add_argument('-nc', type=int, default=256, dest='out_channels',
                         help='Number of in_channels to quant the output with.')

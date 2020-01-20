@@ -1,8 +1,8 @@
 from nsynth.config import make_config
 from nsynth.training import train
 from toy.data import ToyDataSetSingle
-from toy.optim import vqvae_loss
-from toy.vae import ConditionalWavenetVQVAE
+from toy.optim import vqvae_loss, multivae_loss
+from toy.vae import ConditionalWavenetVQVAE, WavenetMultiVAE
 
 
 def main(args):
@@ -10,14 +10,20 @@ def main(args):
     args.n_batch = 20
     μ = 100
     ns = 8
-    loss_function = vqvae_loss()
 
     device = f'cuda:{args.gpu[0]}' if args.gpu else 'cpu'
 
-    model = ConditionalWavenetVQVAE(n_sources=ns, K=ns, D=512, n_blocks=3,
-                                    n_layers=10, encoder_width=64,
-                                    decoder_width=32, in_channels=1,
-                                    out_channels=μ + 1, device=device)
+    if args.vae:
+        model = WavenetMultiVAE(n=4, in_channels=1, out_channels=μ + 1,
+                                latent_width=32, encoder_width=64,
+                                decoder_width=32)
+        loss_function = multivae_loss(4, μ=μ + 1, β=1.1)
+    else:
+        model = ConditionalWavenetVQVAE(n_sources=ns, K=ns, D=512, n_blocks=3,
+                                        n_layers=10, encoder_width=64,
+                                        decoder_width=32, in_channels=1,
+                                        out_channels=μ + 1, device=device)
+        loss_function = vqvae_loss()
     crop = 3 * 2 ** 10
 
     traindata = ToyDataSetSingle(f'{args.datadir}/toy_train_large.npy',

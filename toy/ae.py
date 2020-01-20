@@ -5,6 +5,7 @@ from nsynth.decoder import WavenetDecoder
 from nsynth.encoder import TemporalEncoder
 from nsynth.functional import shift1d
 from nsynth.modules import AutoEncoder
+from nsynth.utils import clean_init_args
 from .functional import destroy_along_axis
 
 
@@ -29,8 +30,7 @@ class WavenetMultiAE(AutoEncoder):
         :param out_channels:
         """
         super(WavenetMultiAE, self).__init__()
-        self.args = locals().copy()
-        del self.args['self']
+        self.params = clean_init_args(locals().copy())
 
         self.latent_width = latent_width
         self.encoder = TemporalEncoder(

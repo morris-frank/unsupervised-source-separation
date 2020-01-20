@@ -8,6 +8,7 @@ from .decoder import WavenetDecoder
 from .encoder import TemporalEncoder
 from .functional import shift1d
 from .modules import AutoEncoder
+from .utils import clean_init_args
 
 
 class WavenetAE(AutoEncoder):
@@ -31,8 +32,7 @@ class WavenetAE(AutoEncoder):
         :param n_layers: number of layers in each block of encoder and decoder
         """
         super(WavenetAE, self).__init__()
-        self.args = locals().copy()
-        del self.args['self']
+        self.params = clean_init_args(locals().copy())
 
         self.encoder = TemporalEncoder(
             in_channels=in_channels, out_channels=latent_width,
