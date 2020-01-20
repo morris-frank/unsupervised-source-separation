@@ -16,7 +16,7 @@ def main():
     parser = ArgumentParser()
     parser.add_argument('--weights', type=abspath, required=True)
     parser.add_argument('--data', type=abspath, required=True)
-    parser.add_argument('-ns', type=int, default=4)
+    parser.add_argument('-ns', type=int, default=8)
     parser.add_argument('-μ', type=int, default=100)
     parser.add_argument('--mode', type=str, default='example')
     parser.add_argument('--length', type=int, default=500)

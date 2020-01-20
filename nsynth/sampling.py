@@ -29,6 +29,7 @@ def load_model(fp: str, device: str, model: nn.Module, train: bool = False) \
     if 'args' in save_point:
         kwargs = save_point['args'].copy()
         del kwargs['__class__']
+        del kwargs['device']
         model = save_point['args']['__class__'](**kwargs)
 
     if next(iter(state_dict.keys())).startswith('module.'):
