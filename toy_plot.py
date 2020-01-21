@@ -7,7 +7,7 @@ import pandas as pd
 
 from nsynth.sampling import load_model
 from toy.ae import WavenetMultiAE
-from toy.data import ToyDataSet
+from toy.data import ToyData
 from toy.plot import plot_reconstruction, prepare_plot_freq_loss
 from toy.vae import WavenetMultiVAE, ConditionalWavenetVQVAE
 
@@ -40,7 +40,7 @@ def main():
             out_channels=args.μ + 1, device=args.device)
     model = load_model(args.weights, 'cpu', model)
 
-    data = ToyDataSet(args.data, crop=crop)
+    data = ToyData(args.data, crop=crop)
 
     if args.mode.startswith('ex'):
         plot_reconstruction(model, data, args.ns, args.length,

@@ -30,9 +30,9 @@ class WavenetDecoder(nn.Module):
         self.filter_conv, self.gate_conv = nn.ModuleList(), nn.ModuleList()
         self.skip_conv, self.feat_conv = nn.ModuleList(), nn.ModuleList()
         self.filter_cond_conv = nn.ModuleList(
-            nn.ModuleList for _ in range(self.n_conds))
+            nn.ModuleList() for _ in range(self.n_conds))
         self.gate_cond_conv = nn.ModuleList(
-            nn.ModuleList for _ in range(self.n_conds))
+            nn.ModuleList() for _ in range(self.n_conds))
         for _, _ in range_product(self.n_blocks, self.n_layers):
             self.filter_conv.append(
                 nn.Conv1d(residual_width, residual_width, kernel_size,

@@ -9,7 +9,7 @@ from torch.nn import functional as F
 from tqdm import trange
 
 from .ae import WavenetMultiAE
-from .data import ToyDataSet
+from .data import ToyData
 from .functional import toy2argmax
 
 mpl.use('TkAgg')
@@ -85,7 +85,7 @@ def plot_reconstruction(model, data, ns, length, single=False):
         plt.close(fig)
 
 
-def prepare_plot_freq_loss(model: WavenetMultiAE, data: ToyDataSet, ns: int,
+def prepare_plot_freq_loss(model: WavenetMultiAE, data: ToyData, ns: int,
                            μ: int, destroy: float = 0.,
                            single: bool = False,
                            device: str = 'cpu') -> pd.DataFrame:
