@@ -4,13 +4,15 @@ import torch
 
 def destroy_along_axis(x: torch.Tensor, amount: float) -> torch.Tensor:
     """
+    Destroys a random subsample of channels in a Tensor ([N,C,L]).
+    Destroy == set to 0.
 
     Args:
-        x:
-        amount:
+        x: Input tensor
+        amount: percentage amount to destroy
 
     Returns:
-
+        Destroyed x
     """
     if amount == 0:
         return x
@@ -23,19 +25,21 @@ def destroy_along_axis(x: torch.Tensor, amount: float) -> torch.Tensor:
     return x
 
 
-def toy2argmax(logits, ns):
+def toy2argmax(y_tilde: int, ns: int, μ: int = 101):
     """
-
+    Takes argmax from SoftMax-output over the concatenated channels.
+    
     Args:
-        logits:
-        ns:
+        y_tilde: Output of network pred
+        ns: Number of sources
+        μ: Number of classes for μ-law encoding
 
     Returns:
-
+        Argmaxed y_tilde with only ns channels
     """
-    μ = 101
+    assert y_tilde.shape[1] == ns*μ
     signals = []
     for i in range(ns):
         j = i * μ
-        signals.append(logits[:, j:j + μ, :].argmax(dim=1))
+        signals.append(y_tilde[:, j:j + μ, :].argmax(dim=1))
     return torch.cat(signals)

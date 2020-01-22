@@ -12,7 +12,7 @@ from torch.utils import data
 
 from .modules import AutoEncoder
 from .scheduler import ManualMultiStepLR
-from .visualization import ConfusionMatrix, log, MonkeyWriter
+from .logging import ConfusionMatrix, log, MonkeyWriter
 
 
 def _setup_scheduler(optimizer: Optimizer, use_manual_scheduler: bool,
@@ -53,7 +53,8 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
     writer = MonkeyWriter()
     if use_board:
         from torch.utils.tensorboard import SummaryWriter
-        writer = SummaryWriter()
+        writer = SummaryWriter(log_dir=f'runs/{datetime.today():%y%m%d}_'
+                                       f'{type(model).__name__}_{save_suffix}')
 
     os.makedirs(paths['save'], exist_ok=True)
     save_path = f'{paths["save"]}/{datetime.today():%y%m%d}_{{:06}}_' \

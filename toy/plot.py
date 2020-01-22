@@ -110,7 +110,7 @@ def prepare_plot_freq_loss(model: WavenetMultiAE, data: ToyData, ns: int,
     return df
 
 
-def plot_freq_loss(fname):
+def plot_freq_loss(fname: str):
     df = pd.read_pickle(fname)
     df.destroy = df.destroy.astype('category')
     # zer = df.destroy.iloc[0]

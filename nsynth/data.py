@@ -113,6 +113,7 @@ def make_loaders(data_dir: str, subsets: List[str], nbatch: int,
                  crop: int = 6144, families: Optional[List[str]] = None,
                  sources: Optional[List[str]] = None) \
         -> Dict[str, data.DataLoader]:
+    # TODO: remove this function move stuff to classes above
     """
     Make a dictionary of data loaders for the given subsets.
     :param data_dir: Location of the Dataset

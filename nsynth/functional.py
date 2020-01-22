@@ -5,23 +5,30 @@ import torch
 import torch.nn.functional as F
 
 
-def range_product(*args: int):
+def range_product(*args: int) -> product:
     """
     Gives an iterator over the product of the ranges of the given integers.
+
     Args:
         *args: A number of Integers
 
     Returns:
-
+        the product iterator
     """
     return product(*map(range, args))
 
 
 def dilate(x: torch.Tensor, new: int, old: int = 1) -> torch.Tensor:
     """
-    :param x: The input Tensor
-    :param new: The new dilation we want
-    :param old: The dilation x already has
+    Will dilate the input tensor of shape [N, C, L]
+
+    Args:
+        x: input tensor
+        new: new amount of dilation to get
+        old: current amount if dilation of x
+
+    Returns:
+        dilated x
     """
     [N, C, L] = x.shape  # N == Batch size × old
     dilation = new / old
