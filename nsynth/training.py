@@ -104,10 +104,10 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
             for x, y in testset:
                 print(ii)
                 ii += 1
-                loss, logits = loss_function(model, x, y, device, it / num_iter)
+                loss, y_ = loss_function(model, x, y, device, it / num_iter)
                 test_losses.append(loss.detach().item())
-                if logits:
-                    conf_mat.add(logits, y)
+                if y_:
+                    conf_mat.add(y_, y)
 
             log(writer, it, {'Loss/test': mean(test_losses),
                              'Class confusion': conf_mat.plot(),

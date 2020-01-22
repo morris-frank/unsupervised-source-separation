@@ -24,7 +24,7 @@ def make_config(version: str) -> ArgumentParser:
                             help='The instrument sources to use from the '
                                  'dataset.')
         gtrain.add_argument('--board', action='store_true',
-                          help='Whether to use Tensorboard.')
+                            help='Whether to use Tensorboard.')
 
     if 'sampl' in version:
         gsampl = parser.add_argument_group('Sampling options')
