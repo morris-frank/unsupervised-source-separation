@@ -43,7 +43,7 @@ class WavenetMultiAE(AutoEncoder):
                             n_blocks=n_blocks, n_layers=n_layers,
                             residual_width=2 * decoder_width,
                             skip_width=decoder_width,
-                            conditional_dims=[(latent_width, False)])
+                            conditional_dims=[(latent_width, 1)])
         self.decoders = nn.ModuleList(
             [WavenetDecoder(**decoder_args) for _ in range(n)])
 

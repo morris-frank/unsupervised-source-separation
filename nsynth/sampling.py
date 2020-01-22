@@ -77,7 +77,7 @@ def generate(model: AutoEncoder, x: torch.Tensor, length: int, device: str) \
     decoder = model.decoder
     embedding = model.encoder(x).mean(-1).unsqueeze(-1)
 
-    # Build and upsample all the conditionals from the embedding:
+    # Build and upsample all the condition from the embedding:
     l_conds = [l_cond(embedding) for l_cond in decoder.conds]
     l_conds.append(decoder.final_cond(embedding))
 

@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, List
 
 import torch
 from torch import distributions as dist
@@ -29,7 +29,7 @@ class WavenetVAE(AutoEncoder):
                                    n_blocks=n_blocks, n_layers=n_layers,
                                    residual_width=2 * decoder_width,
                                    skip_width=decoder_width,
-                                   conditional_dims=[(latent_width, False)])
+                                   conditional_dims=[(latent_width, 1)])
 
     def _latent(self, embedding: torch.Tensor):
         q_loc = embedding[:, :self.latent_width, :]
@@ -49,16 +49,19 @@ class WavenetMultiVAE(WavenetVAE):
         self.encoder = TemporalEncoder(conditional_dims=[self.latent_width],
                                        **self.encoder_params)
 
-        self.decoder_params['conditional_dims'] = [(self.latent_width, False),
-                                                   (self.latent_width, False)]
+        self.decoder_params['conditional_dims'] = [(self.latent_width, 1),
+                                                   self.latent_width]
         self.decoders = nn.ModuleList(
             [WavenetDecoder(**self.decoder_params) for _ in range(n)])
 
     def forward(self, x: torch.Tensor) \
             -> Tuple[torch.Tensor, dist.Normal, torch.Tensor]:
-        embedding = self.encoder(x)
-        x_q, x_q_log_prob = self._latent(embedding)
-        logits = self._decode(x, x_q)
+        z_prev = torch.zeros((x.shape[0], self.latent_width),
+                             device=x.device, dtype=torch.float32)
+        z_next = self.encoder(x, [z_prev])
+        x_q, x_q_log_prob = self._latent(z_next)
+        import ipdb; ipdb.set_trace()
+        logits = self._decode(x, [x_q, z_prev])
         return logits, x_q, x_q_log_prob
 
     def test_forward(self, x: torch.Tensor, destroy: float = 0) \
@@ -71,10 +74,10 @@ class WavenetMultiVAE(WavenetVAE):
         logits = self._decode(x, q_loc)
         return logits
 
-    def _decode(self, x: torch.Tensor, embedding: torch.Tensor) \
+    def _decode(self, x: torch.Tensor, z: List[torch.Tensor]) \
             -> torch.Tensor:
         x = shift1d(x, -1)
-        logits = [dec(x, embedding) for dec in self.decoders]
+        logits = [dec(x, z) for dec in self.decoders]
         return torch.cat(logits, dim=1)
 
 
@@ -96,8 +99,7 @@ class ConditionalWavenetVQVAE(nn.Module):
 
         self.decoder_params = dict(in_channels=in_channels,
                                    out_channels=out_channels,
-                                   conditional_dims=[(D, False), ],
-                                   #  (n_sources, True)],
+                                   conditional_dims=[(D, 1)],
                                    n_blocks=n_blocks, n_layers=n_layers,
                                    skip_width=decoder_width,
                                    residual_width=2 * decoder_width)
@@ -107,21 +109,21 @@ class ConditionalWavenetVQVAE(nn.Module):
         self.decoder = WavenetDecoder(**self.decoder_params)
         self.codebook = VQEmbedding(K, D)
 
-    def _condition(self, labels: torch.Tensor) -> torch.Tensor:
-        return F.one_hot(labels, self.n_sources).float().to(self.device)
+    def encode(self, x: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
+        l = F.one_hot(labels, self.n_sources).float().to(x.device)
+        z = self.encoder(x, [l])
+        return z
 
     def forward(self, x: torch.Tensor, labels: torch.Tensor):
-        source_cond = self._condition(labels)
-        embedding = self.encoder(x, [source_cond])
-        z_q_x_st, z_q_x = self.codebook.straight_through(embedding)
+        z = self.encode(x, labels)
+        z_q_x_st, z_q_x = self.codebook.straight_through(z)
         x_tilde = self.decoder(x, [z_q_x_st])
-        return x_tilde, embedding, z_q_x
+        return x_tilde, z, z_q_x
 
     def test_forward(self, x: torch.Tensor, labels: torch.Tensor,
                      destroy: float = 0):
-        source_cond = self._condition(labels)
-        embedding = self.encoder(x, [source_cond])
+        z = self.encode(x, labels)
         if destroy > 0:
-            embedding = destroy_along_axis(embedding, destroy)
-        x_tilde = self.decoder(x, [embedding])
+            z = destroy_along_axis(z, destroy)
+        x_tilde = self.decoder(x, [z])
         return x_tilde

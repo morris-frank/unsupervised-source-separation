@@ -43,7 +43,7 @@ class WavenetVAE(AutoEncoder):
             in_channels=in_channels, out_channels=out_channels,
             n_blocks=n_blocks, n_layers=n_layers,
             residual_width=2 * decoder_width, skip_width=decoder_width,
-            conditional_dims=[(latent_width, False)]
+            conditional_dims=[(latent_width, 1)]
         )
 
     def forward(self, x: torch.Tensor) \

@@ -19,7 +19,7 @@ class TemporalEncoder(nn.Module):
         self.dilations = [2 ** l for _, l in
                           range_product(n_blocks, n_layers)] + [1]
 
-        conditional_dims = conditional_dims or []
+        conditional_dims = [] if conditional_dims is None else conditional_dims
         self.n_conds = len(conditional_dims)
 
         self.init = nn.Conv1d(in_channels, width, kernel_size, padding=pad)
@@ -30,7 +30,7 @@ class TemporalEncoder(nn.Module):
 
         self.residuals_front = nn.ModuleList()
         self.residuals_back = nn.ModuleList()
-        self.conditionals = nn.ModuleList(
+        self.condition = nn.ModuleList(
             nn.ModuleList() for _ in range(self.n_conds))
         for _, _ in range_product(n_blocks, n_layers):
             self.residuals_front.append(nn.Sequential(
@@ -41,13 +41,13 @@ class TemporalEncoder(nn.Module):
                 nn.ReLU(),
                 nn.Conv1d(width, width, 1)
             ))
-            for ml, dim in zip(self.conditionals, conditional_dims):
+            for ml, dim in zip(self.condition, conditional_dims):
                 ml.append(nn.Linear(dim, width, bias=False))
 
     def forward(self, x: torch.Tensor,
                 conditionals: Union[torch.Tensor, List[torch.Tensor]] = None) \
             -> torch.Tensor:
-        conditionals = conditionals or []
+        conditionals = [] if conditionals is None else conditionals
         if isinstance(conditionals, torch.Tensor):
             conditionals = [conditionals]
         assert len(conditionals) == self.n_conds
@@ -59,7 +59,7 @@ class TemporalEncoder(nn.Module):
             _y = self.residuals_front[i](y)
 
             for j in range(self.n_conds):
-                c = self.conditionals[j][i](conditionals[j])[..., None]
+                c = self.condition[j][i](conditionals[j])[..., None]
                 # As we compound dilate the y we have to repeat the conditional
                 # along the batch dimension
                 c = c.repeat(y.shape[0] // c.shape[0], 1, 1)

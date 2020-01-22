@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Tuple
 
 import torch
 from torch import nn
@@ -10,16 +10,16 @@ class WavenetDecoder(nn.Module):
     def __init__(self, in_channels: int = 1, out_channels: int = 256,
                  n_blocks: int = 3, n_layers: int = 10,
                  residual_width: int = 512, skip_width: int = 256,
-                 conditional_dims: List[int] = None, kernel_size: int = 3):
+                 conditional_dims: List[Tuple[int, ...]] = None,
+                 kernel_size: int = 3):
         super(WavenetDecoder, self).__init__()
-        if conditional_dims is None:
-            conditional_dims = [(16, False)]
-
         assert kernel_size % 2 != 0
         pad = (kernel_size - 1) // 2
-        self.n_conds = len(conditional_dims)
-        self.n_blocks, self.n_layers = n_blocks, n_layers
 
+        conditional_dims = [] if conditional_dims is None else conditional_dims
+        self.n_conds = len(conditional_dims)
+
+        self.n_blocks, self.n_layers = n_blocks, n_layers
         self.dilations = [2 ** l for _, l in
                           range_product(n_blocks, n_layers)] + [1]
 
@@ -45,17 +45,17 @@ class WavenetDecoder(nn.Module):
             self.feat_conv.append(
                 nn.Conv1d(residual_width, residual_width, 1, bias=False))
 
-            for i, (dim, linear) in enumerate(conditional_dims):
-                if linear:
+            for i, shape in enumerate(conditional_dims):
+                if isinstance(shape, int):
                     self.filter_cond_conv[i].append(
-                        nn.Linear(dim, residual_width))
+                        nn.Linear(shape, residual_width))
                     self.gate_cond_conv[i].append(
-                        nn.Linear(dim, residual_width))
+                        nn.Linear(shape, residual_width))
                 else:
                     self.filter_cond_conv[i].append(
-                        nn.Conv1d(dim, residual_width, 1, bias=False))
+                        nn.Conv1d(shape[0], residual_width, 1, bias=False))
                     self.gate_cond_conv[i].append(
-                        nn.Conv1d(dim, residual_width, 1, bias=False))
+                        nn.Conv1d(shape[0], residual_width, 1, bias=False))
 
         self.final_skip = nn.Sequential(
             nn.ReLU(),
@@ -92,7 +92,7 @@ class WavenetDecoder(nn.Module):
             f = self.filter_conv[i](dilated)
             g = self.gate_conv[i](dilated)
 
-            # Now add all the conditionals to the filters and gates
+            # Now add all the condition to the filters and gates
             for j in range(self.n_conds):
                 _f = self.filter_cond_conv[j][i](conditionals[j])
                 _g = self.gate_cond_conv[j][i](conditionals[j])
