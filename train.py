@@ -5,6 +5,7 @@ from nsynth.training import train
 
 
 def main(args):
+    crop = args.n_blocks * 2 ** args.n_layers
     model_class = WavenetVAE if args.vae else WavenetAE
 
     model = model_class(in_channels=1, out_channels=args.out_channels,
@@ -15,20 +16,11 @@ def main(args):
 
     # Build datasets
     loaders = make_loaders(args.datadir, ['train', 'test'], args.n_batch,
-                           args.crop_length, args.families, args.sources)
+                           crop, args.families, args.sources)
 
-    train(model=model,
-          loss_function=model_class.loss_function,
-          gpu=args.gpu,
-          trainset=loaders['train'],
-          testset=loaders['test'],
-          paths={'save': args.savedir, 'log': args.logdir},
-          iterpoints={'print': args.it_print, 'save': args.it_save,
-                      'test': args.it_test},
-          n_it=args.epochs,
-          use_board=args.board,
-          use_manual_scheduler=args.original_lr_scheduler
-          )
+    train(model=model, loss_function=model_class.loss_function,
+          gpu=args.gpu, trainset=loaders['train'], testset=loaders['test'],
+          num_iter=args.num_iter, use_board=args.board)
 
 
 if __name__ == '__main__':

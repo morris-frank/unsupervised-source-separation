@@ -28,7 +28,7 @@ def destroy_along_axis(x: torch.Tensor, amount: float) -> torch.Tensor:
 def toy2argmax(y_tilde: int, ns: int, μ: int = 101):
     """
     Takes argmax from SoftMax-output over the concatenated channels.
-    
+
     Args:
         y_tilde: Output of network pred
         ns: Number of sources
@@ -37,7 +37,7 @@ def toy2argmax(y_tilde: int, ns: int, μ: int = 101):
     Returns:
         Argmaxed y_tilde with only ns channels
     """
-    assert y_tilde.shape[1] == ns*μ
+    assert y_tilde.shape[1] == ns * μ
     signals = []
     for i in range(ns):
         j = i * μ

@@ -9,7 +9,7 @@ from nsynth.decoder import WavenetDecoder
 from nsynth.encoder import TemporalEncoder
 from nsynth.functional import shift1d
 from nsynth.modules import AutoEncoder, VQEmbedding
-from nsynth.utils import clean_init_args, save_append
+from nsynth.utils import clean_init_args
 from .functional import destroy_along_axis
 
 
@@ -61,7 +61,7 @@ class WavenetMultiVAE(WavenetVAE):
         if self.z_c is None:
             self.z_c = torch.zeros((x.shape[0], self.latent_width),
                                    device=x.device, dtype=torch.float32)
-        self.z_c[offsets == 0, :] = 0 # Reset conditionals for mix at the start
+        self.z_c[offsets == 0, :] = 0  # Reset conds for mix at the start
         q_μ_σ = self.encoder(x, [self.z_c])
         z, log_q_z = self._latent(q_μ_σ)
         y_tilde = self._decode(x, [z, self.z_c])
@@ -115,8 +115,8 @@ class ConditionalWavenetVQVAE(nn.Module):
         self.codebook = VQEmbedding(K, D)
 
     def encode(self, x: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
-        l = F.one_hot(labels, self.n_sources).float().to(x.device)
-        z = self.encoder(x, [l])
+        c_l = F.one_hot(labels, self.n_sources).float().to(x.device)
+        z = self.encoder(x, [c_l])
         return z
 
     def forward(self, x: torch.Tensor, labels: torch.Tensor):
