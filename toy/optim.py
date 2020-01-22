@@ -49,11 +49,11 @@ def vae_loss(β: float = 1, dβ: float = 1 / 3) -> Callable:
                       y: torch.Tensor, device: str, progress: float) \
             -> Tuple[torch.Tensor, None]:
         mixes, labels = x
-        logits, x_q, x_q_log_prob = model(mixes, labels)
+        y_tilde, z, log_q_z = model(mixes, labels)
 
-        ce_x = F.cross_entropy(logits, y[:, 0, :].to(device))
+        ce_x = F.cross_entropy(y_tilde, y[:, 0, :].to(device))
 
-        kl_zx = sample_kl(x_q, x_q_log_prob, device)
+        kl_zx = sample_kl(z, log_q_z, device)
 
         it_β = β if dβ == 0 else min(progress / dβ, 1) * β
 
@@ -66,10 +66,11 @@ def vae_loss(β: float = 1, dβ: float = 1 / 3) -> Callable:
 
 def multivae_loss(ns: int, μ: int = 101,
                   dβ: float = 1 / 3, β: float = 1.) -> Callable:
-    def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
-                      device: str, progress: float) \
+    def loss_function(model: nn.Module, x: Tuple[torch.Tensor, torch.Tensor],
+                      y: torch.Tensor, device: str, progress: float) \
             -> Tuple[torch.Tensor, None]:
-        logits, x_q, x_q_log_prob = model(x)
+        mixes, offsets = x
+        logits, x_q, x_q_log_prob = model(mixes, offsets)
 
         # First Cross-Entropy
         ce_x = sum_of_ce(logits, y, ns, μ, device)

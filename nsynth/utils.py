@@ -1,4 +1,6 @@
+import torch
 from typing import Dict, Any
+from os.path import abspath, exists
 
 
 def clean_init_args(_locals: Dict) -> Dict[str, Any]:
@@ -9,3 +11,14 @@ def clean_init_args(_locals: Dict) -> Dict[str, Any]:
     args['kwargs'] = _locals.pop('kwargs')
     args['kwargs'] = {**args['kwargs'], **_locals}
     return args
+
+
+def save_append(fname: str, obj: Any):
+    fp = abspath(fname)
+    if exists(fp):
+        data = torch.load(fp)
+    else:
+        data = [obj]
+    data.append(obj)
+    torch.save(data, fp)
+

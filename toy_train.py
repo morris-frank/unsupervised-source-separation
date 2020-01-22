@@ -7,7 +7,7 @@ from toy.vae import ConditionalWavenetVQVAE, WavenetMultiVAE
 
 def main(args):
     args.epochs = 50000
-    args.n_batch = 20
+
     μ = 100
     crop = 3 * 2 ** 10
 
@@ -16,9 +16,10 @@ def main(args):
     if args.vae:
         ns = 4
         steps = 5
-        model = WavenetMultiVAE(n=ns, in_channels=1, out_channels=μ + 1,
-                                latent_width=32, encoder_width=64,
-                                decoder_width=32)
+        args.n_batch = 8
+        model = WavenetMultiVAE(n=ns, in_channels=1,
+                                out_channels=μ + 1, latent_width=32,
+                                encoder_width=64, decoder_width=32)
         loss_function = multivae_loss(ns, μ=μ + 1, β=1.1)
         traindata = ToyDataSequential(
             f'{args.datadir}/toy_train_long_*.npy', μ=μ, crop=crop,
@@ -28,6 +29,7 @@ def main(args):
             nbatch=args.n_batch, steps=steps).loader(args.n_batch)
     else:
         ns = 8
+        args.n_batch = 20
         model = ConditionalWavenetVQVAE(n_sources=ns, K=ns, D=512, n_blocks=3,
                                         n_layers=10, encoder_width=64,
                                         decoder_width=32, in_channels=1,

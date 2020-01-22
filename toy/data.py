@@ -71,7 +71,8 @@ class ToyDataSequential(data.Dataset):
         return data.DataLoader(self, batch_size=nbatch, num_workers=8,
                                shuffle=False)
 
-    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+    def __getitem__(self, idx: int) \
+            -> Tuple[Tuple[torch.Tensor, int], torch.Tensor]:
         outer = (idx // (self.nbatch * self.steps)) * self.nbatch
         inner = idx % self.nbatch
         # Index of file where sample is
@@ -89,7 +90,7 @@ class ToyDataSequential(data.Dataset):
 
         mix, sources = _prepare_toy(item['mix'], item['sources'], self.μ,
                                     self.crop, offset)
-        return mix, sources
+        return (mix, offset), sources
 
 
 class ToyDataSingle(ToyData):

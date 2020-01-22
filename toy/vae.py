@@ -9,7 +9,7 @@ from nsynth.decoder import WavenetDecoder
 from nsynth.encoder import TemporalEncoder
 from nsynth.functional import shift1d
 from nsynth.modules import AutoEncoder, VQEmbedding
-from nsynth.utils import clean_init_args
+from nsynth.utils import clean_init_args, save_append
 from .functional import destroy_along_axis
 
 
@@ -32,13 +32,13 @@ class WavenetVAE(AutoEncoder):
                                    conditional_dims=[(latent_width, 1)])
 
     def _latent(self, embedding: torch.Tensor):
-        q_loc = embedding[:, :self.latent_width, :]
-        q_scale = F.softplus(embedding[:, self.latent_width:, :]) + 1e-7
+        q_μ = embedding[:, :self.latent_width, :]
+        q_σ = F.softplus(embedding[:, self.latent_width:, :]) + 1e-7
 
-        q = dist.Normal(q_loc, q_scale)
-        x_q = q.rsample()
-        x_q_log_prob = q.log_prob(x_q)
-        return x_q, x_q_log_prob
+        q_z = dist.Normal(q_μ, q_σ)
+        z = q_z.rsample()
+        log_q_z = q_z.log_prob(z)
+        return z, log_q_z
 
 
 class WavenetMultiVAE(WavenetVAE):
@@ -54,25 +54,30 @@ class WavenetMultiVAE(WavenetVAE):
         self.decoders = nn.ModuleList(
             [WavenetDecoder(**self.decoder_params) for _ in range(n)])
 
-    def forward(self, x: torch.Tensor) \
+        self.z_c = None
+
+    def forward(self, x: torch.Tensor, offsets: torch.Tensor) \
             -> Tuple[torch.Tensor, dist.Normal, torch.Tensor]:
-        z_prev = torch.zeros((x.shape[0], self.latent_width),
-                             device=x.device, dtype=torch.float32)
-        z_next = self.encoder(x, [z_prev])
-        x_q, x_q_log_prob = self._latent(z_next)
-        import ipdb; ipdb.set_trace()
-        logits = self._decode(x, [x_q, z_prev])
-        return logits, x_q, x_q_log_prob
+        if self.z_c is None:
+            self.z_c = torch.zeros((x.shape[0], self.latent_width),
+                                   device=x.device, dtype=torch.float32)
+        self.z_c[offsets == 0, :] = 0 # Reset conditionals for mix at the start
+        q_μ_σ = self.encoder(x, [self.z_c])
+        z, log_q_z = self._latent(q_μ_σ)
+        y_tilde = self._decode(x, [z, self.z_c])
+        # I am detaching the z[t-1] right?
+        self.z_c = z[:, :, -1].detach()
+        return y_tilde, z, log_q_z
 
     def test_forward(self, x: torch.Tensor, destroy: float = 0) \
             -> torch.Tensor:
         embedding = self.encoder(x)
-        q_loc = embedding[:, :self.latent_width, :]
+        q_μ = embedding[:, :self.latent_width, :]
         if destroy > 0:
-            q_loc = destroy_along_axis(q_loc, destroy)
+            q_μ = destroy_along_axis(q_μ, destroy)
 
-        logits = self._decode(x, q_loc)
-        return logits
+        log_x_t = self._decode(x, q_μ)
+        return log_x_t
 
     def _decode(self, x: torch.Tensor, z: List[torch.Tensor]) \
             -> torch.Tensor:
