@@ -45,14 +45,14 @@ class ToyData(data.Dataset):
 
     def loader(self, nbatch: int) -> data.DataLoader:
         return data.DataLoader(self, batch_size=nbatch, num_workers=8,
-                               shuffle=False)
+                               shuffle=True)
 
 
 class ToyDataSequential(data.Dataset):
     def __init__(self, filepath: str, μ: int, crop: int,
                  nbatch: int, steps: int = 5, stride: int = None):
         self.μ, self.crop, self.steps, self.nbatch = μ, crop, steps, nbatch
-        self.files = glob(filepath)
+        self.files = sorted(glob(filepath))
         self.load_file(0)
         if not stride:
             self.stride = crop // 2
@@ -62,28 +62,32 @@ class ToyDataSequential(data.Dataset):
         self.data = np.load(self.files[i], allow_pickle=True)
 
     def __len__(self) -> int:
-        return len(self.files) * len(self.data) * self.steps
+        # the minus 1 stays unexplained
+        return len(self.files) * len(self.data) * self.steps \
+               - (self.steps * self.nbatch)
 
     def __str__(self) -> str:
         return f'ToyDataSequential <{len(self):>7} signals>'
 
     def loader(self, nbatch: int) -> data.DataLoader:
-        return data.DataLoader(self, batch_size=nbatch, num_workers=8,
-                               shuffle=False)
+        return data.DataLoader(self, batch_size=nbatch, num_workers=0,
+                               shuffle=False, drop_last=True)
 
     def __getitem__(self, idx: int) \
             -> Tuple[Tuple[torch.Tensor, int], torch.Tensor]:
-        outer = (idx // (self.nbatch * self.steps)) * self.nbatch
-        inner = idx % self.nbatch
+        i_batch = idx // (self.nbatch * self.steps)
+        i_in_batch = idx % self.nbatch
+        i_sample = i_batch * self.nbatch + i_in_batch
+
         # Index of file where sample is
-        didx = (outer + inner) // len(self.data)
+        i_file = i_sample // len(self.data)
         # Index of sample inside this file
-        fidx = (outer + inner) % len(self.data)
+        i_sample_in_file = i_sample % len(self.data)
 
         # If we are currently in the wrong file, load the next one
-        if didx != self.ifile:
-            self.load_file(didx)
-        item = self.data[fidx]
+        if i_file != self.ifile:
+            self.load_file(i_file)
+        item = self.data[i_sample_in_file]
 
         offset = idx // self.nbatch % self.steps
         offset *= self.stride

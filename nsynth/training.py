@@ -114,7 +114,10 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
             conf_mat = ConfusionMatrix()
 
             model.eval()
+            ii = 0
             for x, y in testset:
+                print(ii)
+                ii += 1
                 loss, logits = loss_function(model, x, y, device, it / n_it)
                 test_losses.append(loss.detach().item())
                 if logits:
