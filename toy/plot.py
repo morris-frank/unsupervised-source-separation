@@ -72,14 +72,20 @@ def meta_forward(model, mix, ns, single, destroy=0.):
 
 
 def plot_reconstruction(model, data, ns, length, single=False):
-    N = len(data)
     model.eval()
-    while True:
-        mix, stems = data[randint(0, N)]
-        mix = mix.unsqueeze(0)
-        logits = meta_forward(model, mix, ns, single)
+    for i, (x, stems) in enumerate(data):
+        if isinstance(x, tuple):
+            mix, label = x
+            mix = mix.unsqueeze(0)
+            x = (mix, label)
+        else:
+            mix = x
+            mix = mix.unsqueeze(0)
+            x = mix
+        logits = meta_forward(model, x, ns, single)
         pred = toy2argmax(logits, ns)
         fig = fig_reconstruction(mix, stems, pred, ns, length)
+        fig.savefig(f'./figures/{type(model).__name__}_{i}.png')
         plt.show()
         input()
         plt.close(fig)

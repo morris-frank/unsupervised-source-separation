@@ -9,28 +9,24 @@ from .functional import encode_μ_law
 from .modules import AutoEncoder
 
 
-def load_model(fp: str, device: str, model: nn.Module, train: bool = False) \
-        -> nn.Module:
+def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
     """
 
     Args:
         fp:
         device:
-        model:
         train:
 
     Returns:
 
     """
-    # TODO: DEPRECATE THE model arg
     save_point = torch.load(fp, map_location=torch.device(device))
     state_dict = save_point['model_state_dict']
 
-    if 'params' in save_point:
-        _class = save_point['params']['__class__']
-        args = save_point['params']['args'].copy()
-        kwargs = save_point['params']['kwargs'].copy()
-        model = _class(*args, **kwargs)
+    model_class = save_point['params']['__class__']
+    args = save_point['params']['args']
+    kwargs = save_point['params']['kwargs'].copy()
+    model = model_class(*args, **kwargs)
 
     if next(iter(state_dict.keys())).startswith('module.'):
         _state_dict = OrderedDict({k[7:]: v for k, v in state_dict.items()})
@@ -41,6 +37,7 @@ def load_model(fp: str, device: str, model: nn.Module, train: bool = False) \
     if not train:
         return model
 
+    # TODO implement continue training load
     raise NotImplementedError
 
 

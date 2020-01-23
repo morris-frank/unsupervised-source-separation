@@ -1,22 +1,27 @@
+import os.path
 from argparse import ArgumentParser
 from os import makedirs
 from os.path import basename, abspath
-import os.path
 
 import pandas as pd
 
 from nsynth.sampling import load_model
-from toy.ae import WavenetMultiAE
-from toy.data import ToyData
+from toy.data import ToyDataSequential
 from toy.plot import plot_reconstruction, prepare_plot_freq_loss
-from toy.vae import WavenetMultiVAE, ConditionalWavenetVQVAE
+
+"""
+model = ConditionalWavenetVQVAE(
+            n_sources=args.ns, K=4, D=512, n_blocks=3, n_layers=10,
+            encoder_width=64, decoder_width=32, in_channels=1,
+            out_channels=args.μ + 1)
+"""
 
 
 def main():
     parser = ArgumentParser()
     parser.add_argument('--weights', type=abspath, required=True)
     parser.add_argument('--data', type=abspath, required=True)
-    parser.add_argument('-ns', type=int, default=8)
+    parser.add_argument('-ns', type=int, default=4)
     parser.add_argument('-μ', type=int, default=100)
     parser.add_argument('--mode', type=str, default='example')
     parser.add_argument('--length', type=int, default=500)
@@ -24,23 +29,16 @@ def main():
     parser.add_argument('--single', action='store_true')
     parser.add_argument('--device', type=str, default='cpu')
     parser.add_argument('--destroy', type=float, default=0.5)
+    parser.add_argument('--steps', type=int, default=5)
     args = parser.parse_args()
 
     makedirs('./figures', exist_ok=True)
-    model = WavenetMultiVAE if args.vae else WavenetMultiAE
     fname = f'figures/{basename(args.weights)[:-3]}_freq_plot.npy'
+    model = load_model(args.weights, 'cpu')
 
     crop = 3 * 2 ** 10
-    if not args.single:
-        model = model(args.ns, 16, 64, 64, 10, 3, args.μ + 1, 1, False)
-    else:
-        model = ConditionalWavenetVQVAE(
-            n_sources=args.ns, K=4, D=512, n_blocks=3, n_layers=10,
-            encoder_width=64, decoder_width=32, in_channels=1,
-            out_channels=args.μ + 1)
-    model = load_model(args.weights, 'cpu', model)
-
-    data = ToyData(args.data, crop=crop)
+    data = ToyDataSequential(args.data, μ=args.μ, crop=crop, steps=args.steps,
+                             nbatch=1)
 
     if args.mode.startswith('ex'):
         plot_reconstruction(model, data, args.ns, args.length,

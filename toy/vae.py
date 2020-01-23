@@ -52,11 +52,7 @@ class WavenetMultiVAE(nn.Module):
 
     def forward(self, x: torch.Tensor, offsets: torch.Tensor) \
             -> Tuple[torch.Tensor, dist.Normal, torch.Tensor]:
-        if self.z_c is None:
-            self.z_c = torch.zeros((x.shape[0], self.latent_width),
-                                   device=x.device, dtype=torch.float32)
-        self.z_c[offsets == 0, :] = 0  # Reset conds for mix at the start
-        q_μ_σ = self.encoder(x, [self.z_c])
+        q_μ_σ = self.encode(x, offsets)
         z, log_q_z = self._latent(q_μ_σ)
         y_tilde = self.decode(x, [z, self.z_c])
         # I am detaching the z[t-1] right?
@@ -65,13 +61,24 @@ class WavenetMultiVAE(nn.Module):
 
     def test_forward(self, x: torch.Tensor, destroy: float = 0) \
             -> torch.Tensor:
-        embedding = self.encoder(x)
-        q_μ = embedding[:, :self.latent_width, :]
+        x, offsets = x
+        q_μ = self.encode(x, offsets)[:, :self.latent_width, :]
         if destroy > 0:
             q_μ = destroy_along_axis(q_μ, destroy)
 
-        log_x_t = self.decode(x, q_μ)
+        log_x_t = self.decode(x, [q_μ, self.z_c])
+        # I am detaching the z[t-1] right?
+        self.z_c = q_μ[:, :, -1].detach()
         return log_x_t
+
+    def encode(self, x: torch.Tensor, offsets: torch.Tensor) -> torch.Tensor:
+        if self.z_c is None:
+            self.z_c = torch.zeros((x.shape[0], self.latent_width),
+                                   device=x.device, dtype=torch.float32)
+        print(f'resetted {offsets == 0}')
+        self.z_c[offsets == 0, :] = 0  # Reset conds for mix at the start
+        q_μ_σ = self.encoder(x, [self.z_c])
+        return q_μ_σ
 
     def decode(self, x: torch.Tensor, z: List[torch.Tensor]) \
             -> torch.Tensor:
