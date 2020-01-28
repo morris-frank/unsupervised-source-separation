@@ -1,12 +1,11 @@
 import torch
 from torch import nn
 
-from nsynth.decoder import WavenetDecoder
-from nsynth.encoder import TemporalEncoder
-from nsynth.functional import shift1d
-from nsynth.modules import AutoEncoder
-from nsynth.utils import clean_init_args
-from .functional import destroy_along_axis
+from ..temporal_encoder import TemporalEncoder
+from ..functional import shift1d, destroy_along_channels
+from ..modules import AutoEncoder
+from ..utils import clean_init_args
+from ..wavenet import Wavenet
 
 
 class WavenetMultiAE(AutoEncoder):
@@ -23,7 +22,7 @@ class WavenetMultiAE(AutoEncoder):
         :param encoder_width: Width of the hidden layers in the encoder (Non-
             causal Temporal encoder).
         :param decoder_width: Width of the hidden layers in the decoder
-            (WaveNet).
+            (Wavenet).
         :param n_layers: number of layers in each block of encoder and decoder
         :param n_blocks: number of blocks for both
         :param in_channels: Number of input in_channels.
@@ -45,7 +44,7 @@ class WavenetMultiAE(AutoEncoder):
                             skip_width=decoder_width,
                             conditional_dims=[(latent_width, 1)])
         self.decoders = nn.ModuleList(
-            [WavenetDecoder(**decoder_args) for _ in range(n)])
+            [Wavenet(**decoder_args) for _ in range(n)])
 
     def _decode(self, x: torch.Tensor, embedding: torch.Tensor) \
             -> torch.Tensor:
@@ -56,7 +55,7 @@ class WavenetMultiAE(AutoEncoder):
     def test_forward(self, x: torch.Tensor, destroy: float = 0) \
             -> torch.Tensor:
         embedding = self.encoder(x)
-        embedding = destroy_along_axis(embedding, destroy)
+        embedding = destroy_along_channels(embedding, destroy)
         return self._decode(x, embedding)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

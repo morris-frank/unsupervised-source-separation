@@ -5,12 +5,11 @@ from torch import distributions as dist
 from torch import nn
 from torch.nn import functional as F
 
-from nsynth.decoder import WavenetDecoder
-from nsynth.encoder import TemporalEncoder
-from nsynth.functional import shift1d
-from nsynth.modules import VQEmbedding
-from nsynth.utils import clean_init_args
-from .functional import destroy_along_axis
+from ..temporal_encoder import TemporalEncoder
+from ..functional import shift1d, destroy_along_channels
+from ..modules import VQEmbedding
+from ..utils import clean_init_args
+from ..wavenet import Wavenet
 
 
 class WavenetMultiVAE(nn.Module):
@@ -37,7 +36,7 @@ class WavenetMultiVAE(nn.Module):
                                    conditional_dims=[(self.latent_width, 1),
                                                      self.latent_width])
         self.decoders = nn.ModuleList(
-            [WavenetDecoder(**self.decoder_params) for _ in range(n)])
+            [Wavenet(**self.decoder_params) for _ in range(n)])
 
         self.z_c = None
 
@@ -64,7 +63,7 @@ class WavenetMultiVAE(nn.Module):
         x, offsets = x
         q_μ = self.encode(x, offsets)[:, :self.latent_width, :]
         if destroy > 0:
-            q_μ = destroy_along_axis(q_μ, destroy)
+            q_μ = destroy_along_channels(q_μ, destroy)
 
         log_x_t = self.decode(x, [q_μ, self.z_c])
         # I am detaching the z[t-1] right?
@@ -102,12 +101,12 @@ class ConditionalWavenetVQVAE(nn.Module):
                                        width=encoder_width,
                                        conditional_dims=[n_sources])
 
-        self.decoder = WavenetDecoder(in_channels=in_channels,
-                                      out_channels=out_channels,
-                                      conditional_dims=[(D, 1)],
-                                      n_blocks=n_blocks, n_layers=n_layers,
-                                      skip_width=decoder_width,
-                                      residual_width=2 * decoder_width)
+        self.decoder = Wavenet(in_channels=in_channels,
+                               out_channels=out_channels,
+                               conditional_dims=[(D, 1)],
+                               n_blocks=n_blocks, n_layers=n_layers,
+                               skip_width=decoder_width,
+                               residual_width=2 * decoder_width)
         self.codebook = VQEmbedding(K, D)
 
     def encode(self, x: torch.Tensor, labels: torch.Tensor) -> torch.Tensor:
@@ -126,7 +125,7 @@ class ConditionalWavenetVQVAE(nn.Module):
                      destroy: float = 0):
         z = self.encode(x, labels)
         if destroy > 0:
-            z = destroy_along_axis(z, destroy)
+            z = destroy_along_channels(z, destroy)
         x = shift1d(x, -1)
         x_tilde = self.decoder(x, [z])
         return x_tilde

@@ -1,4 +1,5 @@
 import math
+import random
 from itertools import product
 
 import torch
@@ -96,3 +97,46 @@ def decode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
     out = x / math.ceil(μ / 2)
     out = torch.sign(out) / μ * (torch.pow(1 + μ, torch.abs(out)) - 1)
     return out
+
+
+def destroy_along_channels(x: torch.Tensor, amount: float) -> torch.Tensor:
+    """
+    Destroys a random subsample of channels in a Tensor ([N,C,L]).
+    Destroy == set to 0.
+
+    Args:
+        x: Input tensor
+        amount: percentage amount to destroy
+
+    Returns:
+        Destroyed x
+    """
+    if amount == 0:
+        return x
+    length = x.shape[1]
+    for i in random.sample(range(length), int(amount * length)):
+        if x.ndim == 3:
+            x[:, i, :] = 0.
+        else:
+            x[:, i] = 0.
+    return x
+
+
+def multi_μ_enc_argmax(y_tilde: int, ns: int, μ: int = 101):
+    """
+    Takes argmax from SoftMax-output over the concatenated channels.
+
+    Args:
+        y_tilde: Output of network pred
+        ns: Number of sources
+        μ: Number of classes for μ-law encoding
+
+    Returns:
+        Argmaxed y_tilde with only ns channels
+    """
+    assert y_tilde.shape[1] == ns * μ
+    signals = []
+    for i in range(ns):
+        j = i * μ
+        signals.append(y_tilde[:, j:j + μ, :].argmax(dim=1))
+    return torch.cat(signals)

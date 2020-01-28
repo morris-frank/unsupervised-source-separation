@@ -1,5 +1,3 @@
-from random import randint
-
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -10,7 +8,7 @@ from tqdm import trange
 
 from .ae import WavenetMultiAE
 from .data import ToyData
-from .functional import toy2argmax
+from ..functional import multi_μ_enc_argmax
 
 mpl.use('TkAgg')
 
@@ -83,7 +81,7 @@ def plot_reconstruction(model, data, ns, length, single=False):
             mix = mix.unsqueeze(0)
             x = mix
         logits = meta_forward(model, x, ns, single)
-        pred = toy2argmax(logits, ns)
+        pred = multi_μ_enc_argmax(logits, ns)
         fig = fig_reconstruction(mix, stems, pred, ns, length)
         fig.savefig(f'./figures/{type(model).__name__}_{i}.png')
         plt.show()

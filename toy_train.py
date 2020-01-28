@@ -1,8 +1,8 @@
-from nsynth.config import make_config
-from nsynth.training import train
-from toy.data import ToyDataSingle, ToyDataSequential
-from toy.optim import vqvae_loss, multivae_loss
-from toy.vae import ConditionalWavenetVQVAE, WavenetMultiVAE
+from thesis.config import make_config
+from thesis.training import train
+from thesis.toy.data import ToyDataSingle, ToyDataSequential
+from thesis.toy.optim import vqvae_loss, multivae_loss
+from thesis.toy.vae import ConditionalWavenetVQVAE, WavenetMultiVAE
 
 
 def main(args):

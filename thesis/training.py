@@ -18,7 +18,7 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
           num_iter: int, use_board: bool = False,
           save_suffix: str = '', iterpoints: Dict = None):
     """
-    :param model: The WaveNet model Module
+    :param model: The Wavenet model Module
     :param loss_function: The static loss function, should take params:
         (model: Module, x: Tensor, y: Tensor, device: str)
     :param gpu: List of GPUs to use (int indexes)

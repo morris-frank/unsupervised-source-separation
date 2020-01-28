@@ -6,13 +6,13 @@ from torch import nn
 from .functional import range_product, dilate
 
 
-class WavenetDecoder(nn.Module):
+class Wavenet(nn.Module):
     def __init__(self, in_channels: int = 1, out_channels: int = 256,
                  n_blocks: int = 3, n_layers: int = 10,
                  residual_width: int = 512, skip_width: int = 256,
                  conditional_dims: List[Tuple[int, ...]] = None,
                  kernel_size: int = 3):
-        super(WavenetDecoder, self).__init__()
+        super(Wavenet, self).__init__()
         assert kernel_size % 2 != 0
         pad = (kernel_size - 1) // 2
 

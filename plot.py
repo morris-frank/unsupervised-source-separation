@@ -5,9 +5,9 @@ from os.path import basename, abspath
 
 import pandas as pd
 
-from nsynth.sampling import load_model
-from toy.data import ToyDataSequential
-from toy.plot import plot_reconstruction, prepare_plot_freq_loss
+from thesis.sampling import load_model
+from thesis.toy.data import ToyDataSequential
+from thesis.toy.plot import plot_reconstruction, prepare_plot_freq_loss
 
 """
 model = ConditionalWavenetVQVAE(

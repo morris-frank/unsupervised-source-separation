@@ -1,7 +1,7 @@
-from nsynth import WavenetAE, WavenetVAE, \
+from thesis import WavenetAE, WavenetVAE, \
     make_config
-from nsynth.data import make_loaders
-from nsynth.training import train
+from thesis.data import make_loaders
+from thesis.training import train
 
 
 def main(args):

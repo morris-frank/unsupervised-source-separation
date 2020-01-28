@@ -7,7 +7,7 @@ import numpy as np
 import torch
 from torch.utils import data
 
-from nsynth.functional import encode_μ_law
+from ..functional import encode_μ_law
 
 
 def _prepare_toy(mix: np.ndarray, sources: np.ndarray, μ: int, crop: int,
