@@ -58,6 +58,7 @@ def encode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
     Returns:
         the encoded tensor
     """
+    assert x.max() <= 1. and x.min() >= -1.
     out = torch.sign(x) * torch.log(1 + μ * torch.abs(x)) / math.log(1 + μ)
     out = torch.floor(out * math.ceil(μ / 2))
     return out
@@ -74,7 +75,6 @@ def decode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
     Returns:
         the decoded tensor
     """
-    assert x.max() <= 1 and x.min() >= 0
     x = x.type(torch.float32)
     # out = (x + 0.5) * 2. / (μ + 1)
     out = x / math.ceil(μ / 2)

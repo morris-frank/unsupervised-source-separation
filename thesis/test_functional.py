@@ -1,8 +1,8 @@
 import torch
-from .functional import encode_μ_law, decode_μ_law, shift1d
 
 
 def test_μ_law():
+    from .functional import encode_μ_law, decode_μ_law
     x = torch.tensor([-1, -0.5, 0, 0.5, 0.9], dtype=torch.float)
     y = torch.tensor([-128, -113, 0, 112, 125], dtype=torch.int8)
 
@@ -11,6 +11,7 @@ def test_μ_law():
 
 
 def test_shift1d():
+    from .functional import shift1d
     n_batch, n_channel, length = 8, 2, 32
     x = torch.rand((n_batch, n_channel, length))
     for shift in [1, 3, 5]:

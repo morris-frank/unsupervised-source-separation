@@ -3,8 +3,8 @@
 - [ ] Implement Flow (Glow, WaveGlow, Real NVP, … differences?)
 - [ ] Add Wave And Biases
 - [ ] Refactor plotting / showing code
-- [ ] Refactor to add Flows
 - [ ] Implement the Logit mixture from PixelCNN++
+- [x] Refactor to add Flows
 - [x] Fast-gen Wavenet code
 - [x] Implement VQ-VAE
 - [x] NSynth with probabilistic latent space
@@ -22,11 +22,11 @@
 
 # Papers
 
-- [ ] _Semi-Supervised Learning with Deep Generative Models_
+- [x] _Semi-Supervised Learning with Deep Generative Models_
     - ⇒ how to use conditionals in VAE 
 - [x] _Fixing a Broken ELBO_
     - ⇒ about how to write ELBOs correctly
-- [ ] _Density estimation using Real NVP_
+- [x] _Density estimation using Real NVP_
     - ⇒ unsupervised learning
 - [x] _PixelCNN++_
     - ⇒ Mixture of logits instead of μ-law
