@@ -37,8 +37,8 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
         from torch.utils.tensorboard import SummaryWriter
         writer = SummaryWriter(log_dir=f'runs/{model_id}')
 
-    os.makedirs('./models/', exist_ok=True)
-    save_path = f'models/{model_id}_{{:06}}.pt'
+    os.makedirs('./checkpoints/', exist_ok=True)
+    save_path = f'checkpoints/{model_id}_{{:06}}.pt'
     model_args = model.params
 
     if iterpoints is None:

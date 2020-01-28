@@ -2,6 +2,7 @@ from argparse import ArgumentParser
 from os import path
 
 
+# TODO: REFACTOR STILL WHOLE THING (remove it)
 def make_config(version: str) -> ArgumentParser:
     parser = ArgumentParser()
     parser.add_argument('--gpu', type=int, required=False, nargs='+',

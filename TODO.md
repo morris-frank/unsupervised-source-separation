@@ -4,8 +4,8 @@
 - [ ] Add Wave And Biases
 - [ ] Refactor plotting / showing code
 - [ ] Refactor to add Flows
-- [x] Fast-gen Wavenet code
 - [ ] Implement the Logit mixture from PixelCNN++
+- [x] Fast-gen Wavenet code
 - [x] Implement VQ-VAE
 - [x] NSynth with probabilistic latent space
 - [x] Generation code
