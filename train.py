@@ -1,26 +1,43 @@
-from thesis import WavenetAE, WavenetVAE, \
-    make_config
-from thesis.data import make_loaders
+from thesis.config import make_config
 from thesis.training import train
+from thesis.data.toy import ToyDataSequential, ToyDataSingle
+from thesis.nn.models import WavenetVAE, ConditionalWavenetVQVAE
 
 
 def main(args):
+    args.epochs = 50000
     crop = args.n_blocks * 2 ** args.n_layers
-    model_class = WavenetVAE if args.vae else WavenetAE
+    μ = 100
 
-    model = model_class(in_channels=1, out_channels=args.out_channels,
-                        latent_width=args.latent_width,
-                        encoder_width=args.encoder_width,
-                        decoder_width=args.decoder_width,
-                        n_blocks=args.n_blocks, n_layers=args.n_layers)
+    if args.vae:
+        ns = 4
+        steps = 5
+        args.n_batch = 8
+        model = WavenetVAE(in_channels=1, out_channels=μ + 1, n_decoders=ns,
+                           latent_width=32, encoder_width=64, decoder_width=32)
+        loss_function = model.loss(β=1.1)
+        traindata = ToyDataSequential(
+            f'{args.datadir}/toy_train_long_*.npy', μ=μ, crop=crop,
+            batch_size=args.batch_size, steps=steps).loader(args.batch_size)
+        testdata = ToyDataSequential(
+            f'{args.datadir}/toy_test_long_*.npy', μ=μ, crop=crop,
+            batch_size=args.batch_size, steps=steps).loader(args.batch_size)
+    else:
+        ns = 8
+        args.n_batch = 20
+        model = ConditionalWavenetVQVAE(n_sources=ns, K=ns, D=512, n_blocks=3,
+                                        n_layers=10, encoder_width=64,
+                                        decoder_width=32, in_channels=1,
+                                        out_channels=μ + 1)
+        loss_function = model.loss()
+        traindata = ToyDataSingle(f'{args.datadir}/toy_train_large.npy',
+                                  crop=crop, μ=μ).loader(args.n_batch)
+        testdata = ToyDataSingle(f'{args.datadir}/toy_test_large.npy',
+                                 crop=crop, μ=μ).loader(args.n_batch)
 
-    # Build datasets
-    loaders = make_loaders(args.datadir, ['train', 'test'], args.n_batch,
-                           crop, args.families, args.sources)
-
-    train(model=model, loss_function=model_class.loss_function,
-          gpu=args.gpu, trainset=loaders['train'], testset=loaders['test'],
-          num_iter=args.num_iter, use_board=args.board)
+    train(model=model, loss_function=loss_function, gpu=args.gpu,
+          trainset=traindata, testset=testdata, num_iter=args.num_iter,
+          use_board=args.board, save_suffix=f'det_{ns}')
 
 
 if __name__ == '__main__':

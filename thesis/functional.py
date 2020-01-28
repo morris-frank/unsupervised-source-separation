@@ -1,22 +1,8 @@
 import math
 import random
-from itertools import product
 
 import torch
 import torch.nn.functional as F
-
-
-def range_product(*args: int) -> product:
-    """
-    Gives an iterator over the product of the ranges of the given integers.
-
-    Args:
-        *args: A number of Integers
-
-    Returns:
-        the product iterator
-    """
-    return product(*map(range, args))
 
 
 def dilate(x: torch.Tensor, new: int, old: int = 1) -> torch.Tensor:
@@ -31,13 +17,13 @@ def dilate(x: torch.Tensor, new: int, old: int = 1) -> torch.Tensor:
     Returns:
         dilated x
     """
-    [N, C, L] = x.shape  # N == Batch size × old
+    [n, c, l] = x.shape  # N == Batch size × old
     dilation = new / old
     if dilation == 1:
         return x
-    L, N = int(L / dilation), int(N * dilation)
+    l, n = int(l / dilation), int(n * dilation)
     x = x.permute(1, 2, 0)
-    x = torch.reshape(x, [C, L, N])
+    x = torch.reshape(x, [c, l, n])
     x = x.permute(2, 0, 1)
     return x.contiguous()
 
@@ -61,23 +47,19 @@ def shift1d(x: torch.Tensor, shift: int) -> torch.Tensor:
     return y.contiguous()
 
 
-def encode_μ_law(x: torch.Tensor, μ: int = 255, cast: bool = False) \
-        -> torch.Tensor:
+def encode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
     """
     Encodes the input tensor element-wise with μ-law encoding
 
     Args:
         x: tensor
         μ: the size of the encoding (number of possible classes)
-        cast: whether to cast to int8
 
     Returns:
-
+        the encoded tensor
     """
     out = torch.sign(x) * torch.log(1 + μ * torch.abs(x)) / math.log(1 + μ)
     out = torch.floor(out * math.ceil(μ / 2))
-    if cast:
-        out = out.type(torch.int8)
     return out
 
 
@@ -92,6 +74,7 @@ def decode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
     Returns:
         the decoded tensor
     """
+    assert x.max() <= 1 and x.min() >= 0
     x = x.type(torch.float32)
     # out = (x + 0.5) * 2. / (μ + 1)
     out = x / math.ceil(μ / 2)
@@ -122,21 +105,21 @@ def destroy_along_channels(x: torch.Tensor, amount: float) -> torch.Tensor:
     return x
 
 
-def multi_μ_enc_argmax(y_tilde: int, ns: int, μ: int = 101):
+def multi_argmax(x: torch.Tensor, n: int, μ: int = 101):
     """
     Takes argmax from SoftMax-output over the concatenated channels.
 
     Args:
-        y_tilde: Output of network pred
-        ns: Number of sources
+        x: Output of network pred
+        n: Number of sources
         μ: Number of classes for μ-law encoding
 
     Returns:
         Argmaxed y_tilde with only ns channels
     """
-    assert y_tilde.shape[1] == ns * μ
+    assert x.shape[1] == n * μ
     signals = []
-    for i in range(ns):
+    for i in range(n):
         j = i * μ
-        signals.append(y_tilde[:, j:j + μ, :].argmax(dim=1))
+        signals.append(x[:, j:j + μ, :].argmax(dim=1))
     return torch.cat(signals)

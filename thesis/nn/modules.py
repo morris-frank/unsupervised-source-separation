@@ -1,10 +1,10 @@
-from typing import Tuple, Optional
+from typing import Optional
 
 import torch
 from torch import dtype as torch_dtype
 from torch import nn
 
-from .functions import VectorQuantization, VectorQuantizationStraightThrough
+from .functions import VectorQuantizationStraightThrough, VectorQuantization
 
 
 class DilatedQueue:
@@ -66,16 +66,3 @@ class VQEmbedding(nn.Module):
         z_q_x_bar = z_q_x_bar_.permute(0, 2, 1).contiguous()
 
         return z_q_x, z_q_x_bar
-
-
-class AutoEncoder(nn.Module):
-    def __init__(self):
-        super(AutoEncoder, self).__init__()
-        self.encoder = nn.Module()
-        self.decoder = nn.Module()
-
-    @staticmethod
-    def loss_function(model: nn.Module, x: torch.Tensor, y: torch.Tensor,
-                      device: str, progress: float) \
-            -> Tuple[torch.Tensor, torch.Tensor]:
-        pass

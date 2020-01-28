@@ -9,11 +9,10 @@ from torch import nn
 from torch import optim
 from torch.utils import data
 
-from .logging import ConfusionMatrix, log, MonkeyWriter
-from .modules import AutoEncoder
+from .log import log, MonkeyWriter
 
 
-def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
+def train(model: nn.Module, loss_function: Callable, gpu: List[int],
           trainset: data.DataLoader, testset: data.DataLoader,
           num_iter: int, use_board: bool = False,
           save_suffix: str = '', iterpoints: Dict = None):
@@ -97,7 +96,6 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
         # TEST THE MODEL
         if it % iterpoints['test'] == 0 or it == num_iter - 1:
             test_time, test_losses = time.time(), []
-            conf_mat = ConfusionMatrix()
 
             model.eval()
             ii = 0
@@ -106,11 +104,8 @@ def train(model: AutoEncoder, loss_function: Callable, gpu: List[int],
                 ii += 1
                 loss, y_ = loss_function(model, x, y, device, it / num_iter)
                 test_losses.append(loss.detach().item())
-                if y_:
-                    conf_mat.add(y_, y)
 
             log(writer, it, {'Loss/test': mean(test_losses),
-                             'Class confusion': conf_mat.plot(),
                              'Time/test': time.time() - test_time})
 
     print(f'FINISH {num_iter} mini-batches')

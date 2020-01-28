@@ -2,17 +2,17 @@ import json
 import random
 from glob import glob
 from os import path
-from typing import Optional, List, Dict
+from typing import Optional, List
 
 import librosa
 import torch
 from torch import dtype as torch_dtype
-from torch.utils import data
 
-from .functional import encode_μ_law
+from ..data import Dataset
+from ..functional import encode_μ_law
 
 
-class NSynthDataset(data.Dataset):
+class NSynthDataset(Dataset):
     """
     Dataset to handle the NSynth data in json/wav format.
     """
@@ -74,14 +74,11 @@ class NSynthDataset(data.Dataset):
     def __len__(self):
         return len(self.attrs)
 
-    def __str__(self):
-        return f'NSynthDataset: {len(self):>7} samples in subset {self.subset}'
-
     def __getitem__(self, item: int):
         name = self.names[item]
         attrs = self.attrs[name]
-        path = f'{self.root}/audio/{name}.wav'
-        raw, _ = librosa.load(path, mono=self.mono, sr=attrs['sample_rate'])
+        fpath = f'{self.root}/audio/{name}.wav'
+        raw, _ = librosa.load(fpath, mono=self.mono, sr=attrs['sample_rate'])
         # Add channel dimension.
         if raw.ndim == 1:
             raw = raw[None, ...]
@@ -107,28 +104,3 @@ class AudioOnlyNSynthDataset(NSynthDataset):
         audio_scaled = audio / 128
         audio_target = (audio.squeeze() + 128).long()
         return audio_scaled, audio_target
-
-
-def make_loaders(data_dir: str, subsets: List[str], nbatch: int,
-                 crop: int = 6144, families: Optional[List[str]] = None,
-                 sources: Optional[List[str]] = None) \
-        -> Dict[str, data.DataLoader]:
-    # TODO: remove this function move stuff to classes above
-    """
-    Make a dictionary of data loaders for the given subsets.
-    :param data_dir: Location of the Dataset
-    :param subsets: subsets to make datasets for
-    :param nbatch: batch size
-    :param crop: length  of the cropped samples
-    :param families: families of instruments to select
-    :param sources: sources of instruments to select
-    :return:
-    """
-    data_loaders = dict()
-    for subset in subsets:
-        dset = AudioOnlyNSynthDataset(root=data_dir, subset=subset,
-                                      families=families, sources=sources,
-                                      crop=crop)
-        data_loaders[subset] = data.DataLoader(
-            dset, batch_size=nbatch, num_workers=8, shuffle=True)
-    return data_loaders

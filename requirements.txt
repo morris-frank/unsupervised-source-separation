@@ -8,7 +8,6 @@ tqdm>=4.28.1
 matplotlib>=3.1.2
 librosa>=0.7.1
 tensorboard>=2.0.2
-scikit-learn>=0.21.3
 seaborn>=0.9.0
 Pillow>=6.2.1
 SoundFile>=0.10.3

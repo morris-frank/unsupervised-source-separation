@@ -5,9 +5,9 @@ from os.path import basename, abspath
 
 import pandas as pd
 
-from thesis.sampling import load_model
-from thesis.toy.data import ToyDataSequential
-from thesis.toy.plot import plot_reconstruction, prepare_plot_freq_loss
+from thesis.data.toy import ToyDataSequential
+from thesis.io import load_model
+from thesis.plot.toy import prepare_plot_freq_loss, plot_reconstruction
 
 """
 model = ConditionalWavenetVQVAE(
@@ -38,7 +38,7 @@ def main():
 
     crop = 3 * 2 ** 10
     data = ToyDataSequential(args.data, μ=args.μ, crop=crop, steps=args.steps,
-                             nbatch=1)
+                             batch_size=1)
 
     if args.mode.startswith('ex'):
         plot_reconstruction(model, data, args.ns, args.length,

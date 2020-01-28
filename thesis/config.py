@@ -15,7 +15,7 @@ def make_config(version: str) -> ArgumentParser:
         gtrain = parser.add_argument_group('Training options')
         gtrain.add_argument('-i', type=int, default=250000, dest='num_iter',
                             help='Number of batches to train for.')
-        gtrain.add_argument('-nb', type=int, default=32, dest='n_batch',
+        gtrain.add_argument('-nb', type=int, default=32, dest='batch_size',
                             help='The batch size.')
         gtrain.add_argument('--families', type=str, required=False, nargs='+',
                             help='The instrument families to use from the '

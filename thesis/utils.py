@@ -1,7 +1,5 @@
-from os.path import abspath, exists
+from itertools import product
 from typing import Dict, Any
-
-import torch
 
 
 def clean_init_args(_locals: Dict) -> Dict[str, Any]:
@@ -26,17 +24,14 @@ def clean_init_args(_locals: Dict) -> Dict[str, Any]:
     return args
 
 
-def save_append(fname: str, obj: Any):
+def range_product(*args: int) -> product:
     """
-    Appends to a pickled torch save. Create file if not exists.
+    Gives an iterator over the product of the ranges of the given integers.
+
     Args:
-        fname: Path to file
-        obj: New obj to append
+        *args: A number of Integers
+
+    Returns:
+        the product iterator
     """
-    fp = abspath(fname)
-    if exists(fp):
-        data = torch.load(fp)
-    else:
-        data = [obj]
-    data.append(obj)
-    torch.save(data, fp)
+    return product(*map(range, args))
