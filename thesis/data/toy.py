@@ -41,7 +41,7 @@ class ToyData(Dataset):
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         item = self.data[idx]
-        p = random.randint(0, item['mix'].numel() - self.crop)
+        p = random.randint(0, item['mix'].size - self.crop)
         mix, sources = _prepare_toy_audio_data(item['mix'], item['sources'],
                                                self.μ, self.crop, p)
         return mix, sources

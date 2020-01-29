@@ -15,7 +15,7 @@ from torch.utils import data
 def _print_log(items: Dict, step: int):
     print(f'step {step:>9}', end='\t')
     for k, v in items.items():
-        print(f'k={v:>9}, ')
+        print(f'{k}={v:.3e}, ', end='')
     print()
 
 
