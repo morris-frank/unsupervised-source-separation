@@ -10,3 +10,4 @@ stempeg==0.1.8
 tensorboard>=2.1.0
 torch>=1.4.0
 tqdm>=4.42.0
+wandb>=0.8.22
