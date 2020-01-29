@@ -3,8 +3,8 @@ from typing import List, Union
 import torch
 from torch import nn
 
-from thesis.functional import dilate
-from thesis.utils import range_product
+from ...functional import dilate
+from ...utils import range_product
 
 
 class TemporalEncoder(nn.Module):

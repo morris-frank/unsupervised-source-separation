@@ -5,7 +5,8 @@ from torch import distributions as dist
 from torch import nn
 from torch.nn import functional as F
 
-from . import TemporalEncoder, Wavenet
+from .temporal_encoder import TemporalEncoder
+from .wavenet import Wavenet
 from ..modules import VQEmbedding
 from ..optim import sample_kl, multi_cross_entropy
 from ...functional import shift1d, destroy_along_channels

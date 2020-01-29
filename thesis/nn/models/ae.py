@@ -3,7 +3,8 @@ from typing import Callable
 import torch
 from torch import nn
 
-from . import TemporalEncoder, Wavenet
+from .temporal_encoder import TemporalEncoder
+from .wavenet import Wavenet
 from ..optim import multi_cross_entropy
 from ...functional import shift1d, destroy_along_channels
 from ...utils import clean_init_args
