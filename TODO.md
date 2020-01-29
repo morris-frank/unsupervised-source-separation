@@ -1,9 +1,9 @@
 # Code
 
 - [ ] Implement Flow (Glow, WaveGlow, Real NVP, … differences?)
-- [ ] Add Wave And Biases
 - [ ] Refactor plotting / showing code
 - [ ] Implement the Logit mixture from PixelCNN++
+- [x] Add Wave And Biases
 - [x] Refactor to add Flows
 - [x] Fast-gen Wavenet code
 - [x] Implement VQ-VAE
