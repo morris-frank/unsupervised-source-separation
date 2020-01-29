@@ -43,7 +43,7 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
     model_args = model.params
 
     if log:
-        wandb.init(name=model_id)
+        wandb.init(name=model_id, config=model_args['kwargs'])
 
     # Move model to device(s):
     device = f'cuda:{gpu[0]}' if gpu else 'cpu'
