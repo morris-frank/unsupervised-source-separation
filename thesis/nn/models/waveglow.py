@@ -10,11 +10,10 @@ from .wavenet import Wavenet
 class WaveGlow(nn.Module):
     def __init__(self, channels: int, n_flows: int = 10):
         super(WaveGlow, self).__init__()
-
         self.channels = channels
         self.n_flows = n_flows
-        wn_layers = 10
-        wn_width = 32
+
+        wn_layers, wn_width = 12, 32
 
         self.conv = nn.ModuleList()
         self.waves = nn.ModuleList()

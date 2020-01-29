@@ -12,4 +12,4 @@
 export LD_LIBRARY_PATH=/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH
 
 cd /home/frankm/thesis
-srun /home/frankm/.pyenv/shims/python3.7 train.py --datadir=/home/frankm/data/nsynth-toy/ -wandb --gpu 0
+srun /home/frankm/.pyenv/shims/python3.7 train.py --data=/home/frankm/data/nsynth-toy/ -wandb --gpu 0
