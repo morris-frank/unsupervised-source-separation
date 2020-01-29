@@ -19,16 +19,18 @@ class WavenetAE(nn.Module):
                  latent_width: int, encoder_width: int, decoder_width: int,
                  n_decoders: int = 1, n_blocks: int = 3, n_layers: int = 10):
         """
-        :param latent_width: Number of dims in the latent bottleneck.
-        :param encoder_width: Width of the hidden layers in the encoder (Non-
-            causal Temporal encoder).
-        :param decoder_width: Width of the hidden layers in the decoder
-            (Wavenet).
-        :param n_decoders: number of decoders
-        :param n_blocks: number of blocks for both
-        :param n_layers: number of layers in each block of encoder and decoder
-        :param in_channels: Number of input in_channels.
-        :param out_channels:
+
+        Args:
+            in_channels: Channels of the input
+            out_channels: Channels that the output shall have
+            latent_width: Number of dims in the latent bottleneck
+            encoder_width: Width of the hidden layers in the encoder (Non-
+                causal Temporal encoder).
+            decoder_width: Width of the hidden layers in the decoder
+                (Wavenet).
+            n_decoders: Number of WaveNet decoders
+            n_blocks: Number of blocks for both decoder and encoder
+            n_layers: Number of layers in each of those blocks
         """
         super(WavenetAE, self).__init__()
         self.params = clean_init_args(locals().copy())

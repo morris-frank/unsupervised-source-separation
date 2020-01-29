@@ -39,14 +39,14 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
           train_loader: data.DataLoader, test_loader: data.DataLoader,
           iterations: int, wandb: bool = False):
     """
-    :param model: The model to train
-    :param loss_function: static loss function
-    :param gpu: List of GPUs to use (int indexes)
-    :param train_loader: dataset for training data
-    :param test_loader: dataset for testing data
-    :param iterations: Number of iterations to run for
-    :param wandb: Whether to log to wandb
-    :return:
+    Args:
+        model: the module to train
+        loss_function: the static loss function
+        gpu: list of GPUs to use (int indexes)
+        train_loader: dataset loader for the training data
+        test_loader: dataset loader for the test data
+        iterations: number of iterations to train for
+        wandb: Whether to log wandb
     """
     model_id = f'{datetime.today():%y-%m-%d_%H}_{type(model).__name__}'
 

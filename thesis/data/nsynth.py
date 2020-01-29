@@ -22,13 +22,15 @@ class NSynthDataset(Dataset):
                  sources: Optional[List[str]] = None,
                  dtype: torch_dtype = torch.float32, mono: bool = True):
         """
-        :param root: The path to the dataset. Should contain the sub-folders
+
+        Args:
+            root: The path to the dataset. Should contain the sub-folders
             for the splits as extracted from the .tar.gz.
-        :param subset: The subset to use.
-        :param families: Only keep those Instrument families
-        :param sources: Only keep those instrument sources
-        :param dtype: The data type to output for the audio signals.
-        :param mono: Whether to use mono signal instead of stereo.
+            subset: The subset to use.
+            families: Only keep those Instrument families
+            sources: Only keep those instrument sources
+            dtype: The data type to output for the audio signals.
+            mono: Whether to use mono signal instead of stereo.
         """
         self.dtype = dtype
         self.subset = subset.lower()
