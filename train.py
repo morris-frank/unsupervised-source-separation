@@ -16,10 +16,10 @@ def main(args):
         model = WavenetVAE(in_channels=1, out_channels=μ + 1, n_decoders=ns,
                            latent_width=32, encoder_width=64, decoder_width=32)
         loss_function = model.loss(β=1.1)
-        traindata = ToyDataSequential(
+        train_loader = ToyDataSequential(
             f'{args.datadir}/toy_train_long_*.npy', μ=μ, crop=crop,
             batch_size=args.batch_size, steps=steps).loader(args.batch_size)
-        testdata = ToyDataSequential(
+        test_loader = ToyDataSequential(
             f'{args.datadir}/toy_test_long_*.npy', μ=μ, crop=crop,
             batch_size=args.batch_size, steps=steps).loader(args.batch_size)
     else:
@@ -30,14 +30,14 @@ def main(args):
                                         decoder_width=32, in_channels=1,
                                         out_channels=μ + 1)
         loss_function = model.loss()
-        traindata = ToyDataSingle(f'{args.datadir}/toy_train_large.npy',
+        train_loader = ToyDataSingle(f'{args.datadir}/toy_train_large.npy',
                                   crop=crop, μ=μ).loader(args.n_batch)
-        testdata = ToyDataSingle(f'{args.datadir}/toy_test_large.npy',
+        test_loader = ToyDataSingle(f'{args.datadir}/toy_test_large.npy',
                                  crop=crop, μ=μ).loader(args.n_batch)
 
     train(model=model, loss_function=loss_function, gpu=args.gpu,
-          trainset=traindata, testset=testdata, iterations=args.iterations,
-          use_board=args.board)
+          train_loader=train_loader, test_loader=test_loader,
+          iterations=args.iterations, log=args.log)
 
 
 if __name__ == '__main__':
