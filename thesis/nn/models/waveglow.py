@@ -41,7 +41,7 @@ class WaveGlow(nn.Module):
             # Separate them and get scale and translate
             s_a, s_b = f_s.chunk(2, dim=1)
             log_s_t = self.waves[k](s_a, m)
-            log_s, t = log_s_t.chunck(2, dim=1)
+            log_s, t = log_s_t.chunk(2, dim=1)
 
             # Affine transform right part
             s_b = log_s.exp() * s_a + t
