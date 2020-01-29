@@ -35,6 +35,7 @@ def log(writer: MonkeyWriter, it: int, values: Dict):
     for tag, val in values.items():
         if isinstance(val, plt.Figure):
             writer.add_figure(tag, val, it)
+
         elif isinstance(val, list) and len(val) > 0:
             try:
                 writer.add_histogram(tag, np.array(val), it)
@@ -43,8 +44,10 @@ def log(writer: MonkeyWriter, it: int, values: Dict):
             mean_tag, mean_val = f'{tag}', mean(val)
             mess += f'\t{mean_tag}:{mean_val:.3e}'
             writer.add_scalar(mean_tag, mean_val, it)
+
         elif isinstance(val, str):
             writer.add_text(tag, val, it)
+
         else:
             mess += f'\t{tag}:{val:.3e}'
             writer.add_scalar(tag, val, it)

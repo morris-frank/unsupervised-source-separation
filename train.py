@@ -1,5 +1,5 @@
 from thesis.config import make_config
-from thesis.training import train
+from thesis.train import train
 from thesis.data.toy import ToyDataSequential, ToyDataSingle
 from thesis.nn.models import WavenetVAE, ConditionalWavenetVQVAE
 
@@ -36,8 +36,8 @@ def main(args):
                                  crop=crop, μ=μ).loader(args.n_batch)
 
     train(model=model, loss_function=loss_function, gpu=args.gpu,
-          trainset=traindata, testset=testdata, num_iter=args.num_iter,
-          use_board=args.board, save_suffix=f'det_{ns}')
+          trainset=traindata, testset=testdata, iterations=args.iterations,
+          use_board=args.board)
 
 
 if __name__ == '__main__':

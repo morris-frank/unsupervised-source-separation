@@ -101,7 +101,7 @@ class WavenetVAE(nn.Module):
             it_β = β if dβ == 0 else β * min(progress / dβ, 1)
 
             loss = ce_x - it_β * kl_zx
-            return loss, None
+            return loss
 
         return func
 
@@ -168,6 +168,6 @@ class ConditionalWavenetVQVAE(nn.Module):
             loss_commit = F.mse_loss(z_e_x, z_q_x.detach())
 
             loss = loss_recons + loss_vq + β * loss_commit
-            return loss, None
+            return loss
 
         return func

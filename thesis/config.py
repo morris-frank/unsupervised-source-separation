@@ -14,7 +14,7 @@ def make_config(version: str) -> ArgumentParser:
                                  '(containing the split directories.)')
 
         gtrain = parser.add_argument_group('Training options')
-        gtrain.add_argument('-i', type=int, default=250000, dest='num_iter',
+        gtrain.add_argument('-i', type=int, default=250000, dest='iterations',
                             help='Number of batches to train for.')
         gtrain.add_argument('-nb', type=int, default=32, dest='batch_size',
                             help='The batch size.')

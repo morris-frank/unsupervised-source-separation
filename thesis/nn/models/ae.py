@@ -71,6 +71,6 @@ class WavenetAE(nn.Module):
             y_tilde = model(x)
             loss = multi_cross_entropy(y_tilde, y, len(self.decoders),
                                        self.out_channels)
-            return loss, None
+            return loss
 
         return func
