@@ -22,8 +22,8 @@ class WaveGlow(nn.Module):
         for _ in range(n_flows):
             self.conv.append(ChannelConvInvert(channels))
             self.waves.append(Wavenet(
-                in_channels=channels, out_channels=channels, n_blocks=1,
-                n_layers=wn_layers, residual_width=2 * wn_width,
+                in_channels=channels // 2, out_channels=channels // 2,
+                n_blocks=1, n_layers=wn_layers, residual_width=2 * wn_width,
                 skip_width=wn_width, conditional_dims=[(1, 1)])
             )
 
