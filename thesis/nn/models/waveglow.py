@@ -1,15 +1,17 @@
-from torch.autograd import Variable
 import torch
 from torch import nn
+from torch.autograd import Variable
 
-from ..modules import ChannelConvInvert
 from .wavenet import Wavenet
+from ..modules import ChannelConvInvert
+from ...utils import clean_init_args
 
 
 # TODO: add skip connections / early outputs
 class WaveGlow(nn.Module):
     def __init__(self, channels: int, n_flows: int = 10):
         super(WaveGlow, self).__init__()
+        self.params = clean_init_args(locals().copy())
         self.channels = channels
         self.n_flows = n_flows
 

@@ -8,14 +8,14 @@ from thesis.train import train
 
 def main(args):
     args.epochs = 50000
-    μ, crop = 100, 2 ** 10
+    crop = 2 ** 11
 
     model = WaveGlow(channels=4, n_flows=10)
     loss_function = model.loss(σ=1.)
 
-    train_loader = ToyData(f'{args.data}/toy_train.npy', μ + 1, crop)\
+    train_loader = ToyData(f'{args.data}/toy_train.npy', crop) \
         .loader(args.batch_size)
-    test_loader = ToyData(f'{args.data}/toy_test.npy', μ + 1, crop)\
+    test_loader = ToyData(f'{args.data}/toy_test.npy', crop) \
         .loader(args.batch_size)
 
     train(model=model, loss_function=loss_function, gpu=args.gpu,

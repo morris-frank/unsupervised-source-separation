@@ -1,7 +1,7 @@
 import math
 import random
 from glob import glob
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 import torch
@@ -12,14 +12,16 @@ from ..functional import encode_μ_law
 
 
 def _prepare_toy_audio_data(mix: np.ndarray, sources: np.ndarray,
-                            μ: int, crop: int, offset: int = 0):
+                            crop: int, offset: int = 0,
+                            μ: Optional[int] = None):
     mix = torch.tensor(mix, dtype=torch.float32)
-    mix = encode_μ_law(mix, μ=μ - 1) / math.ceil(μ / 2)
+    if μ:
+        mix = encode_μ_law(mix, μ=μ - 1) / math.ceil(μ / 2)
 
     sources = torch.tensor(sources, dtype=torch.float32)
-    # TODO is this + correct why not / ???????
-    sources = (encode_μ_law(sources, μ=μ - 1) + math.ceil(
-        μ / 2)).long()
+    if μ:
+        sources = (encode_μ_law(sources, μ=μ - 1) + math.ceil(
+            μ / 2)).long()
 
     mix = mix[offset:offset + crop]
     sources = sources[:, offset:offset + crop]
@@ -32,7 +34,7 @@ class ToyData(Dataset):
     cropped.
     """
 
-    def __init__(self, filepath: str, μ: int, crop: int):
+    def __init__(self, filepath: str, crop: int, μ: Optional[int] = None):
         self.data = np.load(filepath, allow_pickle=True)
         self.μ, self.crop = μ, crop
 
@@ -43,7 +45,7 @@ class ToyData(Dataset):
         item = self.data[idx]
         p = random.randint(0, item['mix'].size - self.crop)
         mix, sources = _prepare_toy_audio_data(item['mix'], item['sources'],
-                                               self.μ, self.crop, p)
+                                               self.crop, p, self.μ)
         return mix, sources
 
 
@@ -60,8 +62,8 @@ class ToyDataSingle(ToyData):
 
 
 class ToyDataSequential(Dataset):
-    def __init__(self, filepath: str, μ: int, crop: int,
-                 batch_size: int, steps: int = 5, stride: int = None):
+    def __init__(self, filepath: str, crop: int, batch_size: int,
+                 steps: int = 5, stride: int = None, μ: Optional[int] = None):
         self.μ, self.crop, self.steps = μ, crop, steps
         self.ifile, self.data = None, None
         self.batch_size = batch_size
@@ -99,7 +101,7 @@ class ToyDataSequential(Dataset):
         offset *= self.stride
 
         mix, sources = _prepare_toy_audio_data(item['mix'], item['sources'],
-                                               self.μ, self.crop, offset)
+                                               self.crop, offset, self.μ)
         return (mix, offset), sources
 
     def loader(self, batch_size: int) -> data.DataLoader:
