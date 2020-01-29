@@ -81,6 +81,6 @@ class WaveGlow(nn.Module):
             _ = progress
             z, total_log_s, total_det_w = model(x, y)
             loss = (z * z).sum() / (2 * σ ** 2) - total_log_s - total_det_w
-            return loss
+            return loss / z.numel()
 
         return func

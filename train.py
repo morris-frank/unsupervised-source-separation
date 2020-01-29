@@ -31,7 +31,7 @@ if __name__ == '__main__':
                         help='The top-level directory of dataset.')
     parser.add_argument('-i', type=int, default=50000, dest='iterations',
                         help='Number of batches to train for.')
-    parser.add_argument('-bs', type=int, default=32, dest='batch_size',
+    parser.add_argument('-bs', type=int, default=20, dest='batch_size',
                         help='The batch size.')
     parser.add_argument('-wandb', action='store_true',
                         help='Logs to WandB.')
