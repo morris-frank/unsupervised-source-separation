@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 import torch
-import torch.nn as nn
+from torch import nn
 from torch.nn import functional as F
 from tqdm import trange
 

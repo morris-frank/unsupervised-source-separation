@@ -53,7 +53,8 @@ class ChannelConvInvert(nn.Module):
 
         if reverse:
             if self.inv_w is None:
-                self.inv_w = Variable(w.type(z.dtype).inverse().unsqueeze(-1))
+                inv_w = w.type(z.dtype).inverse()
+                self.inv_w = Variable(inv_w.unsqueeze(-1))
             z = F.conv1d(z, self.inv_w, bias=None)
             return z
         else:

@@ -18,6 +18,8 @@ class Wavenet(nn.Module):
         pad = (kernel_size - 1) // 2
 
         conditional_dims = [] if conditional_dims is None else conditional_dims
+        if not isinstance(conditional_dims, list):
+            conditional_dims = [conditional_dims]
         self.n_conds = len(conditional_dims)
 
         self.n_blocks, self.n_layers = n_blocks, n_layers
