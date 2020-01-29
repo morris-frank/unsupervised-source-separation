@@ -2,30 +2,42 @@ import os
 import time
 from datetime import datetime
 from statistics import mean
+from typing import Dict
 from typing import List, Callable
 
 import torch
-import wandb
+import wandb as _wandb
 from torch import nn
 from torch import optim
 from torch.utils import data
 
 
+def _print_log(items: Dict, step: int):
+    print(f'step {step:>9}', end='\t')
+    for k, v in items.items():
+        print(f'k={v:>9}, ')
+    print()
+
+
 def _test(model: nn.Module, loss_function: Callable,
-          test_loader: data.DataLoader, it: int, iterations: int, log: bool):
+          test_loader: data.DataLoader, it: int, iterations: int, wandb: bool):
     test_time, test_losses = time.time(), []
     model.eval()
     for x, y in test_loader:
         loss = loss_function(model, x, y, it / iterations)
         test_losses.append(loss.detach().item())
-    if log:
-        wandb.log({'Loss/test': mean(test_losses),
-                   'Time/test': time.time() - test_time}, step=it)
+
+    log = {'Loss/test': mean(test_losses),
+           'Time/test': time.time() - test_time}
+
+    _print_log(log, step=it)
+    if wandb:
+        _wandb.log(log, step=it)
 
 
 def train(model: nn.Module, loss_function: Callable, gpu: List[int],
           train_loader: data.DataLoader, test_loader: data.DataLoader,
-          iterations: int, log: bool = False):
+          iterations: int, wandb: bool = False):
     """
     :param model: The model to train
     :param loss_function: static loss function
@@ -33,7 +45,7 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
     :param train_loader: dataset for training data
     :param test_loader: dataset for testing data
     :param iterations: Number of iterations to run for
-    :param log: Whether to log to wandb
+    :param wandb: Whether to log to wandb
     :return:
     """
     model_id = f'{datetime.today():%y-%m-%d_%H}_{type(model).__name__}'
@@ -42,8 +54,9 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
     save_path = f'checkpoints/{model_id}_{{:06}}.pt'
     model_args = model.params
 
-    if log:
-        wandb.init(name=model_id, config=model_args['kwargs'])
+    if wandb:
+        _wandb.init(name=model_id, config=model_args['kwargs'],
+                    project=__name__.split('.')[0])
 
     # Move model to device(s):
     device = f'cuda:{gpu[0]}' if gpu else 'cpu'
@@ -80,10 +93,13 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
         it_times.append(time.time() - it_start_time)
 
         # LOG INFO (every 10 mini batches)
-        if log and (it % 10 == 0 or it == iterations - 1):
-            wandb.log({'Loss/train': mean(losses),
-                       'Time/train': mean(it_times),
-                       'LR': optimizer.param_groups[0]['lr']}, step=it)
+        if it % 10 == 0 or it == iterations - 1:
+            log = {'Loss/train': mean(losses),
+                   'Time/train': mean(it_times),
+                   'LR': optimizer.param_groups[0]['lr']}
+            _print_log(log, step=it)
+            if wandb:
+                _wandb.log(log, step=it)
             losses, it_times = [], []
 
         # SAVE THE MODEL (every 30min)
@@ -99,4 +115,4 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
 
         # TEST THE MODEL
         if it % test_at == 0 or it == iterations - 1:
-            _test(model, loss_function, test_loader, it, iterations, log)
+            _test(model, loss_function, test_loader, it, iterations, wandb)

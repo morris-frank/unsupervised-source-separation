@@ -1,7 +1,7 @@
 from thesis.config import make_config
-from thesis.train import train
 from thesis.data.toy import ToyDataSequential, ToyDataSingle
 from thesis.nn.models import WavenetVAE, ConditionalWavenetVQVAE
+from thesis.train import train
 
 
 def main(args):
@@ -31,13 +31,13 @@ def main(args):
                                         out_channels=μ + 1)
         loss_function = model.loss()
         train_loader = ToyDataSingle(f'{args.datadir}/toy_train_large.npy',
-                                  crop=crop, μ=μ).loader(args.n_batch)
+                                     crop=crop, μ=μ).loader(args.n_batch)
         test_loader = ToyDataSingle(f'{args.datadir}/toy_test_large.npy',
-                                 crop=crop, μ=μ).loader(args.n_batch)
+                                    crop=crop, μ=μ).loader(args.n_batch)
 
     train(model=model, loss_function=loss_function, gpu=args.gpu,
           train_loader=train_loader, test_loader=test_loader,
-          iterations=args.iterations, log=args.log)
+          iterations=args.iterations, wandb=args.wandb)
 
 
 if __name__ == '__main__':

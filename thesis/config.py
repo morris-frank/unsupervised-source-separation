@@ -24,8 +24,8 @@ def make_config(version: str) -> ArgumentParser:
         gtrain.add_argument('--sources', type=str, required=False, nargs='+',
                             help='The instrument sources to use from the '
                                  'dataset.')
-        gtrain.add_argument('-log', action='store_true',
-                            help='Logs to Tensorboard and WandB.')
+        gtrain.add_argument('-wandb', action='store_true',
+                            help='Logs to WandB.')
 
     if 'sampl' in version:
         gsampl = parser.add_argument_group('Sampling options')
