@@ -59,7 +59,7 @@ class WavenetVAE(nn.Module):
         self.z_c = z[:, :, -1].detach()
         return y_tilde, z, log_q_z
 
-    def test_forward(self, x: torch.Tensor, destroy: float = 0) \
+    def infer(self, x: torch.Tensor, destroy: float = 0) \
             -> torch.Tensor:
         x, offsets = x
         q_μ = self.encode(x, offsets)[:, :self.latent_width, :]
@@ -142,8 +142,8 @@ class ConditionalWavenetVQVAE(nn.Module):
         x_tilde = self.decoder(x, [z_q_x_st])
         return x_tilde, z, z_q_x
 
-    def test_forward(self, x: torch.Tensor, labels: torch.Tensor,
-                     destroy: float = 0):
+    def infer(self, x: torch.Tensor, labels: torch.Tensor,
+              destroy: float = 0):
         z = self.encode(x, labels)
         if destroy > 0:
             z = destroy_along_channels(z, destroy)

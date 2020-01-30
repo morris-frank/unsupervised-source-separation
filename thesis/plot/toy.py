@@ -7,6 +7,7 @@ from torch import nn
 from torch.nn import functional as F
 from tqdm import trange
 
+from ..data import Dataset
 from ..data.toy import ToyData
 from ..functional import multi_argmax
 
@@ -47,29 +48,25 @@ def fig_summary(fname: str):
     return fig
 
 
-def fig_reconstruction(mix, stems, pred, ns, length):
-    fig, axs = plt.subplots(ns + 1, 2, sharex='all')
-    for i in range(ns):
+def fig_reconstruction(mix: torch.Tensor, stems: torch.Tensor, pred: torch.Tensor):
+    n_sources = stems.shape[0]
+    length = 500
+    fig, axs = plt.subplots(n_sources + 1, 2, sharex='all')
+    for i in range(n_sources):
         axs[i, 0].plot(stems[i, 100:length], c='r')
         axs[i, 1].plot(pred[i, 100:length], c='b')
     axs[-1, 0].plot(mix[0, 0, 100:length], c='g')
     return fig
 
 
-def meta_forward(model, mix, ns, single, destroy=0.):
+def meta_infer(model: nn.Module, m: torch.Tensor):
+    # TODO tell VAE infer to do the torch.cat
     with torch.no_grad():
-        if single:
-            logits = [
-                model.test_forward(mix, torch.tensor([i]),
-                                   destroy=destroy)
-                for i in range(ns)]
-            logits = torch.cat(logits, 1)
-        else:
-            logits = model.test_forward(mix, destroy=destroy)
-    return logits
+        s = model.infer(m)
+    return s.squeeze()
 
 
-def plot_reconstruction(model, data, ns, length, single=False):
+def plot_reconstruction(model: nn.Module, data: Dataset):
     model.eval()
     for i, (x, stems) in enumerate(data):
         if isinstance(x, tuple):
@@ -80,9 +77,10 @@ def plot_reconstruction(model, data, ns, length, single=False):
             mix = x
             mix = mix.unsqueeze(0)
             x = mix
-        logits = meta_forward(model, x, ns, single)
-        pred = multi_argmax(logits, ns)
-        fig = fig_reconstruction(mix, stems, pred, ns, length)
+        s = meta_infer(model, x)
+        if s.shape[0] > data.n_sources:
+            s = multi_argmax(s, data.n_sources)
+        fig = fig_reconstruction(mix, stems, s)
         fig.savefig(f'./figures/{type(model).__name__}_{i}.png')
         plt.show()
         input()
@@ -101,7 +99,7 @@ def prepare_plot_freq_loss(model: nn.Module, data: ToyData, ns: int,
         mix = mix.unsqueeze(0)
         prms = data.data[n]['params']
 
-        logits = meta_forward(model, mix.to(device), ns, single, destroy)
+        logits = meta_infer(model, mix.to(device), ns, single, destroy)
         logits = logits.cpu()
         for i in range(ns):
             d['n'].append(n)

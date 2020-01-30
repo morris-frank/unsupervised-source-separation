@@ -62,7 +62,7 @@ class WavenetAE(nn.Module):
         embedding = self.encoder(x)
         return self._decode(x, embedding)
 
-    def test_forward(self, x: torch.Tensor, destroy: float = 0) \
+    def infer(self, x: torch.Tensor, destroy: float = 0) \
             -> torch.Tensor:
         embedding = self.encoder(x)
         embedding = destroy_along_channels(embedding, destroy)
