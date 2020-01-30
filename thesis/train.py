@@ -54,14 +54,15 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
     save_path = f'checkpoints/{model_id}_{{:06}}.pt'
     model_args = model.params
 
-    if wandb:
-        _wandb.init(name=model_id, config=model_args['kwargs'],
-                    project=__name__.split('.')[0])
-
     # Move model to device(s):
     device = f'cuda:{gpu[0]}' if gpu else 'cpu'
     if gpu:
         model = nn.DataParallel(model.to(device), device_ids=gpu)
+
+    if wandb:
+        _wandb.watch(model)  # Does this work with DataParallel ?
+        _wandb.init(name=model_id, config=model_args['kwargs'],
+                    project=__name__.split('.')[0])
 
     # Setup optimizer and learning rate scheduler
     optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=1e-3)
