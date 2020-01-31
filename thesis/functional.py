@@ -105,7 +105,7 @@ def destroy_along_channels(x: torch.Tensor, amount: float) -> torch.Tensor:
     return x
 
 
-def multi_argmax(x: torch.Tensor, n: int, μ: int = 101):
+def multi_argmax(x: torch.Tensor, n: int, μ: int = 101) -> torch.Tensor:
     """
     Takes argmax from SoftMax-output over the concatenated channels.
 
@@ -123,3 +123,21 @@ def multi_argmax(x: torch.Tensor, n: int, μ: int = 101):
         j = i * μ
         signals.append(x[:, j:j + μ, :].argmax(dim=1))
     return torch.cat(signals)
+
+
+def orthonormal(*dim: int) -> torch.Tensor:
+    """
+    Creates an orthonormal Tensor with the given dimensions.
+
+    Args:
+        *dim: The dimensions.
+
+    Returns:
+        the Tensor (new)
+    """
+    # this guarantees |det(weights)| == 1 but not the sign
+    data = torch.qr(torch.empty(*dim).normal_())[0]
+
+    if torch.det(data) < 0:
+        data[:, 0] = -data[:, 0]
+    return data

@@ -4,6 +4,7 @@ from torch.autograd import Variable
 from torch.nn import functional as F
 
 from .functions import VectorQuantizationStraightThrough, VectorQuantization
+from ..functional import orthonormal
 
 
 class VQEmbedding(nn.Module):
@@ -31,19 +32,34 @@ class VQEmbedding(nn.Module):
         return z_q_x, z_q_x_bar
 
 
+class LinearInvert(nn.Linear):
+    def __init__(self, in_features: int, out_features: int):
+        super(LinearInvert, self).__init__(in_features=in_features,
+                                           out_features=out_features, bias=True)
+        self.inv_weights = None
+        # I cannot init the weights to be orthonormal as they're not gonna be
+        # square. :((((((
+        self.weight.normal_()
+        self.bias.normal_()
+
+    def forward(self, x: torch.Tensor, reverse: bool = False) -> torch.Tensor:
+        if reverse:
+            if self.inv_weights is None:
+                inv_w = self.weight.type(x.dtype).inverse()
+                self.inv_weights = Variable(inv_w.unsqueeze(-1))
+            y = F.linear(x - self.bias, self.inv_weights, None)
+            return y
+        else:
+            y = super(LinearInvert, self).forward(x)
+            return y
+
+
 class ChannelConvInvert(nn.Module):
     def __init__(self, channels: int):
         super(ChannelConvInvert, self).__init__()
         self.conv = nn.Conv1d(channels, channels, 1, bias=False)
 
-        # Init weights shall be orthonormal:
-        # this guarantees |det(weights)| == 1 but not the sign
-        weights = torch.qr(torch.empty(channels, channels).normal_())[0]
-
-        if torch.det(weights) < 0:
-            weights[:, 0] = -weights[:, 0]
-
-        self.conv.weight.data = weights.unsqueeze(-1)
+        self.conv.weight.data = orthonormal(channels, channels).unsqueeze(-1)
         self.inv_w = None
 
     def forward(self, z: torch.Tensor, reverse: bool = False):

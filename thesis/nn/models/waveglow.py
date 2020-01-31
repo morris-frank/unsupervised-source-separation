@@ -8,7 +8,7 @@ from ...utils import clean_init_args
 
 
 class WaveGlow(nn.Module):
-    def __init__(self, channels: int, n_flows: int = 10, wn_layers: int = 12,
+    def __init__(self, channels: int, n_flows: int = 15, wn_layers: int = 12,
                  wn_width: int = 32):
         super(WaveGlow, self).__init__()
         self.params = clean_init_args(locals().copy())
@@ -25,11 +25,10 @@ class WaveGlow(nn.Module):
                 residual_width=2 * wn_width, skip_width=wn_width)
             )
 
-    def forward(self, mix: torch.Tensor, sources: torch.Tensor):
-        assert sources.shape[1] == self.channels
+    def forward(self, m: torch.Tensor, S: torch.Tensor):
+        assert S.shape[1] == self.channels
 
-        m = mix
-        f_s = sources
+        f_s = S
 
         total_log_s, total_det_w = 0, 0
         for k in range(self.n_flows):
@@ -53,17 +52,17 @@ class WaveGlow(nn.Module):
         z = f_s
         return z, total_log_s, total_det_w
 
-    def infer(self, mix: torch.Tensor, σ: float = 1.):
-        N, _, L = mix.shape
+    def infer(self, m: torch.Tensor, σ: float = 1.):
+        N, _, L = m.shape
 
         # Sample a z
-        f_z = torch.empty(N, self.channels, L).type(mix.dtype).to(mix.device)
+        f_z = torch.empty(N, self.channels, L).type(m.dtype).to(m.device)
         f_z = Variable(σ * f_z.normal_())
 
         for k in reversed(range(self.n_flows)):
             z_a, z_b = f_z.chunk(2, dim=1)
 
-            log_s_t = self.waves[k](z_a, mix)
+            log_s_t = self.waves[k](z_a, m)
             log_s, t = log_s_t.chunk(2, dim=1)
             z_b = (z_a - t) / log_s.exp()
 
