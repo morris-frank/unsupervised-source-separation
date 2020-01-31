@@ -1,4 +1,4 @@
-from typing import List, Union, Tuple
+from typing import List, Union, Optional
 
 import torch
 from torch import nn
@@ -9,19 +9,14 @@ from ...utils import range_product
 
 class Wavenet(nn.Module):
     def __init__(self, in_channels: int = 1, out_channels: int = 256,
-                 n_blocks: int = 3, n_layers: int = 10,
-                 residual_width: int = 512, skip_width: int = 256,
-                 conditional_dims: List[Tuple[int, ...]] = None,
-                 kernel_size: int = 3):
+                 c_channels: Optional[int] = None, n_blocks: int = 3,
+                 n_layers: int = 10, residual_width: int = 512,
+                 skip_width: int = 256, kernel_size: int = 3):
         super(Wavenet, self).__init__()
         assert kernel_size % 2 != 0
         pad = (kernel_size - 1) // 2
 
-        conditional_dims = [] if conditional_dims is None else conditional_dims
-        if not isinstance(conditional_dims, list):
-            conditional_dims = [conditional_dims]
-        self.n_conds = len(conditional_dims)
-
+        self.conditional = c_channels is not None
         self.n_blocks, self.n_layers = n_blocks, n_layers
         self.dilations = [2 ** l for _, l in
                           range_product(n_blocks, n_layers)] + [1]
@@ -32,10 +27,8 @@ class Wavenet(nn.Module):
 
         self.filter_conv, self.gate_conv = nn.ModuleList(), nn.ModuleList()
         self.skip_conv, self.feat_conv = nn.ModuleList(), nn.ModuleList()
-        self.filter_cond_conv = nn.ModuleList(
-            nn.ModuleList() for _ in range(self.n_conds))
-        self.gate_cond_conv = nn.ModuleList(
-            nn.ModuleList() for _ in range(self.n_conds))
+        self.filter_cond_conv = nn.ModuleList()
+        self.gate_cond_conv = nn.ModuleList()
         for _, _ in range_product(self.n_blocks, self.n_layers):
             self.filter_conv.append(
                 nn.Conv1d(residual_width, residual_width, kernel_size,
@@ -48,17 +41,9 @@ class Wavenet(nn.Module):
             self.feat_conv.append(
                 nn.Conv1d(residual_width, residual_width, 1, bias=False))
 
-            for i, shape in enumerate(conditional_dims):
-                if isinstance(shape, int):
-                    self.filter_cond_conv[i].append(
-                        nn.Linear(shape, residual_width))
-                    self.gate_cond_conv[i].append(
-                        nn.Linear(shape, residual_width))
-                else:
-                    self.filter_cond_conv[i].append(
-                        nn.Conv1d(shape[0], residual_width, 1, bias=False))
-                    self.gate_cond_conv[i].append(
-                        nn.Conv1d(shape[0], residual_width, 1, bias=False))
+            if self.conditional:
+                self.filter_cond_conv.append(nn.Conv1d(c_channels, residual_width, 1, bias=False))
+                self.gate_cond_conv.append(nn.Conv1d(c_channels, residual_width, 1, bias=False))
 
         self.final_skip = nn.Sequential(
             nn.ReLU(),
@@ -80,33 +65,30 @@ class Wavenet(nn.Module):
         return cond
 
     def forward(self, x: torch.Tensor,
-                conditionals: Union[torch.Tensor, List[torch.Tensor]]) \
-            -> torch.Tensor:
-        if isinstance(conditionals, torch.Tensor):
-            conditionals = [conditionals]
-        assert len(conditionals) == self.n_conds
+                conditional: Optional[torch.Tensor]) -> torch.Tensor:
+        assert (conditional is not None) == self.conditional
+
         feat = self.init_conv(x)
         skip = self.init_skip(feat)
 
-        for i in range(self.n_blocks * self.n_layers):
-            dilated = dilate(feat, new=self.dilations[i],
-                             old=self.dilations[i - 1])
+        for k in range(self.n_blocks * self.n_layers):
+            dilated = dilate(feat, new=self.dilations[k],
+                             old=self.dilations[k - 1])
 
-            f = self.filter_conv[i](dilated)
-            g = self.gate_conv[i](dilated)
+            f = self.filter_conv[k](dilated)
+            g = self.gate_conv[k](dilated)
 
-            # Now add all the condition to the filters and gates
-            for j in range(self.n_conds):
-                _f = self.filter_cond_conv[j][i](conditionals[j])
-                _g = self.gate_cond_conv[j][i](conditionals[j])
-                f = f + self._scale_cond(_f, self.dilations[i], f.shape[0])
-                g = g + self._scale_cond(_g, self.dilations[i], g.shape[0])
+            if self.conditional:
+                _f = self.filter_cond_conv[k](conditional)
+                _g = self.gate_cond_conv[k](conditional)
+                f = f + self._scale_cond(_f, self.dilations[k], f.shape[0])
+                g = g + self._scale_cond(_g, self.dilations[k], g.shape[0])
 
             residual = torch.sigmoid(f) * torch.tanh(g)
 
-            feat = dilated + self.feat_conv[i](residual)
-            _skip = self.skip_conv[i](residual)
-            skip = skip + dilate(_skip, new=1, old=self.dilations[i])
+            feat = dilated + self.feat_conv[k](residual)
+            _skip = self.skip_conv[k](residual)
+            skip = skip + dilate(_skip, new=1, old=self.dilations[k])
 
         skip = self.final_skip(skip)
         out = self.final(skip)

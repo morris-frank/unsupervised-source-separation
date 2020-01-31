@@ -7,24 +7,22 @@ from ..modules import ChannelConvInvert
 from ...utils import clean_init_args
 
 
-# TODO: add skip connections / early outputs
 class WaveGlow(nn.Module):
-    def __init__(self, channels: int, n_flows: int = 10):
+    def __init__(self, channels: int, n_flows: int = 10, wn_layers: int = 12,
+                 wn_width: int = 32):
         super(WaveGlow, self).__init__()
         self.params = clean_init_args(locals().copy())
         self.channels = channels
         self.n_flows = n_flows
-
-        wn_layers, wn_width = 12, 32
 
         self.conv = nn.ModuleList()
         self.waves = nn.ModuleList()
         for _ in range(n_flows):
             self.conv.append(ChannelConvInvert(channels))
             self.waves.append(Wavenet(
-                in_channels=channels // 2, out_channels=channels // 2,
-                n_blocks=1, n_layers=wn_layers, residual_width=2 * wn_width,
-                skip_width=wn_width, conditional_dims=[(1, 1)])
+                in_channels=channels // 2, out_channels=channels,
+                c_channels=1, n_blocks=1, n_layers=wn_layers,
+                residual_width=2 * wn_width, skip_width=wn_width)
             )
 
     def forward(self, mix: torch.Tensor, sources: torch.Tensor):

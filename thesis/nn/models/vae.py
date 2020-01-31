@@ -124,7 +124,7 @@ class ConditionalWavenetVQVAE(nn.Module):
 
         self.decoder = Wavenet(in_channels=in_channels,
                                out_channels=out_channels,
-                               conditional_dims=[(D, 1)],
+                               c_channels=D,
                                n_blocks=n_blocks, n_layers=n_layers,
                                skip_width=decoder_width,
                                residual_width=2 * decoder_width)
@@ -139,7 +139,7 @@ class ConditionalWavenetVQVAE(nn.Module):
         z = self.encode(x, labels)
         z_q_x_st, z_q_x = self.codebook.straight_through(z)
         x = shift1d(x, -1)
-        x_tilde = self.decoder(x, [z_q_x_st])
+        x_tilde = self.decoder(x, z_q_x_st)
         return x_tilde, z, z_q_x
 
     def infer(self, x: torch.Tensor, labels: torch.Tensor,
@@ -148,7 +148,7 @@ class ConditionalWavenetVQVAE(nn.Module):
         if destroy > 0:
             z = destroy_along_channels(z, destroy)
         x = shift1d(x, -1)
-        x_tilde = self.decoder(x, [z])
+        x_tilde = self.decoder(x, z)
         return x_tilde
 
     @staticmethod

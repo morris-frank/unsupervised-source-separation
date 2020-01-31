@@ -45,17 +45,17 @@ class WavenetAE(nn.Module):
 
         decoder_args = dict(in_channels=in_channels,
                             out_channels=out_channels,
+                            c_channels=latent_width,
                             n_blocks=n_blocks, n_layers=n_layers,
                             residual_width=2 * decoder_width,
-                            skip_width=decoder_width,
-                            conditional_dims=[(latent_width, 1)])
+                            skip_width=decoder_width)
         self.decoders = nn.ModuleList(
             [Wavenet(**decoder_args) for _ in range(n_decoders)])
 
     def _decode(self, x: torch.Tensor, embedding: torch.Tensor) \
             -> torch.Tensor:
         x = shift1d(x, -1)
-        logits = [dec(x, [embedding]) for dec in self.decoders]
+        logits = [dec(x, embedding) for dec in self.decoders]
         return torch.cat(logits, dim=1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
