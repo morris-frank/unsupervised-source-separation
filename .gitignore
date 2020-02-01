@@ -4,3 +4,4 @@ figures/
 runs/
 *npy
 wandb/
+_*.job

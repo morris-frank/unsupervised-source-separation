@@ -60,9 +60,9 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
         model = nn.DataParallel(model.to(device), device_ids=gpu)
 
     if wandb:
-        _wandb.watch(model)  # Does this work with DataParallel ?
         _wandb.init(name=model_id, config=model_args['kwargs'],
                     project=__name__.split('.')[0])
+        _wandb.watch(model)  # Does this work with DataParallel ?
 
     # Setup optimizer and learning rate scheduler
     optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=1e-3)
