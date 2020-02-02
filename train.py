@@ -39,7 +39,7 @@ def one_channel_unconditioned(data):
 
 def one_channel_conditioned(data):
     receptive_field = 2 * 2 ** 9
-    batch_size = 28
+    batch_size = 26
 
     model = ConditionalRealNVP(classes=4, n_flows=15,
                                wn_layers=int(log2(receptive_field // 2) + 1),
