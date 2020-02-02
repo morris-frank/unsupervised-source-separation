@@ -1,4 +1,4 @@
-from typing import List, Union, Optional
+from typing import Optional
 
 import torch
 from torch import nn
@@ -32,18 +32,20 @@ class Wavenet(nn.Module):
         for _, _ in range_product(self.n_blocks, self.n_layers):
             self.filter_conv.append(
                 nn.Conv1d(residual_width, residual_width, kernel_size,
-                          padding=pad, bias=False))
+                          padding=pad, bias=not self.conditional))
             self.gate_conv.append(
                 nn.Conv1d(residual_width, residual_width, kernel_size,
-                          padding=pad, bias=False))
+                          padding=pad, bias=not self.conditional))
             self.skip_conv.append(
                 nn.Conv1d(residual_width, skip_width, 1, bias=False))
             self.feat_conv.append(
                 nn.Conv1d(residual_width, residual_width, 1, bias=False))
 
             if self.conditional:
-                self.filter_cond_conv.append(nn.Conv1d(c_channels, residual_width, 1, bias=False))
-                self.gate_cond_conv.append(nn.Conv1d(c_channels, residual_width, 1, bias=False))
+                self.filter_cond_conv.append(
+                    nn.Conv1d(c_channels, residual_width, 1, bias=False))
+                self.gate_cond_conv.append(
+                    nn.Conv1d(c_channels, residual_width, 1, bias=False))
 
         self.final_skip = nn.Sequential(
             nn.ReLU(),
