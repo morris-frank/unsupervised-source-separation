@@ -31,7 +31,7 @@ class RealNVP(nn.Module):
         windows = torch.split(x, self.window_size, dim=2)
         left = torch.cat(windows[::2], dim=2)
         right = torch.cat(windows[1::2], dim=2)
-        return left, right
+        return left.contiguous(), right.contiguous()
 
     def _split_and_flow(self, x: torch.Tensor, k: int, c: torch.Tensor) \
             -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
@@ -44,7 +44,7 @@ class RealNVP(nn.Module):
             log_s_t = self.waves[k](x_right, c_right)
 
         log_s, t = log_s_t.chunk(2, dim=1)
-        return c_left, c_right, log_s, t
+        return x_left, x_right, log_s, t
 
     def _interleave_windows(self, left: torch.Tensor, right: torch.Tensor) \
             -> torch.Tensor:
@@ -112,12 +112,15 @@ class ConditionalRealNVP(RealNVP):
         self.classes = classes
 
         self.conditioner = nn.Sequential(nn.Linear(classes, 32),
-                                         nn.Linear(32, 2))
+                                         nn.ReLU(),
+                                         nn.Linear(32, 2),
+                                         nn.ReLU())
 
     def forward(self, x, s: torch.Tensor):
         m, y = x  # y is channel label
         y = F.one_hot(y, self.classes).float().to(m.device)
         σ, μ = self.conditioner(y).unsqueeze(-1).chunk(2, dim=1)
+        σ = F.softplus(σ) + 1e-7
         f_s, total_log_s = super(ConditionalRealNVP, self).forward(m, s)
         z = (f_s - μ) / σ
         return z, total_log_s, σ
@@ -133,6 +136,7 @@ class ConditionalRealNVP(RealNVP):
     def loss():
         def func(model, x, y, progress):
             _ = progress
+
             z, total_log_s, σ = model(x, y)
             loss = (z * z / (2 * σ * σ)).sum() - total_log_s
             return loss / z.numel()

@@ -66,7 +66,8 @@ def main(args):
     model, loss_function, train_loader, test_loader = func(args.data)
     train(model=model, loss_function=loss_function, gpu=args.gpu,
           train_loader=train_loader, test_loader=test_loader,
-          iterations=args.iterations, wandb=args.wandb)
+          iterations=args.iterations, wandb=args.wandb,
+          skip_test=args.skip_test)
 
 
 if __name__ == '__main__':
@@ -79,4 +80,5 @@ if __name__ == '__main__':
     parser.add_argument('-wandb', action='store_true',
                         help='Logs to WandB.')
     parser.add_argument('--iterations', default=50000, type=int)
+    parser.add_argument('-notest', action='store_true', dest='skip_test')
     main(parser.parse_args())

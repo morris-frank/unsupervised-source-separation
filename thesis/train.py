@@ -37,7 +37,7 @@ def _test(model: nn.Module, loss_function: Callable,
 
 def train(model: nn.Module, loss_function: Callable, gpu: List[int],
           train_loader: data.DataLoader, test_loader: data.DataLoader,
-          iterations: int, wandb: bool = False):
+          iterations: int, wandb: bool = False, skip_test: bool = False):
     """
     Args:
         model: the module to train
@@ -47,6 +47,7 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
         test_loader: dataset loader for the test data
         iterations: number of iterations to train for
         wandb: Whether to log wandb
+        skip_test: Whether to skip the test set testing tests
     """
     model_id = f'{datetime.today():%y-%m-%d_%H}_{type(model).__name__}'
 
@@ -57,7 +58,8 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
     # Move model to device(s):
     device = f'cuda:{gpu[0]}' if gpu else 'cpu'
     if gpu:
-        model = nn.DataParallel(model.to(device), device_ids=gpu)
+        model = model.to(device)
+        model = nn.DataParallel(model, device_ids=gpu)
 
     if wandb:
         _wandb.init(name=model_id, config=model_args['kwargs'],
@@ -114,5 +116,5 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
             it_timer = time.time()
 
         # TEST THE MODEL
-        if it % test_at == 0 or it == iterations - 1:
+        if not skip_test and (it % test_at == 0 or it == iterations - 1):
             _test(model, loss_function, test_loader, it, iterations, wandb)
