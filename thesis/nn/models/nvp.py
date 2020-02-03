@@ -109,6 +109,7 @@ class RealNVP(nn.Module):
 class ConditionalRealNVP(RealNVP):
     def __init__(self, classes, *args, **kwargs):
         super(ConditionalRealNVP, self).__init__(channels=1, *args, **kwargs)
+        self.params = clean_init_args(locals().copy())
         self.classes = classes
 
         self.conditioner = nn.Sequential(nn.Linear(classes, 32),

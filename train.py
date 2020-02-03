@@ -5,6 +5,7 @@ from os import path
 from thesis.data.toy import ToyData, ToyDataSingle
 from thesis.nn.models import WaveGlow, MultiRealNVP, ConditionalRealNVP
 from thesis.train import train
+from thesis.data.wrapper import map_dataset
 
 
 def four_channel_unconditioned(data):
@@ -30,10 +31,8 @@ def one_channel_unconditioned(data):
                          wn_layers=int(log2(receptive_field // 2) + 1))
     loss_function = model.loss(σ=1.)
 
-    train_loader = ToyData(f'{data}/toy_train.npy', receptive_field) \
-        .loader(batch_size)
-    test_loader = ToyData(f'{data}/toy_test.npy', receptive_field) \
-        .loader(batch_size)
+    train_loader = map_dataset(model, data, 'train').loader(batch_size)
+    test_loader = map_dataset(model, data, 'test').loader(batch_size)
     return model, loss_function, train_loader, test_loader
 
 
@@ -46,10 +45,8 @@ def one_channel_conditioned(data):
                                wn_width=64)
     loss_function = model.loss()
 
-    train_loader = ToyDataSingle(f'{data}/toy_train.npy', receptive_field) \
-        .loader(batch_size)
-    test_loader = ToyDataSingle(f'{data}/toy_test.npy', receptive_field) \
-        .loader(batch_size)
+    train_loader = map_dataset(model, data, 'train').loader(batch_size)
+    test_loader = map_dataset(model, data, 'test').loader(batch_size)
     return model, loss_function, train_loader, test_loader
 
 

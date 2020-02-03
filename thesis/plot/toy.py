@@ -1,3 +1,5 @@
+from typing import Generator
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -48,7 +50,8 @@ def fig_summary(fname: str):
     return fig
 
 
-def fig_reconstruction(mix: torch.Tensor, stems: torch.Tensor, pred: torch.Tensor):
+def fig_reconstruction(mix: torch.Tensor, stems: torch.Tensor,
+                       pred: torch.Tensor):
     n_sources = stems.shape[0]
     length = 500
     fig, axs = plt.subplots(n_sources + 1, 2, sharex='all')
@@ -66,9 +69,11 @@ def meta_infer(model: nn.Module, m: torch.Tensor):
     return s.squeeze()
 
 
-def plot_reconstruction(model: nn.Module, data: Dataset):
+def example_reconstruction(model: nn.Module, data: Dataset) \
+        -> Generator[plt.Figure, None, None]:
     model.eval()
     for i, (x, stems) in enumerate(data):
+        # TODO : redo this part
         if isinstance(x, tuple):
             mix, label = x
             mix = mix.unsqueeze(0)
@@ -77,14 +82,13 @@ def plot_reconstruction(model: nn.Module, data: Dataset):
             mix = x
             mix = mix.unsqueeze(0)
             x = mix
-        s = meta_infer(model, x)
-        if s.shape[0] > data.n_sources:
-            s = multi_argmax(s, data.n_sources)
-        fig = fig_reconstruction(mix, stems, s)
+        s_tilde = meta_infer(model, x)
+        import ipdb; ipdb.set_trace()
+        if s_tilde.shape[0] > data.n_sources:
+            s_tilde = multi_argmax(s_tilde, data.n_sources)
+        fig = fig_reconstruction(mix, stems, s_tilde)
         fig.savefig(f'./figures/{type(model).__name__}_{i}.png')
-        plt.show()
-        input()
-        plt.close(fig)
+        yield fig
 
 
 def prepare_plot_freq_loss(model: nn.Module, data: ToyData, ns: int,
