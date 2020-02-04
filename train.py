@@ -1,53 +1,32 @@
 from argparse import ArgumentParser
-from math import log2
 from os import path
 
-from thesis.data.toy import ToyData, ToyDataSingle
+from thesis.data.wrapper import map_dataset
 from thesis.nn.models import WaveGlow, MultiRealNVP, ConditionalRealNVP
 from thesis.train import train
-from thesis.data.wrapper import map_dataset
 
 
-def four_channel_unconditioned(data):
-    receptive_field = 2 ** 11
+def four_channel_unconditioned():
     batch_size = 12
-
-    model = WaveGlow(channels=4, n_flows=15,
-                     wn_layers=int(log2(receptive_field) + 1))
+    model = WaveGlow(channels=4, n_flows=15, wn_layers=12)  # rf: 2^11
     loss_function = model.loss(σ=1.)
 
-    train_loader = ToyData(f'{data}/toy_train.npy', receptive_field) \
-        .loader(batch_size)
-    test_loader = ToyData(f'{data}/toy_test.npy', receptive_field) \
-        .loader(batch_size)
-    return model, loss_function, train_loader, test_loader
+    return model, loss_function, batch_size
 
 
-def one_channel_unconditioned(data):
-    receptive_field = 2 * 2 ** 9
+def one_channel_unconditioned():
     batch_size = 16
-
-    model = MultiRealNVP(channels=4, n_flows=15,
-                         wn_layers=int(log2(receptive_field // 2) + 1))
+    model = MultiRealNVP(channels=4, n_flows=15, wn_layers=10)  # rf: 2*2**9
     loss_function = model.loss(σ=1.)
-
-    train_loader = map_dataset(model, data, 'train').loader(batch_size)
-    test_loader = map_dataset(model, data, 'test').loader(batch_size)
-    return model, loss_function, train_loader, test_loader
+    return model, loss_function, batch_size
 
 
-def one_channel_conditioned(data):
-    receptive_field = 2 * 2 ** 9
+def one_channel_conditioned():
     batch_size = 26
-
-    model = ConditionalRealNVP(classes=4, n_flows=15,
-                               wn_layers=int(log2(receptive_field // 2) + 1),
-                               wn_width=64)
+    model = ConditionalRealNVP(classes=4, n_flows=15, wn_layers=10,
+                               wn_width=64)  # rf: 2*2**9
     loss_function = model.loss()
-
-    train_loader = map_dataset(model, data, 'train').loader(batch_size)
-    test_loader = map_dataset(model, data, 'test').loader(batch_size)
-    return model, loss_function, train_loader, test_loader
+    return model, loss_function, batch_size
 
 
 def main(args):
@@ -60,7 +39,11 @@ def main(args):
     else:
         raise ValueError('Invalid experiment given.')
 
-    model, loss_function, train_loader, test_loader = func(args.data)
+    model, loss_function, batch_size = func()
+
+    train_loader = map_dataset(model, args.data, 'train').loader(batch_size)
+    test_loader = map_dataset(model, args.data, 'test').loader(batch_size)
+
     train(model=model, loss_function=loss_function, gpu=args.gpu,
           train_loader=train_loader, test_loader=test_loader,
           iterations=args.iterations, wandb=args.wandb,

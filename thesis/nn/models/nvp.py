@@ -65,9 +65,9 @@ class RealNVP(nn.Module):
             s_a, s_b, log_s, t = self._split_and_flow(f_s, k, m)
 
             if k % 2 == 0:
-                s_b = log_s.exp() * s_a + t
+                s_b = log_s.exp() * s_b + t
             else:
-                s_a = log_s.exp() * s_b + t
+                s_a = log_s.exp() * s_a + t
 
             f_s = self._interleave_windows(s_a, s_b)
 
@@ -87,9 +87,9 @@ class RealNVP(nn.Module):
             z_a, z_b, log_s, t = self._split_and_flow(f_z, k, m)
 
             if k % 2 == 0:
-                z_b = (z_a - t) / log_s.exp()
+                z_b = (z_b - t) / log_s.exp()
             else:
-                z_a = (z_b - t) / log_s.exp()
+                z_a = (z_a - t) / log_s.exp()
 
             f_z = self._interleave_windows(z_a, z_b)
 

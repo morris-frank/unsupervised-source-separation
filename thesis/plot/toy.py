@@ -11,7 +11,6 @@ from tqdm import trange
 
 from ..data import Dataset
 from ..data.toy import ToyData
-from ..functional import multi_argmax
 
 mpl.use('TkAgg')
 
@@ -50,44 +49,35 @@ def fig_summary(fname: str):
     return fig
 
 
-def fig_reconstruction(mix: torch.Tensor, stems: torch.Tensor,
-                       pred: torch.Tensor):
-    n_sources = stems.shape[0]
-    length = 500
-    fig, axs = plt.subplots(n_sources + 1, 2, sharex='all')
-    for i in range(n_sources):
-        axs[i, 0].plot(stems[i, 100:length], c='r')
-        axs[i, 1].plot(pred[i, 100:length], c='b')
-    axs[-1, 0].plot(mix[0, 0, 100:length], c='g')
+def plot_reconstruction(m: torch.Tensor, S: torch.Tensor,
+                        S_tilde: torch.Tensor) -> plt.Figure:
+    p_length = 500
+    n = S.shape[0]
+    fig, axs = plt.subplots(n + 1, 2, sharex='all')
+    for i in range(n):
+        axs[i, 0].plot(S[i, 100:p_length], c='r')
+        axs[i, 1].plot(S_tilde[i, 100:p_length], c='b')
+        axs[-1, 0].plot(m[0, 100:p_length], c='g')
     return fig
-
-
-def meta_infer(model: nn.Module, m: torch.Tensor):
-    # TODO tell VAE infer to do the torch.cat
-    with torch.no_grad():
-        s = model.infer(m)
-    return s.squeeze()
 
 
 def example_reconstruction(model: nn.Module, data: Dataset) \
         -> Generator[plt.Figure, None, None]:
-    model.eval()
-    for i, (x, stems) in enumerate(data):
-        # TODO : redo this part
-        if isinstance(x, tuple):
-            mix, label = x
-            mix = mix.unsqueeze(0)
-            x = (mix, label)
-        else:
-            mix = x
-            mix = mix.unsqueeze(0)
-            x = mix
-        s_tilde = meta_infer(model, x)
-        import ipdb; ipdb.set_trace()
-        if s_tilde.shape[0] > data.n_sources:
-            s_tilde = multi_argmax(s_tilde, data.n_sources)
-        fig = fig_reconstruction(mix, stems, s_tilde)
+    for i, (m, S) in enumerate(data):
+        S_tilde = model.infer(m.unsqueeze(0)).squeeze()
+        fig = plot_reconstruction(m, S, S_tilde)
         fig.savefig(f'./figures/{type(model).__name__}_{i}.png')
+        yield fig
+
+
+def z_example_reconstruction(model: nn.Module, data: Dataset) \
+        -> Generator[plt.Figure, None, None]:
+    for i, (m, S) in enumerate(data):
+        r = model(m.unsqueeze(0), S.unsqueeze(0))
+        z = r[0]  # account for multiple outputs
+        S_tilde = model.infer(m.unsqueeze(0), z=z).squeeze()
+        fig = plot_reconstruction(m, S, S_tilde)
+        fig.savefig(f'./figures/{type(model).__name__}_z_{i}.png')
         yield fig
 
 

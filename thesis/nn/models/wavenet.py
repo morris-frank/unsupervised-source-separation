@@ -11,7 +11,8 @@ class Wavenet(nn.Module):
     def __init__(self, in_channels: int = 1, out_channels: int = 256,
                  c_channels: Optional[int] = None, n_blocks: int = 3,
                  n_layers: int = 10, residual_width: int = 512,
-                 skip_width: int = 256, kernel_size: int = 3):
+                 skip_width: int = 256, kernel_size: int = 3,
+                 weight_norm: bool = False):
         super(Wavenet, self).__init__()
         assert kernel_size % 2 != 0
         pad = (kernel_size - 1) // 2
@@ -57,15 +58,6 @@ class Wavenet(nn.Module):
             nn.Conv1d(skip_width, out_channels, 1)
         )
 
-    @staticmethod
-    def _scale_cond(cond: torch.Tensor, dilation: int, channels: int):
-        if cond.ndim == 3:
-            cond = dilate(cond, new=dilation, old=1)
-        else:
-            cond = cond[..., None]
-            cond = cond.repeat(channels // cond.shape[0], 1, 1)
-        return cond
-
     def forward(self, x: torch.Tensor,
                 conditional: Optional[torch.Tensor]) -> torch.Tensor:
         assert (conditional is not None) == self.conditional
@@ -82,9 +74,9 @@ class Wavenet(nn.Module):
 
             if self.conditional:
                 _f = self.filter_cond_conv[k](conditional)
+                f = f + dilate(_f, self.dilations[k], 1)
                 _g = self.gate_cond_conv[k](conditional)
-                f = f + self._scale_cond(_f, self.dilations[k], f.shape[0])
-                g = g + self._scale_cond(_g, self.dilations[k], g.shape[0])
+                g = g + dilate(_g, self.dilations[k], 1)
 
             residual = torch.sigmoid(f) * torch.tanh(g)
 

@@ -1,3 +1,5 @@
+from typing import Optional
+
 import torch
 from torch import nn
 from torch.autograd import Variable
@@ -41,7 +43,7 @@ class WaveGlow(nn.Module):
             log_s, t = log_s_t.chunk(2, dim=1)
 
             # Affine transform right part
-            s_b = log_s.exp() * s_a + t
+            s_b = log_s.exp() * s_b + t
 
             # Merge them back
             f_s = torch.cat([s_a, s_b], 1)
@@ -52,19 +54,23 @@ class WaveGlow(nn.Module):
         z = f_s
         return z, total_log_s, total_det_w
 
-    def infer(self, m: torch.Tensor, σ: float = 1.):
+    def infer(self, m: torch.Tensor, σ: float = 1.,
+              z: Optional[torch.Tensor] = None) -> torch.Tensor:
         N, _, L = m.shape
 
         # Sample a z
-        f_z = torch.empty(N, self.channels, L).type(m.dtype).to(m.device)
-        f_z = Variable(σ * f_z.normal_())
+        if z is not None:
+            f_z = z.type(m.dtype).to(m.device)
+        else:
+            f_z = torch.empty(N, self.channels, L).type(m.dtype).to(m.device)
+            f_z = Variable(σ * f_z.normal_())
 
         for k in reversed(range(self.n_flows)):
             z_a, z_b = f_z.chunk(2, dim=1)
 
             log_s_t = self.waves[k](z_a, m)
             log_s, t = log_s_t.chunk(2, dim=1)
-            z_b = (z_a - t) / log_s.exp()
+            z_b = (z_b - t) / (log_s.exp())
 
             f_z = torch.cat([z_a, z_b], 1)
 
