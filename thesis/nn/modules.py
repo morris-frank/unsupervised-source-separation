@@ -77,5 +77,4 @@ class ChannelConvInvert(nn.Module):
         else:
             logdet_w = n * l * torch.logdet(w)
             z = self.conv(z)
-
             return z, logdet_w

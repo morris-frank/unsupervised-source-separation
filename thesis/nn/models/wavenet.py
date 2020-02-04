@@ -60,22 +60,21 @@ class Wavenet(nn.Module):
                     self.feat_c[-1] = weight_norm(self.feat_c[-1],
                                                   name='weight')
 
-        self.final = nn.Sequential(
-            nn.ReLU(),
-            nn.Conv1d(skip_width, skip_width, 1),
-            nn.ReLU(),
-            nn.Conv1d(skip_width, out_channels, 1)
-        )
+        # TODO make this step optional somehow: (hehe)
+        final = nn.Conv1d(skip_width, out_channels, 1)
+        final.weight.data.zero_()
+        final.bias.data.zero_()
+        self.final = final
 
     def forward(self, x: torch.Tensor,
                 conditional: Optional[torch.Tensor]) -> torch.Tensor:
         assert (conditional is not None) == self.conditional
 
-        x = self.init_conv(x)
-        s = self.init_skip(x)
+        h = self.init_conv(x)
+        s = self.init_skip(h)
 
         for k in range(self.n_blocks * self.n_layers):
-            dilated = dilate(x, new=self.dilations[k],
+            dilated = dilate(h, new=self.dilations[k],
                              old=self.dilations[k - 1])
             g, f = self.gate[k](dilated), self.feat[k](dilated)
 
@@ -86,9 +85,8 @@ class Wavenet(nn.Module):
 
             res = torch.sigmoid(g) * torch.tanh(f)
 
-            x = dilated + self.thru[k](res)
+            h = dilated + self.thru[k](res)
             s = s + dilate(self.skip[k](res), 1, self.dilations[k])
-
         return self.final(s)
 
     def train(self, mode: bool = True):
