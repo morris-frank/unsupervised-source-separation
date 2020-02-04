@@ -3,8 +3,25 @@ import random
 
 import torch
 from torch.nn import functional as F
+from torch import nn
+from torch.nn.utils import remove_weight_norm
 
 
+def remove_list_weight_norm(ml: nn.ModuleList) -> nn.ModuleList:
+    """
+    Removes weight norm from all layers in a ModuleList
+
+    Args:
+        ml: the ModuleList
+
+    Returns:
+        the changes modulelist
+    """
+    _ml = nn.ModuleList([remove_weight_norm(l) for l in ml])
+    return _ml
+
+
+@torch.jit.script
 def dilate(x: torch.Tensor, new: int, old: int = 1) -> torch.Tensor:
     """
     Will dilate the input tensor of shape [N, C, L]
@@ -17,7 +34,7 @@ def dilate(x: torch.Tensor, new: int, old: int = 1) -> torch.Tensor:
     Returns:
         dilated x
     """
-    [n, c, l] = x.shape  # N == Batch size × old
+    n, c, l = x.shape  # N == Batch size × old
     dilation = new / old
     if dilation == 1:
         return x

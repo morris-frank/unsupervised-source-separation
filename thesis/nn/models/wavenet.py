@@ -2,8 +2,9 @@ from typing import Optional
 
 import torch
 from torch import nn
+from torch.nn.utils import weight_norm
 
-from ...functional import dilate
+from ...functional import dilate, remove_list_weight_norm
 from ...utils import range_product
 
 
@@ -12,7 +13,7 @@ class Wavenet(nn.Module):
                  c_channels: Optional[int] = None, n_blocks: int = 3,
                  n_layers: int = 10, residual_width: int = 512,
                  skip_width: int = 256, kernel_size: int = 3,
-                 weight_norm: bool = False):
+                 normalize: bool = True):
         super(Wavenet, self).__init__()
         assert kernel_size % 2 != 0
         pad = (kernel_size - 1) // 2
@@ -26,34 +27,42 @@ class Wavenet(nn.Module):
                                    padding=(kernel_size - 1) // 2)
         self.init_skip = nn.Conv1d(residual_width, skip_width, 1)
 
-        self.filter_conv, self.gate_conv = nn.ModuleList(), nn.ModuleList()
-        self.skip_conv, self.feat_conv = nn.ModuleList(), nn.ModuleList()
-        self.filter_cond_conv = nn.ModuleList()
-        self.gate_cond_conv = nn.ModuleList()
+        self.skip, self.thru = nn.ModuleList(), nn.ModuleList()
+        self.gate, self.feat = nn.ModuleList(), nn.ModuleList()
+        self.gate_c, self.feat_c = nn.ModuleList(), nn.ModuleList()
         for _, _ in range_product(self.n_blocks, self.n_layers):
-            self.filter_conv.append(
+            self.gate.append(
                 nn.Conv1d(residual_width, residual_width, kernel_size,
                           padding=pad, bias=not self.conditional))
-            self.gate_conv.append(
+            self.feat.append(
                 nn.Conv1d(residual_width, residual_width, kernel_size,
                           padding=pad, bias=not self.conditional))
-            self.skip_conv.append(
+            self.skip.append(
                 nn.Conv1d(residual_width, skip_width, 1, bias=False))
-            self.feat_conv.append(
+            self.thru.append(
                 nn.Conv1d(residual_width, residual_width, 1, bias=False))
 
+            if normalize:
+                self.gate[-1] = weight_norm(self.gate[-1], name='weight')
+                self.feat[-1] = weight_norm(self.feat[-1], name='weight')
+                self.skip[-1] = weight_norm(self.skip[-1], name='weight')
+                self.thru[-1] = weight_norm(self.thru[-1], name='weight')
+
             if self.conditional:
-                self.filter_cond_conv.append(
+                self.gate_c.append(
                     nn.Conv1d(c_channels, residual_width, 1, bias=False))
-                self.gate_cond_conv.append(
+                self.feat_c.append(
                     nn.Conv1d(c_channels, residual_width, 1, bias=False))
 
-        self.final_skip = nn.Sequential(
-            nn.ReLU(),
-            nn.Conv1d(skip_width, skip_width, 1)
-        )
+                if normalize:
+                    self.gate_c[-1] = weight_norm(self.gate_c[-1],
+                                                  name='weight')
+                    self.feat_c[-1] = weight_norm(self.feat_c[-1],
+                                                  name='weight')
 
         self.final = nn.Sequential(
+            nn.ReLU(),
+            nn.Conv1d(skip_width, skip_width, 1),
             nn.ReLU(),
             nn.Conv1d(skip_width, out_channels, 1)
         )
@@ -62,28 +71,38 @@ class Wavenet(nn.Module):
                 conditional: Optional[torch.Tensor]) -> torch.Tensor:
         assert (conditional is not None) == self.conditional
 
-        feat = self.init_conv(x)
-        skip = self.init_skip(feat)
+        x = self.init_conv(x)
+        s = self.init_skip(x)
 
         for k in range(self.n_blocks * self.n_layers):
-            dilated = dilate(feat, new=self.dilations[k],
+            dilated = dilate(x, new=self.dilations[k],
                              old=self.dilations[k - 1])
-
-            f = self.filter_conv[k](dilated)
-            g = self.gate_conv[k](dilated)
+            g, f = self.gate[k](dilated), self.feat[k](dilated)
 
             if self.conditional:
-                _f = self.filter_cond_conv[k](conditional)
-                f = f + dilate(_f, self.dilations[k], 1)
-                _g = self.gate_cond_conv[k](conditional)
-                g = g + dilate(_g, self.dilations[k], 1)
+                dilated_c = dilate(conditional, self.dilations[k], 1)
+                g = g + self.gate_c(dilated_c)
+                f = f + self.feat_c(dilated_c)
 
-            residual = torch.sigmoid(f) * torch.tanh(g)
+            res = torch.sigmoid(g) * torch.tanh(f)
 
-            feat = dilated + self.feat_conv[k](residual)
-            _skip = self.skip_conv[k](residual)
-            skip = skip + dilate(_skip, new=1, old=self.dilations[k])
+            x = dilated + self.thru[k](res)
+            s = s + dilate(self.skip[k](res), 1, self.dilations[k])
 
-        skip = self.final_skip(skip)
-        out = self.final(skip)
-        return out
+        return self.final(s)
+
+    def train(self, mode: bool = True):
+        if mode is False:
+            self.remove_weight_norm()
+        return super(Wavenet, self).train()
+
+    def remove_weight_norm(self):
+        """
+        Removes all the weight norms for this Wavenet
+        """
+        self.gate = remove_list_weight_norm(self.gate)
+        self.feat = remove_list_weight_norm(self.feat)
+        self.thru = remove_list_weight_norm(self.thru)
+        self.skip = remove_list_weight_norm(self.skip)
+        self.gate_c = remove_list_weight_norm(self.gate_c)
+        self.feat_c = remove_list_weight_norm(self.feat_c)

@@ -24,6 +24,7 @@ def main(args):
     elif args.command == 'z-sample':
         from thesis.plot.toy import z_example_reconstruction
         model = load_model(args.weights, args.device)
+        model.eval()
         data = map_dataset(model, args.data, 'train')
         with torch.no_grad():
             for fig in z_example_reconstruction(model, data):

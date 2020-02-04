@@ -35,7 +35,8 @@ class VQEmbedding(nn.Module):
 class LinearInvert(nn.Linear):
     def __init__(self, in_features: int, out_features: int):
         super(LinearInvert, self).__init__(in_features=in_features,
-                                           out_features=out_features, bias=True)
+                                           out_features=out_features,
+                                           bias=True)
         self.inv_weights = None
         # I cannot init the weights to be orthonormal as they're not gonna be
         # square. :((((((
