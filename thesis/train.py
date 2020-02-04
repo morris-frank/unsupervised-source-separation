@@ -66,7 +66,7 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
                     project=__name__.split('.')[0])
 
     # Setup optimizer and learning rate scheduler
-    optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=1e-3)
+    optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=1e-2)
     lr_milestones = torch.linspace(iterations * 0.36, iterations, 5).tolist()
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, lr_milestones,
                                                gamma=0.6)

@@ -34,13 +34,13 @@ def dilate(x: torch.Tensor, new: int, old: int = 1) -> torch.Tensor:
     Returns:
         dilated x
     """
-    n, c, l = x.shape  # N == Batch size × old
+    n, c, w = x.shape  # N == Batch size × old
     dilation = new / old
     if dilation == 1:
         return x
-    l, n = int(l / dilation), int(n * dilation)
+    w, n = int(w / dilation), int(n * dilation)
     x = x.permute(1, 2, 0)
-    x = torch.reshape(x, [c, l, n])
+    x = torch.reshape(x, [c, w, n])
     x = x.permute(2, 0, 1)
     return x.contiguous()
 

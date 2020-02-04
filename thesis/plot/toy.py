@@ -93,7 +93,8 @@ def prepare_plot_freq_loss(model: nn.Module, data: ToyData, ns: int,
         mix = mix.unsqueeze(0)
         prms = data.data[n]['params']
 
-        logits = meta_infer(model, mix.to(device), ns, single, destroy)
+        logits = model.infer(mix, stems)
+        # TODO: FIX THIS
         logits = logits.cpu()
         for i in range(ns):
             d['n'].append(n)
