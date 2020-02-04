@@ -81,8 +81,8 @@ class Wavenet(nn.Module):
 
             if self.conditional:
                 dilated_c = dilate(conditional, self.dilations[k], 1)
-                g = g + self.gate_c(dilated_c)
-                f = f + self.feat_c(dilated_c)
+                g = g + self.gate_c[k](dilated_c)
+                f = f + self.feat_c[k](dilated_c)
 
             res = torch.sigmoid(g) * torch.tanh(f)
 
