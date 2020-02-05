@@ -24,11 +24,14 @@ def main(args):
     f = f"#!/usr/bin/env bash\n\n{s_c}\n"
     f += "export LD_LIBRARY_PATH=/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH\n\n"""
     f += "cd /home/frankm/thesis\n"
-    f += f"srun /home/frankm/.pyenv/shims/python3.7 train.py {args.experiment} --data=/home/frankm/data/toy/ -wandb --gpu 0\n"
+    f += f"srun /home/frankm/.pyenv/shims/python3.7 train.py {args.experiment} --data=/home/frankm/data/toy/ -wandb --gpu 0"
+
+    if args.short:
+        f += '--batch_size=2'
 
     fn = '_temp.job'
     with open(fn, 'w') as fp:
-        fp.write(f)
+        fp.write(f + '\n')
     os.makedirs('./log/', exist_ok=True)
     print(Fore.YELLOW + f'Written job file ./{fn}')
     o = f'{datetime.today():%y-%m-%d_%H}_{args.experiment}_{p}.out'

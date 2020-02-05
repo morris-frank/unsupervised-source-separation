@@ -7,34 +7,35 @@ from thesis.train import train
 
 
 def four_channel_unconditioned():
-    batch_size = 12
+    max_batch_size = 12
     model = WaveGlow(channels=4, n_flows=15, wn_layers=12)  # rf: 2^11
     loss_function = model.loss(σ=1.)
 
-    return model, loss_function, batch_size
+    return model, loss_function, max_batch_size
 
 
 def one_channel_unconditioned():
-    batch_size = 14
+    max_batch_size = 14
     model = MultiRealNVP(channels=4, n_flows=15, wn_layers=10)  # rf: 2*2**9
     loss_function = model.loss(σ=1.)
-    return model, loss_function, batch_size
+    return model, loss_function, max_batch_size
 
 
 def one_channel_conditioned():
-    batch_size = 26
+    max_batch_size = 26
     model = ConditionalRealNVP(classes=4, n_flows=15, wn_layers=10,
                                wn_width=64)  # rf: 2*2**9
     loss_function = model.loss()
-    return model, loss_function, batch_size
+    return model, loss_function, max_batch_size
 
 
 def main(args):
     if args.experiment not in EXPERIMENTS:
         raise ValueError('Invalid experiment given.')
 
-    model, loss_function, batch_size = EXPERIMENTS[args.experiment]()
+    model, loss_function, max_batch_size = EXPERIMENTS[args.experiment]()
 
+    batch_size = args.batch_size or max_batch_size
     train_loader = map_dataset(model, args.data, 'train').loader(batch_size)
     test_loader = map_dataset(model, args.data, 'test').loader(batch_size)
 
@@ -62,4 +63,5 @@ if __name__ == '__main__':
                         help='Logs to WandB.')
     parser.add_argument('--iterations', default=50000, type=int)
     parser.add_argument('-notest', action='store_true', dest='skip_test')
+    parser.add_argument('--batch_size', type=int, default=None)
     main(parser.parse_args())
