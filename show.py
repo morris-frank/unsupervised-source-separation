@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 import torch
 from argparse import ArgumentParser
 from os.path import abspath
