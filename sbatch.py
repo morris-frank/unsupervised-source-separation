@@ -27,7 +27,7 @@ def main(args):
     f += f"srun /home/frankm/.pyenv/shims/python3.7 train.py {args.experiment} --data=/home/frankm/data/toy/ -wandb --gpu 0"
 
     if args.short:
-        f += '--batch_size=2'
+        f += ' --batch_size=2'
 
     fn = '_temp.job'
     with open(fn, 'w') as fp:
@@ -35,9 +35,9 @@ def main(args):
     os.makedirs('./log/', exist_ok=True)
     print(Fore.YELLOW + f'Written job file ./{fn}')
     o = f'{datetime.today():%y-%m-%d_%H}_{args.experiment}_{p}.out'
-    rc = subprocess.call(["sbatch", fn, f'--output="./log/{o}"'])
-    if rc == 0:
-        os.remove(fn)
+    rc = subprocess.call(["sbatch", fn, '-o', f'./log/{o}'])
+    #if rc == 0:
+        #os.remove(fn)
     exit(rc)
 
 
