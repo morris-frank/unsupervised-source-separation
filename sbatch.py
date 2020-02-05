@@ -11,9 +11,12 @@ def main(args):
         raise ValueError('Invalid experiment given.')
 
     p = 'gpu_short' if args.short else 'gpu'
+    t = '0:05:00' if args.short else f'{args.hours}:00:00'
+
     c = {'job-name': args.experiment, 'ntasks': 1, 'cpus-per-task': 2,
-         'ntasks-per-node': 1, 'time': f'{args.hours}:00:00', 'mem': '10000M',
+         'ntasks-per-node': 1, 'time': t, 'mem': '10000M',
          'partition': p, 'gres': 'gpu:1'}
+
     s_c = '\n'.join(f'#SBATCH --{k}={v}' for k, v in c.items())
 
     f = f"#!/usr/bin/env bash\n\n{s_c}\n"
