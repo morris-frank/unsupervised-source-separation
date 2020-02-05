@@ -44,6 +44,13 @@ def main(args):
           skip_test=args.skip_test)
 
 
+EXPERIMENTS = {'4cu': four_channel_unconditioned,
+               'four_channel_unconditioned': four_channel_unconditioned,
+               '1cu': one_channel_unconditioned,
+               'one_channel_unconditioned': one_channel_unconditioned,
+               '1cc': one_channel_conditioned,
+               'one_channel_conditioned': one_channel_conditioned}
+
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('experiment', type=str, help='choose the experiment')
@@ -56,10 +63,3 @@ if __name__ == '__main__':
     parser.add_argument('--iterations', default=50000, type=int)
     parser.add_argument('-notest', action='store_true', dest='skip_test')
     main(parser.parse_args())
-
-EXPERIMENTS = {'4cu': four_channel_unconditioned,
-               'four_channel_unconditioned': four_channel_unconditioned,
-               '1cu': one_channel_unconditioned,
-               'one_channel_unconditioned': one_channel_unconditioned,
-               '1cc': one_channel_conditioned,
-               'one_channel_conditioned': one_channel_conditioned}
