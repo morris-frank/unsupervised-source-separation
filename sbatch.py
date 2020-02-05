@@ -1,3 +1,4 @@
+from datetime import datetime
 import subprocess
 from argparse import ArgumentParser
 import os
@@ -28,8 +29,10 @@ def main(args):
     fn = '_temp.job'
     with open(fn, 'w') as fp:
         fp.write(f)
+    os.makedirs('./log/', exist_ok=True)
     print(Fore.YELLOW + f'Written job file ./{fn}')
-    rc = subprocess.call(["sbatch", fn])
+    o = f'{datetime.today():%y-%m-%d_%H}_{args.experiment}.out'
+    rc = subprocess.call(["sbatch", fn, f'--output="./log/{o}"'])
     if rc == 0:
         os.remove(fn)
     exit(rc)
