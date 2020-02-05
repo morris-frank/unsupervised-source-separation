@@ -33,7 +33,7 @@ def main(args):
     if args.experiment not in EXPERIMENTS:
         raise ValueError('Invalid experiment given.')
 
-    model, loss_function, batch_size = EXPERIMENTS[args.experiment]
+    model, loss_function, batch_size = EXPERIMENTS[args.experiment]()
 
     train_loader = map_dataset(model, args.data, 'train').loader(batch_size)
     test_loader = map_dataset(model, args.data, 'test').loader(batch_size)
