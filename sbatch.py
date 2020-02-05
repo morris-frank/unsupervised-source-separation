@@ -1,5 +1,6 @@
 import subprocess
 from argparse import ArgumentParser
+import os
 
 from colorama import Fore
 
@@ -28,7 +29,10 @@ def main(args):
     with open(fn, 'w') as fp:
         fp.write(f)
     print(Fore.YELLOW + f'Written job file ./{fn}')
-    subprocess.call(["sbatch", fn])
+    rc = subprocess.call(["sbatch", fn])
+    if rc == 0:
+        os.remove(fn)
+    exit(rc)
 
 
 if __name__ == '__main__':
