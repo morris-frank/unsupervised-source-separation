@@ -12,14 +12,14 @@ def main(args):
 
     p = 'gpu_short' if args.short else 'gpu'
     c = {'job-name': args.experiment, 'ntasks': 1, 'cpus-per-task': 2,
-         'ntasks-per-node': 1, 'time': f'{args.hours}:00:00', 'mem': '1000M',
+         'ntasks-per-node': 1, 'time': f'{args.hours}:00:00', 'mem': '10000M',
          'partition': p, 'gres': 'gpu:1'}
     s_c = '\n'.join(f'#SBATCH --{k}={v}' for k, v in c.items())
 
     f = f"#!/usr/bin/env bash\n\n{s_c}\n"
     f += "export LD_LIBRARY_PATH=/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH\n\n"""
     f += "cd /home/frankm/thesis\n"
-    f += f"srun /home/frankm/.pyenv/shims/python3.7 train.py {args.experiment} --data=/home/frankm/data/toy/ -wandb --gpu 0"
+    f += f"srun /home/frankm/.pyenv/shims/python3.7 train.py {args.experiment} --data=/home/frankm/data/toy/ -wandb --gpu 0\n"
 
     fn = '_temp.job'
     with open(fn, 'w') as fp:
