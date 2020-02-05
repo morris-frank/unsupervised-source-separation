@@ -1,7 +1,7 @@
-from datetime import datetime
+import os
 import subprocess
 from argparse import ArgumentParser
-import os
+from datetime import datetime
 
 from colorama import Fore
 
@@ -24,20 +24,22 @@ def main(args):
     f = f"#!/usr/bin/env bash\n\n{s_c}\n"
     f += "export LD_LIBRARY_PATH=/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH\n\n"""
     f += "cd /home/frankm/thesis\n"
-    f += f"srun /home/frankm/.pyenv/shims/python3.7 train.py {args.experiment} --data=/home/frankm/data/toy/ -wandb --gpu 0"
+    f += f"srun /home/frankm/.pyenv/shims/python3.7 train.py {args.experiment} --data=/home/frankm/data/toy/ --gpu 0"
 
     if args.short:
         f += ' --batch_size=2'
+    else:
+        f += ' -wandb'
 
     fn = '_temp.job'
     with open(fn, 'w') as fp:
         fp.write(f + '\n')
     os.makedirs('./log/', exist_ok=True)
     print(Fore.YELLOW + f'Written job file ./{fn}')
-    o = f'{datetime.today():%y-%m-%d_%H}_{args.experiment}_{p}.out'
-    rc = subprocess.call(["sbatch", fn, '-o', f'./log/{o}'])
-    #if rc == 0:
-        #os.remove(fn)
+    o = f'{datetime.today():%y-%m-%d_%H}_%x_{p}.out'
+    rc = subprocess.call(["sbatch", fn, '-o', o])
+    if rc == 0:
+        os.remove(fn)
     exit(rc)
 
 
