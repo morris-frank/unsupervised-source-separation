@@ -19,7 +19,7 @@ def main(args):
     c = {'job-name': args.experiment, 'ntasks': 1, 'cpus-per-task': 2,
          'ntasks-per-node': 1, 'time': t, 'mem': '10000M',
          'partition': p, 'gres': 'gpu:1',
-         'output': f'./log/{datetime.today():%y-%m-%d_%H}_%x_{p}.out'}
+         'output': f'./log/{datetime.today():%y-%m-%d_%H:%M}_%x_{p}.out'}
 
     f = f"#!/usr/bin/env bash\n\n"
     f += '\n'.join(f'#SBATCH --{k}={v}' for k, v in c.items()) + '\n'
