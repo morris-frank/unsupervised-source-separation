@@ -113,9 +113,7 @@ class ConditionalRealNVP(RealNVP):
         self.classes = classes
 
         self.conditioner = nn.Sequential(nn.Linear(classes, 32),
-                                         nn.ReLU(),
-                                         nn.Linear(32, 2),
-                                         nn.ReLU())
+                                         nn.Linear(32, 2))
 
     def forward(self, x, s: torch.Tensor):
         m, y = x  # y is channel label
@@ -128,7 +126,7 @@ class ConditionalRealNVP(RealNVP):
 
     def infer(self, x):
         m, y = x  # y is channel label
-        y = F.one_hot(y, self.channels).float().to(m.device)
+        y = F.one_hot(y, self.classes).float().to(m.device)
         σ, μ = self.conditioner(y).unsqueeze(-1).chunk(2, dim=1)
         f_z = super(ConditionalRealNVP, self).infer(m, σ, μ)
         return f_z

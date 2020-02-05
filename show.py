@@ -9,7 +9,7 @@ from thesis.io import load_model
 
 
 def main(args):
-    if args.command == 'example':
+    if args.command == 'sample':
         from thesis.plot.toy import example_reconstruction
         model = load_model(args.weights, args.device)
         model.eval()
@@ -25,7 +25,7 @@ def main(args):
         from thesis.plot.toy import z_example_reconstruction
         model = load_model(args.weights, args.device)
         model.eval()
-        data = map_dataset(model, args.data, 'train')
+        data = map_dataset(model, args.data, 'test')
         with torch.no_grad():
             for fig in z_example_reconstruction(model, data):
                 fig.show()

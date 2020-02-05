@@ -18,6 +18,7 @@ class Wavenet(nn.Module):
         assert kernel_size % 2 != 0
         pad = (kernel_size - 1) // 2
 
+        self.normalized = normalize
         self.conditional = c_channels is not None
         self.n_blocks, self.n_layers = n_blocks, n_layers
         self.dilations = [2 ** l for _, l in
@@ -90,7 +91,7 @@ class Wavenet(nn.Module):
         return self.final(s)
 
     def train(self, mode: bool = True):
-        if mode is False:
+        if mode is False and self.normalized:
             self.remove_weight_norm()
         return super(Wavenet, self).train()
 

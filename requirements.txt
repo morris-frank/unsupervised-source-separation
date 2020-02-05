@@ -1,3 +1,4 @@
+colorama
 librosa>=0.7.2
 matplotlib>=3.1.2
 musdb==0.3.1

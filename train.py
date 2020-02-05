@@ -15,7 +15,7 @@ def four_channel_unconditioned():
 
 
 def one_channel_unconditioned():
-    batch_size = 16
+    batch_size = 14
     model = MultiRealNVP(channels=4, n_flows=15, wn_layers=10)  # rf: 2*2**9
     loss_function = model.loss(σ=1.)
     return model, loss_function, batch_size
@@ -30,16 +30,10 @@ def one_channel_conditioned():
 
 
 def main(args):
-    if args.experiment == 'four_channel_unconditioned':
-        func = four_channel_unconditioned
-    elif args.experiment == 'one_channel_unconditioned':
-        func = one_channel_unconditioned
-    elif args.experiment == 'one_channel_conditioned':
-        func = one_channel_conditioned
-    else:
+    if args.experiment not in EXPERIMENTS:
         raise ValueError('Invalid experiment given.')
 
-    model, loss_function, batch_size = func()
+    model, loss_function, batch_size = EXPERIMENTS[args.experiment]
 
     train_loader = map_dataset(model, args.data, 'train').loader(batch_size)
     test_loader = map_dataset(model, args.data, 'test').loader(batch_size)
@@ -62,3 +56,10 @@ if __name__ == '__main__':
     parser.add_argument('--iterations', default=50000, type=int)
     parser.add_argument('-notest', action='store_true', dest='skip_test')
     main(parser.parse_args())
+
+EXPERIMENTS = {'4cu': four_channel_unconditioned,
+               'four_channel_unconditioned': four_channel_unconditioned,
+               '1cu': one_channel_unconditioned,
+               'one_channel_unconditioned': one_channel_unconditioned,
+               '1cc': one_channel_conditioned,
+               'one_channel_conditioned': one_channel_conditioned}

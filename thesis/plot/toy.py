@@ -51,6 +51,8 @@ def fig_summary(fname: str):
 
 def plot_reconstruction(m: torch.Tensor, S: torch.Tensor,
                         S_tilde: torch.Tensor) -> plt.Figure:
+    if S_tilde.ndim == 1:
+        S_tilde = S_tilde.unsqueeze(0)
     p_length = 500
     n = S.shape[0]
     fig, axs = plt.subplots(n + 1, 2, sharex='all')
@@ -61,10 +63,21 @@ def plot_reconstruction(m: torch.Tensor, S: torch.Tensor,
     return fig
 
 
+def _tuple_unsequeeze(x):
+    if isinstance(x, tuple):
+        m = x[0]
+        x = (x[0].unsqueeze(0), torch.tensor([x[1]]))
+    else:
+        m = x
+        x = x.unsqueeze(0)
+    return m, x
+
+
 def example_reconstruction(model: nn.Module, data: Dataset) \
         -> Generator[plt.Figure, None, None]:
-    for i, (m, S) in enumerate(data):
-        S_tilde = model.infer(m.unsqueeze(0)).squeeze()
+    for i, (x, S) in enumerate(data):
+        m, x = _tuple_unsequeeze(x)
+        S_tilde = model.infer(x).squeeze()
         fig = plot_reconstruction(m, S, S_tilde)
         fig.savefig(f'./figures/{type(model).__name__}_{i}.png')
         yield fig
@@ -72,10 +85,11 @@ def example_reconstruction(model: nn.Module, data: Dataset) \
 
 def z_example_reconstruction(model: nn.Module, data: Dataset) \
         -> Generator[plt.Figure, None, None]:
-    for i, (m, S) in enumerate(data):
-        r = model(m.unsqueeze(0), S.unsqueeze(0))
+    for i, (x, S) in enumerate(data):
+        m, x = _tuple_unsequeeze(x)
+        r = model(x, S.unsqueeze(0))
         z = r[0]  # account for multiple outputs
-        S_tilde = model.infer(m.unsqueeze(0), z=z).squeeze()
+        S_tilde = model.infer(x, z=z).squeeze()
         fig = plot_reconstruction(m, S, S_tilde)
         fig.savefig(f'./figures/{type(model).__name__}_z_{i}.png')
         yield fig
