@@ -31,7 +31,7 @@ def main(args):
         fp.write(f)
     os.makedirs('./log/', exist_ok=True)
     print(Fore.YELLOW + f'Written job file ./{fn}')
-    o = f'{datetime.today():%y-%m-%d_%H}_{args.experiment}.out'
+    o = f'{datetime.today():%y-%m-%d_%H}_{args.experiment}_{p}.out'
     rc = subprocess.call(["sbatch", fn, f'--output="./log/{o}"'])
     if rc == 0:
         os.remove(fn)
