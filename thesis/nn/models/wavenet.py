@@ -65,7 +65,7 @@ class Wavenet(nn.Module):
         final = nn.Conv1d(skip_width, out_channels, 1)
         final.weight.data.zero_()
         final.bias.data.zero_()
-        self.final = final
+        self.final = nn.Sequential(final, nn.Tanh())
 
     def forward(self, x: torch.Tensor,
                 conditional: Optional[torch.Tensor]) -> torch.Tensor:
