@@ -38,6 +38,7 @@ def main(args):
     print(Fore.YELLOW + f'Written job file ./{fn}')
     o = f'{datetime.today():%y-%m-%d_%H}_%x_{p}.out'
     rc = subprocess.call(["sbatch", fn, '-o', o])
+    print(' '.join(["sbatch", fn, '-o', o]))
     if rc == 0:
         os.remove(fn)
     exit(rc)
