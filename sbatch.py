@@ -17,14 +17,16 @@ def main(args):
 
     c = {'job-name': args.experiment, 'ntasks': 1, 'cpus-per-task': 2,
          'ntasks-per-node': 1, 'time': t, 'mem': '10000M',
-         'partition': p, 'gres': 'gpu:1'}
+         'partition': p, 'gres': 'gpu:1',
+         'output': f'./log/{datetime.today():%y-%m-%d_%H}_%x_{p}.out'}
 
-    s_c = '\n'.join(f'#SBATCH --{k}={v}' for k, v in c.items())
-
-    f = f"#!/usr/bin/env bash\n\n{s_c}\n"
-    f += "export LD_LIBRARY_PATH=/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH\n\n"""
+    f = f"#!/usr/bin/env bash\n\n"
+    f += '\n'.join(f'#SBATCH --{k}={v}' for k, v in c.items()) + '\n'
+    f += "export LD_LIBRARY_PATH=" \
+         "/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH\n\n"""
     f += "cd /home/frankm/thesis\n"
-    f += f"srun /home/frankm/.pyenv/shims/python3.7 train.py {args.experiment} --data=/home/frankm/data/toy/ --gpu 0"
+    f += f"srun /home/frankm/.pyenv/shims/python3.7 train.py " \
+         f"{args.experiment} --data=/home/frankm/data/toy/ --gpu 0"
 
     if args.short:
         f += ' --batch_size=2'
@@ -36,9 +38,7 @@ def main(args):
         fp.write(f + '\n')
     os.makedirs('./log/', exist_ok=True)
     print(Fore.YELLOW + f'Written job file ./{fn}')
-    o = f'{datetime.today():%y-%m-%d_%H}_%x_{p}.out'
-    rc = subprocess.call(["sbatch", fn, '-o', o])
-    print(' '.join(["sbatch", fn, '-o', o]))
+    rc = subprocess.call(["sbatch", fn])
     if rc == 0:
         os.remove(fn)
     exit(rc)
