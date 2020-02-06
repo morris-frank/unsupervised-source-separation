@@ -98,7 +98,7 @@ class ExperimentalWaveGlow(nn.Module):
         self.n_flows = n_flows
 
         self.conditioner = nn.Sequential(
-            nn.Conv1d(self.channels, 2 * self.channels, 3, padding=1),
+            nn.Conv1d(1, 2 * self.channels, 3, padding=1),
             nn.Conv1d(2 * self.channels, self.channels, 1))
 
         self.conv = nn.ModuleList()
