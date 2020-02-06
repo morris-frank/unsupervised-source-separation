@@ -87,3 +87,66 @@ class WaveGlow(nn.Module):
             return loss / z.numel()
 
         return func
+
+
+class ExperimentalWaveGlow(nn.Module):
+    def __init__(self, channels: int, n_flows: int = 15, wn_layers: int = 12,
+                 wn_width: int = 32):
+        super(ExperimentalWaveGlow, self).__init__()
+        self.params = clean_init_args(locals().copy())
+        self.channels = channels
+        self.n_flows = n_flows
+
+        self.conditioner = nn.Sequential(
+            nn.Conv1d(self.channels, 2 * self.channels, 3, padding=1),
+            nn.Conv1d(2 * self.channels, self.channels, 1))
+
+        self.conv = nn.ModuleList()
+        self.waves = nn.ModuleList()
+        for _ in range(n_flows):
+            self.conv.append(ChannelConvInvert(channels))
+            self.waves.append(Wavenet(
+                in_channels=channels // 2, out_channels=channels,
+                n_blocks=1, n_layers=wn_layers, residual_width=2 * wn_width,
+                skip_width=wn_width)
+            )
+
+    def forward(self, m: torch.Tensor, S: torch.Tensor):
+        assert S.shape[1] == self.channels
+
+        f_s = S
+
+        total_log_s, total_det_w = 0, 0
+        for k in range(self.n_flows):
+            # First mix the channels
+            f_s, log_det_w = self.conv[k](f_s)
+
+            # Separate them and get scale and translate
+            s_a, s_b = f_s.chunk(2, dim=1)
+            log_s_t = self.waves[k](s_a)
+            log_s, t = log_s_t.chunk(2, dim=1)
+
+            # Affine transform right part
+            s_b = log_s.exp() * s_b + t
+
+            # Merge them back
+            f_s = torch.cat([s_a, s_b], 1)
+
+            # Save for loss
+            total_det_w = log_det_w + total_det_w
+            total_log_s = log_s.sum() + total_log_s
+
+        μ, σ = self.conditioner(m).chunk(2, dim=1)
+
+        z = (f_s - μ) / σ
+        return z, total_log_s, total_det_w, σ
+
+    @staticmethod
+    def loss():
+        def func(model, m, S, progress):
+            _ = progress
+            z, total_log_s, total_det_w, σ = model(m, S)
+            loss = (z * z).sum() / (2 * σ ** 2) - total_log_s - total_det_w
+            return loss / z.numel()
+
+        return func

@@ -118,6 +118,7 @@ class ConditionalRealNVP(RealNVP):
         m, y = x  # y is channel label
         y = F.one_hot(y, self.classes).float().to(m.device)
         σ, μ = self.conditioner(y).unsqueeze(-1).chunk(2, dim=1)
+        σ = F.softplus(σ) + 1e-7
         f_z = super(ConditionalRealNVP, self).infer(m, σ, μ, z)
         return f_z
 
@@ -151,6 +152,15 @@ class ExperimentalRealNVP(RealNVP):
         f_s, total_log_s = super(ExperimentalRealNVP, self).forward(Y, s)
         z = (f_s - μ) / σ
         return z, total_log_s, σ
+
+    def infer(self, x: Tuple[torch.Tensor, torch.Tensor],
+              z: Optional[torch.Tensor] = None):
+        m, y = x  # y is channel label
+        μ, _ = self.conditioner(m).chunk(2, dim=1)
+        bs, _, rf = m.shape
+        Y = y.view(bs, 1, 1).repeat(1, 1, rf).type(m.dtype).to(m.device)
+        f_z = super(ExperimentalRealNVP, self).infer(Y, 0, μ, z)
+        return f_z
 
     @staticmethod
     def loss():

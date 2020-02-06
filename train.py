@@ -7,9 +7,7 @@ from thesis.nn.models import WaveGlow, MultiRealNVP, ConditionalRealNVP
 from thesis.train import train
 from thesis.utils import optional
 
-
 from torch import autograd
-
 
 
 def four_channel_unconditioned():
@@ -40,7 +38,14 @@ def experimental_nvp():
     max_batch_size = 24
     model = ExperimentalRealNVP(classes=4, n_flows=15, wn_layers=10,
                                 wn_width=64)
+    loss_function = model.loss()
+    return model, loss_function, max_batch_size
 
+
+def experimental_waveglow():
+    from thesis.nn.models.waveglow import ExperimentalWaveGlow
+    max_batch_size = 12
+    model = ExperimentalWaveGlow(channels=4, n_flows=15, wn_layers=12)
     loss_function = model.loss()
     return model, loss_function, max_batch_size
 
@@ -67,7 +72,8 @@ EXPERIMENTS = {'4cu': four_channel_unconditioned,
                'one_channel_unconditioned': one_channel_unconditioned,
                '1cc': one_channel_conditioned,
                'one_channel_conditioned': one_channel_conditioned,
-               'xnvp': experimental_nvp}
+               'xnvp': experimental_nvp,
+               'xglow': experimental_waveglow}
 
 if __name__ == '__main__':
     parser = ArgumentParser()
