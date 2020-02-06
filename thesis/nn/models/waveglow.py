@@ -145,7 +145,7 @@ class ExperimentalWaveGlow(nn.Module):
         def func(model, m, S, progress):
             _ = progress
             z, total_log_s, total_det_w, σ = model(m, S)
-            loss = (z * z).sum() / (2 * σ ** 2) - total_log_s - total_det_w
+            loss = ((z * z) / (2 * σ ** 2)).sum() - total_log_s - total_det_w
             return loss / z.numel()
 
         return func
