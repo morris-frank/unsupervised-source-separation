@@ -30,7 +30,7 @@ def main(args):
          f"{args.experiment} --data=/home/frankm/data/toy/ --gpu 0"
 
     if args.short:
-        f += ' --batch_size=2'
+        f += ' --batch_size=2 -debug'
     else:
         f += ' -wandb'
 

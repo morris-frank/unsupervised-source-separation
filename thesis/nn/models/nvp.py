@@ -150,7 +150,7 @@ class ExperimentalRealNVP(RealNVP):
         Y = y.view(bs, 1, 1).repeat(1, 1, rf).type(m.dtype).to(m.device)
         f_s, total_log_s = super(ExperimentalRealNVP, self).forward(Y, s)
         z = (f_s - μ) / σ
-        return z, total_log_s
+        return z, total_log_s, σ
 
     @staticmethod
     def loss():

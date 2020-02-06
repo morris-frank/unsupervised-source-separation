@@ -168,8 +168,4 @@ def split(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
 def interleave(left: torch.Tensor, right: torch.Tensor) -> torch.Tensor:
     assert left.shape == right.shape
     bs, c, l = left.shape
-    x = torch.empty((bs, c, 2 * l), dtype=left.dtype, device=left.device,
-                    requires_grad=left.requires_grad)
-    x[:, :, ::2] = left
-    x[:, :, 1::2] = right
-    return x
+    return torch.stack((left, right), dim=3).view(bs, c, 2 * l)

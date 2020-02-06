@@ -5,6 +5,11 @@ from os import path
 from thesis.data.wrapper import map_dataset
 from thesis.nn.models import WaveGlow, MultiRealNVP, ConditionalRealNVP
 from thesis.train import train
+from thesis.utils import optional
+
+
+from torch import autograd
+
 
 
 def four_channel_unconditioned():
@@ -32,7 +37,7 @@ def one_channel_conditioned():
 
 def experimental_nvp():
     from thesis.nn.models.nvp import ExperimentalRealNVP
-    max_batch_size = 2
+    max_batch_size = 22
     model = ExperimentalRealNVP(classes=4, n_flows=15, wn_layers=10,
                                 wn_width=64)
 
@@ -50,9 +55,10 @@ def main(args):
     train_loader = map_dataset(model, args.data, 'train').loader(batch_size)
     test_loader = map_dataset(model, args.data, 'test').loader(batch_size)
 
-    train(model=model, loss_function=loss_function, gpu=args.gpu,
-          train_loader=train_loader, test_loader=test_loader,
-          iterations=args.iterations, wandb=args.wandb)
+    with optional(args.debug, autograd.detect_anomaly()):
+        train(model=model, loss_function=loss_function, gpu=args.gpu,
+              train_loader=train_loader, test_loader=test_loader,
+              iterations=args.iterations, wandb=args.wandb)
 
 
 EXPERIMENTS = {'4cu': four_channel_unconditioned,
@@ -74,4 +80,5 @@ if __name__ == '__main__':
                         help='Logs to WandB.')
     parser.add_argument('--iterations', default=50000, type=int)
     parser.add_argument('--batch_size', type=int, default=None)
+    parser.add_argument('-debug', action='store_true')
     main(parser.parse_args())

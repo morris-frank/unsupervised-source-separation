@@ -69,8 +69,6 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
     lr_milestones = torch.linspace(iterations * 0.36, iterations, 5).tolist()
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, lr_milestones,
                                                gamma=0.6)
-    test_at = iterations // 10
-
     losses, it_times = [], []
     train_iterator = iter(train_loader)
     it_timer = time.time()
