@@ -99,7 +99,7 @@ class ExperimentalWaveGlow(nn.Module):
 
         self.conditioner = nn.Sequential(
             nn.Conv1d(1, 2 * self.channels, 3, padding=1),
-            nn.Conv1d(2 * self.channels, self.channels, 1))
+            nn.Conv1d(2 * self.channels, 2 * self.channels, 1))
 
         self.conv = nn.ModuleList()
         self.waves = nn.ModuleList()
@@ -137,7 +137,6 @@ class ExperimentalWaveGlow(nn.Module):
             total_log_s = log_s.sum() + total_log_s
 
         μ, σ = self.conditioner(m).chunk(2, dim=1)
-
         z = (f_s - μ) / σ
         return z, total_log_s, total_det_w, σ
 
