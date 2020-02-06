@@ -56,7 +56,7 @@ class Wavenet(nn.Module):
         self.final = nn.Sequential(final, nn.Tanh())
 
     def forward(self, x: torch.Tensor,
-                conditional: Optional[torch.Tensor]) -> torch.Tensor:
+                conditional: Optional[torch.Tensor] = None) -> torch.Tensor:
         assert (conditional is not None) == self.conditional
 
         h = self.init_conv(x)
