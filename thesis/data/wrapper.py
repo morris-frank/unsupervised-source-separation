@@ -1,10 +1,10 @@
+from math import pow
 from os.path import abspath
 
 from torch import nn
+
 from . import Dataset
 from .toy import ToyDataSingle, ToyData
-
-from math import pow
 
 
 def map_dataset(model: nn.Module, data_dir: abspath, subset: str) -> Dataset:
@@ -17,7 +17,8 @@ def map_dataset(model: nn.Module, data_dir: abspath, subset: str) -> Dataset:
         wn_layers = model.params['kwargs']['wn_layers']
         receptive_field = int(2 * pow(2, wn_layers - 1))
         dset = ToyDataSingle(f'{data_dir}/toy_{subset}.npy', receptive_field)
-    elif model.__class__.__name__ == 'WaveGlow':
+    elif model.__class__.__name__ in ('WaveGlow',
+                                      'ExperimentalWaveGlow'):
         wn_layers = model.params['kwargs']['wn_layers']
         receptive_field = int(pow(2, wn_layers - 1))
         dset = ToyData(f'{data_dir}/toy_{subset}.npy', receptive_field)
