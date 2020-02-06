@@ -23,3 +23,26 @@ def test_shift1d():
         assert y.shape == x.shape
         assert torch.all(y[:, :, :length - shift] == x[:, :, shift:])
         assert y.is_contiguous()
+
+
+def test_split_interleave():
+    from .functional import split, interleave
+    n_batch, n_channel, length = 8, 2, 32
+    x = torch.rand((n_batch, n_channel, length))
+    assert torch.all(interleave(*split(x)) == x)
+
+
+def test_orthonormal():
+    from .functional import orthonormal
+    w, h = 32, 32
+    Q = orthonormal(w, h)
+    assert torch.allclose(torch.inverse(Q), Q.t(), atol=1e-5)
+    assert torch.allclose(torch.matrix_power(Q, 0), (Q @ Q.t()), atol=1e-5)
+
+
+def test_destroy_along_channels():
+    from .functional import destroy_along_channels
+    bs, c, l = 4, 16, 128
+    x = torch.rand(bs, c, l)
+    _x = destroy_along_channels(x, 0.5)
+    assert (_x == 0.).sum() == c // 2 * bs * l

@@ -6,6 +6,7 @@ from torch.autograd import Variable
 from torch.nn import functional as F
 
 from .wavenet import Wavenet
+from ...functional import split, interleave
 from ...utils import clean_init_args
 
 
@@ -27,16 +28,10 @@ class RealNVP(nn.Module):
                 residual_width=2 * wn_width, skip_width=wn_width)
             )
 
-    def _split(self, x):
-        windows = torch.split(x, self.window_size, dim=2)
-        left = torch.cat(windows[::2], dim=2)
-        right = torch.cat(windows[1::2], dim=2)
-        return left.contiguous(), right.contiguous()
-
-    def _split_and_flow(self, x: torch.Tensor, k: int, c: torch.Tensor) \
+    def apply_wave(self, x: torch.Tensor, k: int, c: torch.Tensor) \
             -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
-        x_left, x_right = self._split(x)
-        c_left, c_right = self._split(c)
+        x_left, x_right = split(x)
+        c_left, c_right = split(c)
 
         if k % 2 == 0:
             log_s_t = self.waves[k](x_left, c_left)
@@ -46,15 +41,6 @@ class RealNVP(nn.Module):
         log_s, t = log_s_t.chunk(2, dim=1)
         return x_left, x_right, log_s, t
 
-    def _interleave_windows(self, left: torch.Tensor, right: torch.Tensor) \
-            -> torch.Tensor:
-        left = left.split(self.window_size, dim=2)
-        right = right.split(self.window_size, dim=2)
-
-        # Interleave the masks and combine back together
-        windows = [win for pair in zip(left, right) for win in pair]
-        return torch.cat(windows, dim=2)
-
     def forward(self, m: torch.Tensor, S: torch.Tensor):
         assert S.shape[1] == self.channels
 
@@ -62,14 +48,14 @@ class RealNVP(nn.Module):
         total_log_s = 0
         for k in range(self.n_flows):
             # Separate them and get scale and translate
-            s_a, s_b, log_s, t = self._split_and_flow(f_s, k, m)
+            s_a, s_b, log_s, t = self.apply_wave(f_s, k, m)
 
             if k % 2 == 0:
                 s_b = log_s.exp() * s_b + t
             else:
                 s_a = log_s.exp() * s_a + t
 
-            f_s = self._interleave_windows(s_a, s_b)
+            f_s = interleave(s_a, s_b)
 
             # Save for loss
             total_log_s = log_s.sum() + total_log_s
@@ -87,14 +73,14 @@ class RealNVP(nn.Module):
         f_z = Variable(σ * z.type(m.dtype).to(m.device) + μ)
 
         for k in reversed(range(self.n_flows)):
-            z_a, z_b, log_s, t = self._split_and_flow(f_z, k, m)
+            z_a, z_b, log_s, t = self.apply_wave(f_z, k, m)
 
             if k % 2 == 0:
                 z_b = (z_b - t) / log_s.exp()
             else:
                 z_a = (z_a - t) / log_s.exp()
 
-            f_z = self._interleave_windows(z_a, z_b)
+            f_z = interleave(z_a, z_b)
 
         return f_z
 
@@ -145,6 +131,30 @@ class ConditionalRealNVP(RealNVP):
             return loss / z.numel()
 
         return func
+
+
+class ExperimentalRealNVP(RealNVP):
+    def __init__(self, classes, *args, **kwargs):
+        super(ExperimentalRealNVP, self).__init__(channels=1, *args, **kwargs)
+        self.params = clean_init_args(locals().copy())
+        self.classes = classes
+
+        self.conditioner = nn.Sequential(nn.Conv1d(1, 8, 3, padding=1),
+                                         nn.Conv1d(8, 2, 1))
+
+    def forward(self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor):
+        m, y = x
+        μ, σ = self.conditioner(m).chunk(2, dim=1)
+        σ = F.softplus(σ) + 1e-7
+        bs, _, rf = m.shape
+        Y = y.view(bs, 1, 1).repeat(1, 1, rf).type(m.dtype).to(m.device)
+        f_s, total_log_s = super(ExperimentalRealNVP, self).forward(Y, s)
+        z = (f_s - μ) / σ
+        return z, total_log_s
+
+    @staticmethod
+    def loss():
+        return ConditionalRealNVP.loss()
 
 
 class MultiRealNVP(nn.Module):

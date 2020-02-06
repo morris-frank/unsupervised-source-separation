@@ -37,7 +37,7 @@ def _test(model: nn.Module, loss_function: Callable,
 
 def train(model: nn.Module, loss_function: Callable, gpu: List[int],
           train_loader: data.DataLoader, test_loader: data.DataLoader,
-          iterations: int, wandb: bool = False, skip_test: bool = False):
+          iterations: int, wandb: bool = False):
     """
     Args:
         model: the module to train
@@ -47,7 +47,6 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
         test_loader: dataset loader for the test data
         iterations: number of iterations to train for
         wandb: Whether to log wandb
-        skip_test: Whether to skip the test set testing tests
     """
     model_id = f'{datetime.today():%y-%m-%d_%H}_{type(model).__name__}'
 
@@ -104,7 +103,7 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
                 _wandb.log(log, step=it)
             losses, it_times = [], []
 
-        # SAVE THE MODEL (every 30min)
+        # TEST AND SAVE THE MODEL (every 30min)
         if (time.time() - it_timer) > 1800 or it == iterations - 1:
             torch.save({
                 'it': it,
@@ -113,8 +112,5 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
                 'loss': loss,
                 'params': model_args,
             }, save_path.format(it))
-            it_timer = time.time()
-
-        # TEST THE MODEL
-        if not skip_test and (it % test_at == 0 or it == iterations - 1):
             _test(model, loss_function, test_loader, it, iterations, wandb)
+            it_timer = time.time()

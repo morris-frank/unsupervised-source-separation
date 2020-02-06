@@ -1,5 +1,6 @@
 import math
 import random
+from typing import Tuple
 
 import torch
 from torch.nn import functional as F
@@ -158,3 +159,17 @@ def orthonormal(*dim: int) -> torch.Tensor:
     if torch.det(data) < 0:
         data[:, 0] = -data[:, 0]
     return data
+
+
+def split(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    return x[:, :, ::2].contiguous(), x[:, :, 1::2].contiguous()
+
+
+def interleave(left: torch.Tensor, right: torch.Tensor) -> torch.Tensor:
+    assert left.shape == right.shape
+    bs, c, l = left.shape
+    x = torch.empty((bs, c, 2 * l), dtype=left.dtype, device=left.device,
+                    requires_grad=left.requires_grad)
+    x[:, :, ::2] = left
+    x[:, :, 1::2] = right
+    return x

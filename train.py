@@ -30,6 +30,16 @@ def one_channel_conditioned():
     return model, loss_function, max_batch_size
 
 
+def experimental_nvp():
+    from thesis.nn.models.nvp import ExperimentalRealNVP
+    max_batch_size = 2
+    model = ExperimentalRealNVP(classes=4, n_flows=15, wn_layers=10,
+                                wn_width=64)
+
+    loss_function = model.loss()
+    return model, loss_function, max_batch_size
+
+
 def main(args):
     if args.experiment not in EXPERIMENTS:
         raise ValueError('Invalid experiment given.')
@@ -42,8 +52,7 @@ def main(args):
 
     train(model=model, loss_function=loss_function, gpu=args.gpu,
           train_loader=train_loader, test_loader=test_loader,
-          iterations=args.iterations, wandb=args.wandb,
-          skip_test=args.skip_test)
+          iterations=args.iterations, wandb=args.wandb)
 
 
 EXPERIMENTS = {'4cu': four_channel_unconditioned,
@@ -51,7 +60,8 @@ EXPERIMENTS = {'4cu': four_channel_unconditioned,
                '1cu': one_channel_unconditioned,
                'one_channel_unconditioned': one_channel_unconditioned,
                '1cc': one_channel_conditioned,
-               'one_channel_conditioned': one_channel_conditioned}
+               'one_channel_conditioned': one_channel_conditioned,
+               'xnvp': experimental_nvp}
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -63,6 +73,5 @@ if __name__ == '__main__':
     parser.add_argument('-wandb', action='store_true',
                         help='Logs to WandB.')
     parser.add_argument('--iterations', default=50000, type=int)
-    parser.add_argument('-notest', action='store_true', dest='skip_test')
     parser.add_argument('--batch_size', type=int, default=None)
     main(parser.parse_args())

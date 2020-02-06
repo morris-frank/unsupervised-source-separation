@@ -19,6 +19,7 @@ class Wavenet(nn.Module):
         pad = (kernel_size - 1) // 2
 
         self.normalized = normalize
+        wn = weight_norm if normalize else lambda x: x
         self.conditional = c_channels is not None
         self.n_blocks, self.n_layers = n_blocks, n_layers
         self.dilations = [2 ** l for _, l in
@@ -32,36 +33,23 @@ class Wavenet(nn.Module):
         self.gate, self.feat = nn.ModuleList(), nn.ModuleList()
         self.gate_c, self.feat_c = nn.ModuleList(), nn.ModuleList()
         for _, _ in range_product(self.n_blocks, self.n_layers):
-            self.gate.append(
+            self.gate.append(wn(
                 nn.Conv1d(residual_width, residual_width, kernel_size,
-                          padding=pad, bias=not self.conditional))
-            self.feat.append(
+                          padding=pad, bias=not self.conditional)))
+            self.feat.append(wn(
                 nn.Conv1d(residual_width, residual_width, kernel_size,
-                          padding=pad, bias=not self.conditional))
-            self.skip.append(
-                nn.Conv1d(residual_width, skip_width, 1, bias=False))
-            self.thru.append(
-                nn.Conv1d(residual_width, residual_width, 1, bias=False))
-
-            if normalize:
-                self.gate[-1] = weight_norm(self.gate[-1], name='weight')
-                self.feat[-1] = weight_norm(self.feat[-1], name='weight')
-                self.skip[-1] = weight_norm(self.skip[-1], name='weight')
-                self.thru[-1] = weight_norm(self.thru[-1], name='weight')
+                          padding=pad, bias=not self.conditional)))
+            self.skip.append(wn(
+                nn.Conv1d(residual_width, skip_width, 1, bias=False)))
+            self.thru.append(wn(
+                nn.Conv1d(residual_width, residual_width, 1, bias=False)))
 
             if self.conditional:
-                self.gate_c.append(
-                    nn.Conv1d(c_channels, residual_width, 1, bias=False))
-                self.feat_c.append(
-                    nn.Conv1d(c_channels, residual_width, 1, bias=False))
+                self.gate_c.append(wn(
+                    nn.Conv1d(c_channels, residual_width, 1, bias=False)))
+                self.feat_c.append(wn(
+                    nn.Conv1d(c_channels, residual_width, 1, bias=False)))
 
-                if normalize:
-                    self.gate_c[-1] = weight_norm(self.gate_c[-1],
-                                                  name='weight')
-                    self.feat_c[-1] = weight_norm(self.feat_c[-1],
-                                                  name='weight')
-
-        # TODO make this step optional somehow: (hehe)
         final = nn.Conv1d(skip_width, out_channels, 1)
         final.weight.data.zero_()
         final.bias.data.zero_()
