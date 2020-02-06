@@ -30,7 +30,7 @@ def main(args):
         with torch.no_grad():
             for fig in z_example_reconstruction(model, data):
                 fig.show()
-                input()
+                input("?")
                 plt.close(fig)
 
     else:

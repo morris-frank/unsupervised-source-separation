@@ -1,4 +1,4 @@
-from typing import Tuple
+from typing import Tuple, Optional
 
 import torch
 from torch import nn
@@ -76,12 +76,15 @@ class RealNVP(nn.Module):
         z = f_s
         return z, total_log_s
 
-    def infer(self, m: torch.Tensor, σ: float = 1., μ: float = 0.):
+    def infer(self, m: torch.Tensor, σ: float = 1., μ: float = 0.,
+              z: Optional[torch.Tensor] = None):
         N, _, L = m.shape
 
         # Sample a z
-        f_z = torch.empty(N, self.channels, L).type(m.dtype).to(m.device)
-        f_z = Variable(σ * f_z.normal_() + μ)
+        if z is None:
+            z = torch.empty(N, self.channels, L)
+            z.normal_()
+        f_z = Variable(σ * z.type(m.dtype).to(m.device) + μ)
 
         for k in reversed(range(self.n_flows)):
             z_a, z_b, log_s, t = self._split_and_flow(f_z, k, m)
@@ -115,7 +118,7 @@ class ConditionalRealNVP(RealNVP):
         self.conditioner = nn.Sequential(nn.Linear(classes, 32),
                                          nn.Linear(32, 2))
 
-    def forward(self, x, s: torch.Tensor):
+    def forward(self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor):
         m, y = x  # y is channel label
         y = F.one_hot(y, self.classes).float().to(m.device)
         σ, μ = self.conditioner(y).unsqueeze(-1).chunk(2, dim=1)
@@ -124,11 +127,12 @@ class ConditionalRealNVP(RealNVP):
         z = (f_s - μ) / σ
         return z, total_log_s, σ
 
-    def infer(self, x):
+    def infer(self, x: Tuple[torch.Tensor, torch.Tensor],
+              z: Optional[torch.Tensor] = None):
         m, y = x  # y is channel label
         y = F.one_hot(y, self.classes).float().to(m.device)
         σ, μ = self.conditioner(y).unsqueeze(-1).chunk(2, dim=1)
-        f_z = super(ConditionalRealNVP, self).infer(m, σ, μ)
+        f_z = super(ConditionalRealNVP, self).infer(m, σ, μ, z)
         return f_z
 
     @staticmethod

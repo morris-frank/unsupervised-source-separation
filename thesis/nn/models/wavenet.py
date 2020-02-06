@@ -13,7 +13,7 @@ class Wavenet(nn.Module):
                  c_channels: Optional[int] = None, n_blocks: int = 3,
                  n_layers: int = 10, residual_width: int = 512,
                  skip_width: int = 256, kernel_size: int = 3,
-                 normalize: bool = True):
+                 normalize: bool = False):
         super(Wavenet, self).__init__()
         assert kernel_size % 2 != 0
         pad = (kernel_size - 1) // 2

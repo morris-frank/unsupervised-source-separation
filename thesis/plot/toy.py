@@ -1,6 +1,5 @@
 from typing import Generator
 
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
@@ -11,8 +10,6 @@ from tqdm import trange
 
 from ..data import Dataset
 from ..data.toy import ToyData
-
-mpl.use('TkAgg')
 
 
 def fig_summary(fname: str):
