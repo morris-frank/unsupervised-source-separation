@@ -37,7 +37,7 @@ def one_channel_conditioned():
 
 def experimental_nvp():
     from thesis.nn.models.nvp import ExperimentalRealNVP
-    max_batch_size = 22
+    max_batch_size = 24
     model = ExperimentalRealNVP(classes=4, n_flows=15, wn_layers=10,
                                 wn_width=64)
 
