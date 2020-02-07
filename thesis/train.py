@@ -83,6 +83,8 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
 
         model.train()
         loss = loss_function(model, x, y, it / iterations)
+        if torch.isnan(loss):
+            exit(1)
         model.zero_grad()
         loss.backward()
         optimizer.step()
