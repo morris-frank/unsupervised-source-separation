@@ -2,12 +2,12 @@
 from argparse import ArgumentParser
 from os import path
 
+from torch import autograd
+
 from thesis.data.wrapper import map_dataset
 from thesis.nn.models import WaveGlow, MultiRealNVP, ConditionalRealNVP
 from thesis.train import train
 from thesis.utils import optional
-
-from torch import autograd
 
 
 def four_channel_unconditioned():
@@ -50,6 +50,14 @@ def experimental_waveglow():
     return model, loss_function, max_batch_size
 
 
+def hydra():
+    from thesis.nn.models.hydra import Hydra
+    max_batch_size = 2
+    model = Hydra(in_channels=1, out_channels=100, wn_width=32)
+    loss_function = model.loss()
+    return model, loss_function, max_batch_size
+
+
 def main(args):
     if args.experiment not in EXPERIMENTS:
         raise ValueError('Invalid experiment given.')
@@ -73,7 +81,8 @@ EXPERIMENTS = {'4cu': four_channel_unconditioned,
                '1cc': one_channel_conditioned,
                'one_channel_conditioned': one_channel_conditioned,
                'xnvp': experimental_nvp,
-               'xglow': experimental_waveglow}
+               'xglow': experimental_waveglow,
+               'hydra': hydra}
 
 if __name__ == '__main__':
     parser = ArgumentParser()

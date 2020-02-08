@@ -17,6 +17,7 @@ def multi_cross_entropy(x: torch.Tensor, t: torch.Tensor, n: int, μ: int) \
     Returns:
         The sum of n CE losses
     """
+    assert x.shape[1] == n * μ
     loss = None
     for i in range(n):
         _x = x[:, i * μ:i * μ + μ, :]
