@@ -36,12 +36,12 @@ class Hydra(nn.Module):
         def func(model, m, S, progress):
             _ = progress
             S_tilde = model(m)
-            μ = S_tilde.shape[2]
+            hμ = (S_tilde.shape[2] - 1) / 2
             # Sum of channel wise cross-entropy
 
             ce_S = multi_cross_entropy(S_tilde, S)
 
-            m_tilde = decode_μ_law(S_tilde.argmax(dim=2), μ).mean(dim=1)
+            m_tilde = (S_tilde.argmax(dim=2) - hμ) / hμ
             m_tilde = m_tilde.unsqueeze(1)
             mse_m = F.mse_loss(m.to(m_tilde.device), m_tilde)
 
