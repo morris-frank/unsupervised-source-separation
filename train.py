@@ -56,7 +56,7 @@ def experimental_waveglow():
 def hydra():
     from thesis.nn.models.hydra import Hydra
 
-    max_batch_size = 2
+    max_batch_size = 18
     model = Hydra(classes=4, in_channels=1, out_channels=101, wn_width=32)
     loss_function = model.loss()
     return model, loss_function, max_batch_size

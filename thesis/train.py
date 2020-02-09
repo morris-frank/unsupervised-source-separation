@@ -112,5 +112,5 @@ def train(model: nn.Module, loss_function: Callable, gpu: List[int],
                 'loss': loss,
                 'params': model_args,
             }, save_path.format(it))
-            _test(model, loss_function, test_loader, it, iterations, wandb)
+            #_test(model, loss_function, test_loader, it, iterations, wandb)
             it_timer = time.time()
