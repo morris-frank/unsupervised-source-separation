@@ -21,7 +21,7 @@ def multi_cross_entropy(x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
         _t = t[:, i, :].to(x.device)
         _loss = F.cross_entropy(_x, _t)
         loss = loss + _loss if loss else _loss
-    return loss
+    return loss / x.shape[1]
 
 
 def sample_kl(x_q: torch.Tensor, x_q_log_prob: torch.Tensor) -> torch.Tensor:

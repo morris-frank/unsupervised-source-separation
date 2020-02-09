@@ -1,10 +1,12 @@
 from typing import Callable
+
 import torch
 from torch import nn
-from .wavenet import Wavenet
+from torch.nn import functional as F
 
+from .wavenet import Wavenet
 from ..optim import multi_cross_entropy
-from ...functional import multi_argmax
+from ...functional import decode_μ_law
 from ...utils import clean_init_args
 
 
@@ -34,20 +36,16 @@ class Hydra(nn.Module):
         def func(model, m, S, progress):
             _ = progress
             S_tilde = model(m)
+            μ = S_tilde.shape[2]
             # Sum of channel wise cross-entropy
+
             ce_S = multi_cross_entropy(S_tilde, S)
 
-            S_tilde = S_tilde.argmax(dim=2)
+            m_tilde = decode_μ_law(S_tilde.argmax(dim=2), μ).mean(dim=1)
+            m_tilde = m_tilde.unsqueeze(1)
+            mse_m = F.mse_loss(m.to(m_tilde.device), m_tilde)
 
-            print()
-            print()
-            print()
-            import ipdb; ipdb.set_trace()
-            print()
-            print()
-            print()
-
-            loss = ce_S
+            loss = ce_S + mse_m
             return loss
 
         return func

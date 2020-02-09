@@ -3,8 +3,8 @@ import random
 from typing import Tuple
 
 import torch
-from torch.nn import functional as F
 from torch import nn
+from torch.nn import functional as F
 from torch.nn.utils import remove_weight_norm
 
 
