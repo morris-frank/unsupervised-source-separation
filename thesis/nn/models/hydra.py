@@ -14,7 +14,7 @@ class Hydra(nn.Module):
         super(Hydra, self).__init__()
         self.params = clean_init_args(locals().copy())
 
-        self.classes, out_channels = classes, out_channels
+        self.classes, self.out_channels = classes, out_channels
         self.bottom = Wavenet(in_channels=in_channels, out_channels=32,
                               residual_width=wn_width * 2, skip_width=wn_width)
         self.heads = nn.ModuleList()
@@ -26,22 +26,26 @@ class Hydra(nn.Module):
     def forward(self, x: torch.Tensor):
         z = self.bottom(x)
 
-        S = (self.heads[k](z) for k in range(self.classes))
+        S = [self.heads[k](z) for k in range(self.classes)]
         S = torch.stack(S, dim=1)
         return S
 
     def loss(self) -> Callable:
         def func(model, m, S, progress):
             _ = progress
-            n, μ = len(self.heads), self.out_channels
             S_tilde = model(m)
-
             # Sum of channel wise cross-entropy
-            ce_S = multi_cross_entropy(S_tilde, S, n, μ)
+            ce_S = multi_cross_entropy(S_tilde, S)
 
-            S_tilde = multi_argmax(S_tilde, n, μ)
+            S_tilde = S_tilde.argmax(dim=2)
 
+            print()
+            print()
+            print()
             import ipdb; ipdb.set_trace()
+            print()
+            print()
+            print()
 
             loss = ce_S
             return loss

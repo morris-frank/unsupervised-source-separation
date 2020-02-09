@@ -3,24 +3,21 @@ from torch import distributions as dist
 from torch.nn import functional as F
 
 
-def multi_cross_entropy(x: torch.Tensor, t: torch.Tensor, n: int, μ: int) \
-        -> torch.Tensor:
+def multi_cross_entropy(x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
     """
     Get cross entropy of a multiple multi-class problem.
 
     Args:
-        x: Probabilities for all samples and classes size n × μ
+        x: Probabilities for all samples and classes size
         t: Correct indices for all samples size n
-        n: Number of items
-        μ: Number of classes
 
     Returns:
         The sum of n CE losses
     """
-    assert x.shape[1] == n * μ
+    assert x.shape[1] == t.shape[1]
     loss = None
-    for i in range(n):
-        _x = x[:, i * μ:i * μ + μ, :]
+    for i in range(x.shape[1]):
+        _x = x[:, i, :, :]
         _t = t[:, i, :].to(x.device)
         _loss = F.cross_entropy(_x, _t)
         loss = loss + _loss if loss else _loss

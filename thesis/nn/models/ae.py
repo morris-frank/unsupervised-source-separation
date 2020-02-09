@@ -56,6 +56,7 @@ class WavenetAE(nn.Module):
             -> torch.Tensor:
         x = shift1d(x, -1)
         logits = [dec(x, embedding) for dec in self.decoders]
+        # TODO change cat to stack!
         return torch.cat(logits, dim=1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:

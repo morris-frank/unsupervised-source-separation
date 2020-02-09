@@ -83,6 +83,7 @@ class WavenetVAE(nn.Module):
     def decode(self, x: torch.Tensor, z: List[torch.Tensor]) \
             -> torch.Tensor:
         x = shift1d(x, -1)
+        # TODO change cat to stack
         logits = [dec(x, z) for dec in self.decoders]
         return torch.cat(logits, dim=1)
 

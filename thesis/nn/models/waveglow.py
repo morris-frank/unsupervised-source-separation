@@ -10,8 +10,9 @@ from ...utils import clean_init_args
 
 
 class WaveGlow(nn.Module):
-    def __init__(self, channels: int, n_flows: int = 15, wn_layers: int = 12,
-                 wn_width: int = 32):
+    def __init__(
+        self, channels: int, n_flows: int = 15, wn_layers: int = 12, wn_width: int = 32
+    ):
         super(WaveGlow, self).__init__()
         self.params = clean_init_args(locals().copy())
         self.channels = channels
@@ -21,10 +22,16 @@ class WaveGlow(nn.Module):
         self.waves = nn.ModuleList()
         for _ in range(n_flows):
             self.conv.append(ChannelConvInvert(channels))
-            self.waves.append(Wavenet(
-                in_channels=channels // 2, out_channels=channels,
-                c_channels=1, n_blocks=1, n_layers=wn_layers,
-                residual_width=2 * wn_width, skip_width=wn_width)
+            self.waves.append(
+                Wavenet(
+                    in_channels=channels // 2,
+                    out_channels=channels,
+                    c_channels=1,
+                    n_blocks=1,
+                    n_layers=wn_layers,
+                    residual_width=2 * wn_width,
+                    skip_width=wn_width,
+                )
             )
 
     def forward(self, m: torch.Tensor, S: torch.Tensor):
@@ -54,8 +61,9 @@ class WaveGlow(nn.Module):
         z = f_s
         return z, total_log_s, total_det_w
 
-    def infer(self, m: torch.Tensor, σ: float = 1.,
-              z: Optional[torch.Tensor] = None) -> torch.Tensor:
+    def infer(
+        self, m: torch.Tensor, σ: float = 1.0, z: Optional[torch.Tensor] = None
+    ) -> torch.Tensor:
         N, _, L = m.shape
 
         # Sample a z
@@ -79,7 +87,7 @@ class WaveGlow(nn.Module):
         return f_z
 
     @staticmethod
-    def loss(σ: float = 1.):
+    def loss(σ: float = 1.0):
         def func(model, x, y, progress):
             _ = progress
             z, total_log_s, total_det_w = model(x, y)
@@ -90,8 +98,9 @@ class WaveGlow(nn.Module):
 
 
 class ExperimentalWaveGlow(nn.Module):
-    def __init__(self, channels: int, n_flows: int = 15, wn_layers: int = 12,
-                 wn_width: int = 32):
+    def __init__(
+        self, channels: int, n_flows: int = 15, wn_layers: int = 12, wn_width: int = 32
+    ):
         super(ExperimentalWaveGlow, self).__init__()
         self.params = clean_init_args(locals().copy())
         self.channels = channels
@@ -99,16 +108,22 @@ class ExperimentalWaveGlow(nn.Module):
 
         self.conditioner = nn.Sequential(
             nn.Conv1d(1, 2 * self.channels, 3, padding=1),
-            nn.Conv1d(2 * self.channels, 2 * self.channels, 1))
+            nn.Conv1d(2 * self.channels, 2 * self.channels, 1),
+        )
 
         self.conv = nn.ModuleList()
         self.waves = nn.ModuleList()
         for _ in range(n_flows):
             self.conv.append(ChannelConvInvert(channels))
-            self.waves.append(Wavenet(
-                in_channels=channels // 2, out_channels=channels,
-                n_blocks=1, n_layers=wn_layers, residual_width=2 * wn_width,
-                skip_width=wn_width)
+            self.waves.append(
+                Wavenet(
+                    in_channels=channels // 2,
+                    out_channels=channels,
+                    n_blocks=1,
+                    n_layers=wn_layers,
+                    residual_width=2 * wn_width,
+                    skip_width=wn_width,
+                )
             )
 
     def forward(self, m: torch.Tensor, S: torch.Tensor):

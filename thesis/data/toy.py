@@ -14,14 +14,16 @@ from ..functional import encode_μ_law
 def _prepare_toy_audio_data(mix: np.ndarray, sources: np.ndarray,
                             crop: int, offset: int = 0,
                             μ: Optional[int] = None):
+    assert μ & 1
+    hμ = (μ - 1) // 2
     mix = torch.tensor(mix, dtype=torch.float32)
     if μ:
-        mix = encode_μ_law(mix, μ=μ - 1) / math.ceil(μ / 2)
+        mix = encode_μ_law(mix, μ=μ) / hμ
 
     sources = torch.tensor(sources, dtype=torch.float32)
     if μ:
-        sources = (encode_μ_law(sources, μ=μ - 1) + math.ceil(
-            μ / 2)).long()
+        sources = encode_μ_law(sources, μ=μ)
+        sources = (sources + hμ).long()
 
     mix = mix[offset:offset + crop]
     sources = sources[:, offset:offset + crop]
