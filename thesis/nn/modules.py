@@ -11,7 +11,7 @@ class VQEmbedding(nn.Module):
     def __init__(self, K, D):
         super(VQEmbedding, self).__init__()
         self.embedding = nn.Embedding(K, D)
-        self.embedding.weight.data.uniform_(-1. / K, 1. / K)
+        self.embedding.weight.data.uniform_(-1.0 / K, 1.0 / K)
 
     def forward(self, z_e_x):
         z_e_x_ = z_e_x.permute(0, 2, 1).contiguous()
@@ -21,11 +21,13 @@ class VQEmbedding(nn.Module):
     def straight_through(self, z_e_x):
         z_e_x_ = z_e_x.permute(0, 2, 1).contiguous()
         z_q_x_, indices = VectorQuantizationStraightThrough.apply(
-            z_e_x_, self.embedding.weight.detach())
+            z_e_x_, self.embedding.weight.detach()
+        )
         z_q_x = z_q_x_.permute(0, 2, 1).contiguous()
 
-        z_q_x_bar_flatten = torch.index_select(self.embedding.weight,
-                                               dim=0, index=indices)
+        z_q_x_bar_flatten = torch.index_select(
+            self.embedding.weight, dim=0, index=indices
+        )
         z_q_x_bar_ = z_q_x_bar_flatten.view_as(z_e_x_)
         z_q_x_bar = z_q_x_bar_.permute(0, 2, 1).contiguous()
 
@@ -34,9 +36,9 @@ class VQEmbedding(nn.Module):
 
 class LinearInvert(nn.Linear):
     def __init__(self, in_features: int, out_features: int):
-        super(LinearInvert, self).__init__(in_features=in_features,
-                                           out_features=out_features,
-                                           bias=True)
+        super(LinearInvert, self).__init__(
+            in_features=in_features, out_features=out_features, bias=True
+        )
         self.inv_weights = None
         # I cannot init the weights to be orthonormal as they're not gonna be
         # square. :((((((
@@ -78,3 +80,28 @@ class ChannelConvInvert(nn.Module):
             logdet_w = n * l * torch.logdet(w)
             z = self.conv(z)
             return z, logdet_w
+
+
+class Flatten(nn.Module):
+    def forward(self, x):
+        return x.flatten(start_dim=1)
+
+
+class AttentionBlock(nn.Module):
+    def __init__(self, input_nc, output_nc, resize=True):
+        super().__init__()
+        self.conv = nn.Conv2d(input_nc, output_nc, 3, padding=1, bias=False)
+        self.norm = nn.InstanceNorm2d(output_nc, affine=True)
+        self._resize = resize
+
+    def forward(self, *inputs):
+        downsampling = len(inputs) == 1
+        x = inputs[0] if downsampling else torch.cat(inputs, dim=1)
+        x = self.conv(x)
+        x = self.norm(x)
+        x = skip = F.relu(x)
+        if self._resize:
+            x = F.interpolate(
+                skip, scale_factor=0.5 if downsampling else 2.0, mode="nearest"
+            )
+        return (x, skip) if downsampling else x

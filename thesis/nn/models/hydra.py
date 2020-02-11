@@ -6,31 +6,45 @@ from torch.nn import functional as F
 
 from .wavenet import Wavenet
 from ..optim import multi_cross_entropy
-from ...functional import decode_μ_law
 from ...utils import clean_init_args
 
 
 class Hydra(nn.Module):
-    def __init__(self, classes: int, in_channels: int, out_channels: int,
-                 wn_width: int):
+    def __init__(
+        self, classes: int, in_channels: int, out_channels: int, wn_width: int
+    ):
         super(Hydra, self).__init__()
         self.params = clean_init_args(locals().copy())
 
         self.classes, self.out_channels = classes, out_channels
-        self.bottom = Wavenet(in_channels=in_channels, out_channels=32,
-                              residual_width=wn_width * 2, skip_width=wn_width)
+        self.bottom = Wavenet(
+            in_channels=in_channels,
+            out_channels=32,
+            residual_width=wn_width * 2,
+            skip_width=wn_width,
+        )
         self.heads = nn.ModuleList()
         for _ in range(classes):
             self.heads.append(
-                Wavenet(in_channels=32, out_channels=out_channels,
-                        residual_width=wn_width * 2, skip_width=wn_width))
+                Wavenet(
+                    in_channels=32,
+                    out_channels=out_channels,
+                    residual_width=wn_width * 2,
+                    skip_width=wn_width,
+                )
+            )
 
     def forward(self, x: torch.Tensor):
         z = self.bottom(x)
 
-        S = [self.heads[k](z) for k in range(self.classes)]
-        S = torch.stack(S, dim=1)
-        return S
+        S_tilde = [self.heads[k](z) for k in range(self.classes)]
+        S_tilde = torch.stack(S_tilde, dim=1)
+        return S_tilde
+
+    def infer(self, x: torch.Tensor):
+        S_tilde = self(x)
+        S_tilde = S_tilde.argmax(dim=2)
+        return S_tilde
 
     def loss(self) -> Callable:
         def func(model, m, S, progress):
