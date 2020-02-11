@@ -15,9 +15,17 @@ class WavenetAE(nn.Module):
     The complete WaveNetAutoEncoder model.
     """
 
-    def __init__(self, in_channels: int, out_channels: int,
-                 latent_width: int, encoder_width: int, decoder_width: int,
-                 n_decoders: int = 1, n_blocks: int = 3, n_layers: int = 10):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        latent_width: int,
+        encoder_width: int,
+        decoder_width: int,
+        n_decoders: int = 1,
+        n_blocks: int = 3,
+        n_layers: int = 10,
+    ):
         """
 
         Args:
@@ -39,21 +47,27 @@ class WavenetAE(nn.Module):
         self.out_channels = out_channels
 
         self.encoder = TemporalEncoder(
-            in_channels=in_channels, out_channels=latent_width,
-            n_blocks=n_blocks, n_layers=n_layers, width=encoder_width
+            in_channels=in_channels,
+            out_channels=latent_width,
+            n_blocks=n_blocks,
+            n_layers=n_layers,
+            width=encoder_width,
         )
 
-        decoder_args = dict(in_channels=in_channels,
-                            out_channels=out_channels,
-                            c_channels=latent_width,
-                            n_blocks=n_blocks, n_layers=n_layers,
-                            residual_width=2 * decoder_width,
-                            skip_width=decoder_width)
+        decoder_args = dict(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            c_channels=latent_width,
+            n_blocks=n_blocks,
+            n_layers=n_layers,
+            residual_width=2 * decoder_width,
+            skip_width=decoder_width,
+        )
         self.decoders = nn.ModuleList(
-            [Wavenet(**decoder_args) for _ in range(n_decoders)])
+            [Wavenet(**decoder_args) for _ in range(n_decoders)]
+        )
 
-    def _decode(self, x: torch.Tensor, embedding: torch.Tensor) \
-            -> torch.Tensor:
+    def _decode(self, x: torch.Tensor, embedding: torch.Tensor) -> torch.Tensor:
         x = shift1d(x, -1)
         logits = [dec(x, embedding) for dec in self.decoders]
         # TODO change cat to stack!
@@ -63,8 +77,7 @@ class WavenetAE(nn.Module):
         embedding = self.encoder(x)
         return self._decode(x, embedding)
 
-    def infer(self, x: torch.Tensor, destroy: float = 0) \
-            -> torch.Tensor:
+    def infer(self, x: torch.Tensor, destroy: float = 0) -> torch.Tensor:
         embedding = self.encoder(x)
         embedding = destroy_along_channels(embedding, destroy)
         return self._decode(x, embedding)
@@ -73,8 +86,9 @@ class WavenetAE(nn.Module):
         def func(model, x, y, progress):
             _ = progress  # Ignore arg
             y_tilde = model(x)
-            loss = multi_cross_entropy(y_tilde, y, len(self.decoders),
-                                       self.out_channels)
+            loss = multi_cross_entropy(
+                y_tilde, y, len(self.decoders), self.out_channels
+            )
             return loss
 
         return func

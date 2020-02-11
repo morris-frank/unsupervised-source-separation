@@ -5,7 +5,6 @@ from ..modules import Flatten
 
 
 class ComponentVAE(nn.Module):
-
     def __init__(self, input_nc, z_dim=16, full_res=False):
         super().__init__()
         self._input_nc = input_nc
@@ -24,7 +23,7 @@ class ComponentVAE(nn.Module):
             Flatten(),
             nn.Linear(h_dim, 256),
             nn.ReLU(True),
-            nn.Linear(256, 32)
+            nn.Linear(256, 32),
         )
         self.decoder = nn.Sequential(
             nn.Conv2d(z_dim + 2, 32, 3),
@@ -70,8 +69,8 @@ class ComponentVAE(nn.Module):
         :return: x_k and reconstructed mask logits
         """
         params = self.encoder(torch.cat((x, log_m_k), dim=1))
-        z_mu = params[:, :self._z_dim]
-        z_logvar = params[:, self._z_dim:]
+        z_mu = params[:, : self._z_dim]
+        z_logvar = params[:, self._z_dim :]
         z = self.reparameterize(z_mu, z_logvar)
 
         # "The height and width of the input to this CNN were both 8 larger than the target output (i.e. image) size
@@ -80,8 +79,8 @@ class ComponentVAE(nn.Module):
         z_sb = self.spatial_broadcast(z, h + 8, w + 8)
 
         output = self.decoder(z_sb)
-        x_mu = output[:, :self._input_nc]
+        x_mu = output[:, : self._input_nc]
         x_logvar = self._bg_logvar if background else self._fg_logvar
-        m_logits = output[:, self._input_nc:]
+        m_logits = output[:, self._input_nc :]
 
         return m_logits, x_mu, x_logvar, z_mu, z_logvar

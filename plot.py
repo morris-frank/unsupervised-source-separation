@@ -6,14 +6,14 @@ from os.path import abspath
 
 def main(args):
     _ = args
-    makedirs('./figures', exist_ok=True)
-    raise ValueError('Invalid Command given')
+    makedirs("./figures", exist_ok=True)
+    raise ValueError("Invalid Command given")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('command', type=str, help='show ∨ something')
-    parser.add_argument('--weights', type=abspath, required=True)
-    parser.add_argument('--data', type=abspath, required=True)
-    parser.add_argument('--device', type=str, default='cpu')
+    parser.add_argument("command", type=str, help="show ∨ something")
+    parser.add_argument("--weights", type=abspath, required=True)
+    parser.add_argument("--data", type=abspath, required=True)
+    parser.add_argument("--device", type=str, default="cpu")
     main(parser.parse_args())

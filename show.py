@@ -10,11 +10,12 @@ from thesis.io import load_model
 
 
 def main(args):
-    if args.command == 'sample':
+    if args.command == "sample":
         from thesis.plot.toy import example_reconstruction
+
         model = load_model(args.weights, args.device)
         model.eval()
-        data = map_dataset(model, args.data, 'test')
+        data = map_dataset(model, args.data, "test")
 
         with torch.no_grad():
             for fig in example_reconstruction(model, data):
@@ -22,11 +23,12 @@ def main(args):
                 input()
                 plt.close(fig)
 
-    elif args.command == 'z-sample':
+    elif args.command == "z-sample":
         from thesis.plot.toy import z_example_reconstruction
+
         model = load_model(args.weights, args.device)
         model.eval()
-        data = map_dataset(model, args.data, 'test')
+        data = map_dataset(model, args.data, "test")
         with torch.no_grad():
             for fig in z_example_reconstruction(model, data):
                 fig.show()
@@ -34,13 +36,13 @@ def main(args):
                 plt.close(fig)
 
     else:
-        raise ValueError('Invalid command given')
+        raise ValueError("Invalid command given")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument('command', type=str)
-    parser.add_argument('--weights', type=abspath)
-    parser.add_argument('--device', type=str, default='cpu')
-    parser.add_argument('--data', type=abspath)
+    parser.add_argument("command", type=str)
+    parser.add_argument("--weights", type=abspath)
+    parser.add_argument("--device", type=str, default="cpu")
+    parser.add_argument("--data", type=abspath)
     main(parser.parse_args())

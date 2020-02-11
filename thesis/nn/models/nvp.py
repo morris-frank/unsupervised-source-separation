@@ -11,8 +11,9 @@ from ...utils import clean_init_args
 
 
 class RealNVP(nn.Module):
-    def __init__(self, channels: int, n_flows: int = 15, wn_layers: int = 12,
-                 wn_width: int = 32):
+    def __init__(
+        self, channels: int, n_flows: int = 15, wn_layers: int = 12, wn_width: int = 32
+    ):
         super(RealNVP, self).__init__()
         self.params = clean_init_args(locals().copy())
 
@@ -22,14 +23,21 @@ class RealNVP(nn.Module):
 
         self.waves = nn.ModuleList()
         for _ in range(n_flows):
-            self.waves.append(Wavenet(
-                in_channels=channels, out_channels=channels * 2,
-                c_channels=1, n_blocks=1, n_layers=wn_layers,
-                residual_width=2 * wn_width, skip_width=wn_width)
+            self.waves.append(
+                Wavenet(
+                    in_channels=channels,
+                    out_channels=channels * 2,
+                    c_channels=1,
+                    n_blocks=1,
+                    n_layers=wn_layers,
+                    residual_width=2 * wn_width,
+                    skip_width=wn_width,
+                )
             )
 
-    def apply_wave(self, x: torch.Tensor, k: int, c: torch.Tensor) \
-            -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def apply_wave(
+        self, x: torch.Tensor, k: int, c: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
         x_left, x_right = split(x)
         c_left, c_right = split(c)
 
@@ -62,8 +70,13 @@ class RealNVP(nn.Module):
         z = f_s
         return z, total_log_s
 
-    def infer(self, m: torch.Tensor, σ: float = 1., μ: float = 0.,
-              z: Optional[torch.Tensor] = None):
+    def infer(
+        self,
+        m: torch.Tensor,
+        σ: float = 1.0,
+        μ: float = 0.0,
+        z: Optional[torch.Tensor] = None,
+    ):
         N, _, L = m.shape
 
         # Sample a z
@@ -85,7 +98,7 @@ class RealNVP(nn.Module):
         return f_z
 
     @staticmethod
-    def loss(σ: float = 1.):
+    def loss(σ: float = 1.0):
         def func(model, x, y, progress):
             _ = progress
             z, total_log_s = model(x, y)
@@ -101,8 +114,7 @@ class ConditionalRealNVP(RealNVP):
         self.params = clean_init_args(locals().copy())
         self.classes = classes
 
-        self.conditioner = nn.Sequential(nn.Linear(classes, 32),
-                                         nn.Linear(32, 2))
+        self.conditioner = nn.Sequential(nn.Linear(classes, 32), nn.Linear(32, 2))
 
     def forward(self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor):
         m, y = x  # y is channel label
@@ -113,8 +125,9 @@ class ConditionalRealNVP(RealNVP):
         z = (f_s - μ) / σ
         return z, total_log_s, σ
 
-    def infer(self, x: Tuple[torch.Tensor, torch.Tensor],
-              z: Optional[torch.Tensor] = None):
+    def infer(
+        self, x: Tuple[torch.Tensor, torch.Tensor], z: Optional[torch.Tensor] = None
+    ):
         m, y = x  # y is channel label
         y = F.one_hot(y, self.classes).float().to(m.device)
         σ, μ = self.conditioner(y).unsqueeze(-1).chunk(2, dim=1)
@@ -140,8 +153,9 @@ class ExperimentalRealNVP(RealNVP):
         self.params = clean_init_args(locals().copy())
         self.classes = classes
 
-        self.conditioner = nn.Sequential(nn.Conv1d(1, 8, 3, padding=1),
-                                         nn.Conv1d(8, 2, 1))
+        self.conditioner = nn.Sequential(
+            nn.Conv1d(1, 8, 3, padding=1), nn.Conv1d(8, 2, 1)
+        )
 
     def forward(self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor):
         m, y = x
@@ -153,8 +167,9 @@ class ExperimentalRealNVP(RealNVP):
         z = (f_s - μ) / σ
         return z, total_log_s, σ
 
-    def infer(self, x: Tuple[torch.Tensor, torch.Tensor],
-              z: Optional[torch.Tensor] = None):
+    def infer(
+        self, x: Tuple[torch.Tensor, torch.Tensor], z: Optional[torch.Tensor] = None
+    ):
         m, y = x  # y is channel label
         μ, _ = self.conditioner(m).chunk(2, dim=1)
         bs, _, rf = m.shape
@@ -185,7 +200,7 @@ class MultiRealNVP(nn.Module):
             total_log_s = total_log_s_i + total_log_s
         return torch.cat(z, dim=1), total_log_s
 
-    def infer(self, m: torch.Tensor, σ: float = 1.):
+    def infer(self, m: torch.Tensor, σ: float = 1.0):
         f_z = []
         for k in range(self.channels):
             f_z_i = self.flows[k].infer(m, σ)
@@ -193,5 +208,5 @@ class MultiRealNVP(nn.Module):
         return torch.cat(f_z, dim=1)
 
     @staticmethod
-    def loss(σ: float = 1.):
+    def loss(σ: float = 1.0):
         return RealNVP.loss(σ)

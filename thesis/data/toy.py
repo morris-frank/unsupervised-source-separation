@@ -1,4 +1,3 @@
-import math
 import random
 from glob import glob
 from typing import Tuple, Optional
@@ -11,9 +10,13 @@ from ..data import Dataset
 from ..functional import encode_μ_law
 
 
-def _prepare_toy_audio_data(mix: np.ndarray, sources: np.ndarray,
-                            crop: int, offset: int = 0,
-                            μ: Optional[int] = None):
+def _prepare_toy_audio_data(
+    mix: np.ndarray,
+    sources: np.ndarray,
+    crop: int,
+    offset: int = 0,
+    μ: Optional[int] = None,
+):
     assert μ & 1
     hμ = (μ - 1) // 2
     mix = torch.tensor(mix, dtype=torch.float32)
@@ -25,8 +28,8 @@ def _prepare_toy_audio_data(mix: np.ndarray, sources: np.ndarray,
         sources = encode_μ_law(sources, μ=μ)
         sources = (sources + hμ).long()
 
-    mix = mix[offset:offset + crop]
-    sources = sources[:, offset:offset + crop]
+    mix = mix[offset : offset + crop]
+    sources = sources[:, offset : offset + crop]
     return mix.unsqueeze(0), sources
 
 
@@ -45,9 +48,10 @@ class ToyData(Dataset):
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         item = self.data[idx]
-        p = random.randint(0, item['mix'].size - self.crop)
-        mix, sources = _prepare_toy_audio_data(item['mix'], item['sources'],
-                                               self.crop, p, self.μ)
+        p = random.randint(0, item["mix"].size - self.crop)
+        mix, sources = _prepare_toy_audio_data(
+            item["mix"], item["sources"], self.crop, p, self.μ
+        )
         return mix, sources
 
 
@@ -55,8 +59,7 @@ class ToyDataSingle(ToyData):
     def __init__(self, *args, **kwargs):
         super(ToyDataSingle, self).__init__(*args, **kwargs)
 
-    def __getitem__(self, item: int) \
-            -> Tuple[Tuple[torch.Tensor, int], torch.Tensor]:
+    def __getitem__(self, item: int) -> Tuple[Tuple[torch.Tensor, int], torch.Tensor]:
         mix, sources = super(ToyDataSingle, self).__getitem__(item)
         t = random.randint(0, sources.shape[0] - 1)
         source = sources[None, t, :]
@@ -64,8 +67,15 @@ class ToyDataSingle(ToyData):
 
 
 class ToyDataSequential(Dataset):
-    def __init__(self, filepath: str, crop: int, batch_size: int,
-                 steps: int = 5, stride: int = None, μ: Optional[int] = None):
+    def __init__(
+        self,
+        filepath: str,
+        crop: int,
+        batch_size: int,
+        steps: int = 5,
+        stride: int = None,
+        μ: Optional[int] = None,
+    ):
         self.μ, self.crop, self.steps = μ, crop, steps
         self.ifile, self.data = None, None
         self.batch_size = batch_size
@@ -80,11 +90,11 @@ class ToyDataSequential(Dataset):
 
     def __len__(self) -> int:
         # the minus 1 stays unexplained
-        return len(self.files) * len(self.data) * self.steps \
-               - (self.steps * self.batch_size)
+        return len(self.files) * len(self.data) * self.steps - (
+            self.steps * self.batch_size
+        )
 
-    def __getitem__(self, idx: int) \
-            -> Tuple[Tuple[torch.Tensor, int], torch.Tensor]:
+    def __getitem__(self, idx: int) -> Tuple[Tuple[torch.Tensor, int], torch.Tensor]:
         i_batch = idx // (self.batch_size * self.steps)
         i_in_batch = idx % self.batch_size
         i_sample = i_batch * self.batch_size + i_in_batch
@@ -102,10 +112,12 @@ class ToyDataSequential(Dataset):
         offset = idx // self.batch_size % self.steps
         offset *= self.stride
 
-        mix, sources = _prepare_toy_audio_data(item['mix'], item['sources'],
-                                               self.crop, offset, self.μ)
+        mix, sources = _prepare_toy_audio_data(
+            item["mix"], item["sources"], self.crop, offset, self.μ
+        )
         return (mix, offset), sources
 
     def loader(self, batch_size: int) -> data.DataLoader:
-        return data.DataLoader(self, batch_size=batch_size, num_workers=0,
-                               shuffle=False, drop_last=True)
+        return data.DataLoader(
+            self, batch_size=batch_size, num_workers=0, shuffle=False, drop_last=True
+        )

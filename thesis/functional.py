@@ -61,7 +61,7 @@ def shift1d(x: torch.Tensor, shift: int) -> torch.Tensor:
     length = x.shape[2]
     pad = [-min(shift, 0), max(shift, 0)]
     y = F.pad(x, pad)
-    y = y[:, :, pad[1]:pad[1] + length]
+    y = y[:, :, pad[1] : pad[1] + length]
     return y.contiguous()
 
 
@@ -77,7 +77,7 @@ def encode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
         the encoded tensor
     """
     assert μ & 1
-    assert x.max() <= 1. and x.min() >= -1.
+    assert x.max() <= 1.0 and x.min() >= -1.0
     μ = μ - 1
     out = torch.sign(x) * torch.log(1 + μ * torch.abs(x)) / math.log(μ)
     out = torch.round(out * (μ // 2))
@@ -121,9 +121,9 @@ def destroy_along_channels(x: torch.Tensor, amount: float) -> torch.Tensor:
     length = x.shape[1]
     for i in random.sample(range(length), int(amount * length)):
         if x.ndim == 3:
-            x[:, i, :] = 0.
+            x[:, i, :] = 0.0
         else:
-            x[:, i] = 0.
+            x[:, i] = 0.0
     return x
 
 
@@ -143,7 +143,7 @@ def multi_argmax(x: torch.Tensor, n: int, μ: int = 101) -> torch.Tensor:
     signals = []
     for i in range(n):
         j = i * μ
-        signals.append(x[:, j:j + μ, :].argmax(dim=1))
+        signals.append(x[:, j : j + μ, :].argmax(dim=1))
     return torch.cat(signals)
 
 
