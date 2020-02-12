@@ -80,11 +80,11 @@ class MONet(nn.Module):
 
         return x_tilde, m, m_tilde_logits
 
-    def loss(self, β: float = 0.5, γ: float = 0.5):
+    def loss(self, β: float = 0.5, γ: float = 0.5, ρ: float = 1.0):
         def func(model, x, y, progress):
             _, m, m_tilde_logits = model(x, y)
             ℒ_M = F.kl_div(m_tilde_logits.log_softmax(dim=1), m, reduction="batchmean")
-            ℒ = self.ℒ_D + β * self.ℒ_E + γ * ℒ_M + self.ℒ_R
+            ℒ = self.ℒ_D + β * self.ℒ_E + γ * ℒ_M + ρ * self.ℒ_R
 
             self.losses['encoder'].append(self.ℒ_E.detach().item())
             self.losses['decoder'].append(self.ℒ_D.detach().item())
