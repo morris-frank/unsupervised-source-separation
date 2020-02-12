@@ -4,7 +4,7 @@ from os.path import abspath
 from torch import nn
 
 from . import Dataset
-from .toy import ToyDataSingle, ToyData
+from .toy import ToyDataSingle, ToyData, ToyDataSpectral
 
 
 def map_dataset(model: nn.Module, data_dir: abspath, subset: str) -> Dataset:
@@ -24,6 +24,9 @@ def map_dataset(model: nn.Module, data_dir: abspath, subset: str) -> Dataset:
         receptive_field = 3 * 2 ** 10
         μ = model.out_channels
         dset = ToyData(f"{data_dir}/toy_{subset}.npy", receptive_field, μ=μ)
+    elif model.__class__.__name__ == "MONet":
+        receptive_field = 3 * 2 ** 10
+        dset = ToyDataSpectral(f"{data_dir}/toy_{subset}.npy", receptive_field)
     else:
         raise ValueError("Unrecognized Model Class – do it on your own pls")
     return dset

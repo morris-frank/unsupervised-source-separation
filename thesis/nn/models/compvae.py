@@ -5,14 +5,14 @@ from ..modules import Flatten
 
 
 class ComponentVAE(nn.Module):
-    def __init__(self, input_nc, z_dim=16, full_res=False):
+    def __init__(self, in_channels, z_dim=16, full_res=False):
         super().__init__()
-        self._input_nc = input_nc
+        self._input_nc = in_channels
         self._z_dim = z_dim
         # full_res = False # full res: 128x128, low res: 64x64
         h_dim = 4096 if full_res else 1024
         self.encoder = nn.Sequential(
-            nn.Conv2d(input_nc + 1, 32, 3, stride=2, padding=1),
+            nn.Conv2d(in_channels + 1, 32, 3, stride=2, padding=1),
             nn.ReLU(True),
             nn.Conv2d(32, 32, 3, stride=2, padding=1),
             nn.ReLU(True),
@@ -34,7 +34,7 @@ class ComponentVAE(nn.Module):
             nn.ReLU(True),
             nn.Conv2d(32, 32, 3),
             nn.ReLU(True),
-            nn.Conv2d(32, input_nc + 1, 1),
+            nn.Conv2d(32, in_channels + 1, 1),
         )
         self._bg_logvar = 2 * torch.tensor(0.09).log()
         self._fg_logvar = 2 * torch.tensor(0.11).log()

@@ -4,6 +4,7 @@ from typing import Tuple, Optional
 
 import numpy as np
 import torch
+from librosa import stft
 from torch.utils import data
 
 from ..data import Dataset
@@ -17,10 +18,10 @@ def _prepare_toy_audio_data(
     offset: int = 0,
     μ: Optional[int] = None,
 ):
-    assert μ & 1
-    hμ = (μ - 1) // 2
     mix = torch.tensor(mix, dtype=torch.float32)
     if μ:
+        assert μ & 1
+        hμ = (μ - 1) // 2
         mix = encode_μ_law(mix, μ=μ) / hμ
 
     sources = torch.tensor(sources, dtype=torch.float32)
@@ -53,6 +54,26 @@ class ToyData(Dataset):
             item["mix"], item["sources"], self.crop, p, self.μ
         )
         return mix, sources
+
+
+class ToyDataSpectral(ToyData):
+    def __init__(self, *args, **kwargs):
+        super(ToyDataSpectral, self).__init__(*args, **kwargs)
+        self.n_fft = 2 ** 7
+        self.f = lambda x: np.abs(stft(x, n_fft=self.n_fft))
+
+    def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
+        item = self.data[idx]
+        p = random.randint(0, item["mix"].size - self.crop)
+        mix, _sources = item["mix"], item["sources"]
+        mix = mix[p:p+self.crop]
+        _sources = _sources[:, p:p+self.crop]
+        mix = self.f(mix)
+        mix = torch.tensor(mix, dtype=torch.float32).unsqueeze(0)
+        sources = []
+        for i in range(_sources.shape[0]):
+            sources.append(torch.tensor(self.f(_sources[i, :]), dtype=torch.float32))
+        return mix, torch.stack(sources)
 
 
 class ToyDataSingle(ToyData):

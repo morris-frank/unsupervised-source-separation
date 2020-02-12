@@ -61,6 +61,15 @@ def hydra():
     return model, loss_function, max_batch_size
 
 
+def monet():
+    from thesis.nn.models.monet import MONet
+
+    max_batch_size = 2
+    model = MONet(slots=4)
+    loss_function = model.loss(β=1., γ=1.)
+    return model, loss_function, max_batch_size
+
+
 def main(args):
     if args.experiment not in EXPERIMENTS:
         raise ValueError("Invalid experiment given.")
@@ -93,6 +102,7 @@ EXPERIMENTS = {
     "xnvp": experimental_nvp,
     "xglow": experimental_waveglow,
     "hydra": hydra,
+    "monet": monet,
 }
 
 if __name__ == "__main__":
