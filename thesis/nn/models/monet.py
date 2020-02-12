@@ -13,7 +13,7 @@ class MONet(nn.Module):
         super(MONet, self).__init__()
         self.params = clean_init_args(locals().copy())
         self.slots = slots
-        self.attention = Attention(in_channels=1, out_channels=1)
+        self.attention = Attention(in_channels=1, out_channels=1, ngf=32)
         self.component = ComponentVAE(in_channels=1)
         self.ε = torch.finfo(torch.float).eps
 
@@ -21,15 +21,15 @@ class MONet(nn.Module):
         self.ℒ_E = None  # Encoder loss
         self.ℒ_D = None  # Decoder loss
         self.ℒ_R = None  # Possible reconstruction loss
-        self.losses = dict(encoder=[], decoder=(), reconstruction=[], mask=[])
+        self.losses = dict(encoder=[], decoder=[], reconstruction=[], mask=[])
 
-    def forward(self, m: torch.Tensor, S: Optional[torch.Tensor] = None):
-        bs, _, h, w = m.shape
+    def forward(self, x: torch.Tensor, S: Optional[torch.Tensor] = None):
+        bs, _, h, w = x.shape
 
         if S is not None:
             assert S.shape[1] == self.slots
 
-        log_s_k = m.new_zeros((bs, 1, h, w))
+        log_s_k = x.new_zeros((bs, 1, h, w))
         x_tilde = 0
 
         self.ℒ_E = 0
@@ -40,14 +40,14 @@ class MONet(nn.Module):
 
         for k in range(self.slots):
             if k != self.slots - 1:
-                log_α_k = self.attention(m, log_s_k)
+                log_α_k = self.attention(x, log_s_k)
                 log_m_k = log_s_k + log_α_k
                 log_s_k += (1.0 - log_α_k.exp()).clamp(min=self.ε).log()
             else:
                 log_m_k = log_s_k
 
             m_tilde_k_logits, x_μ_k, x_logvar_k, z_μ_k, z_logvar_k = self.component(
-                m, log_m_k, k == 0
+                x, log_m_k, k == 0
             )
 
             # KLD is additive for independent distributions
@@ -61,7 +61,7 @@ class MONet(nn.Module):
 
             # Exponents for the decoder loss
             b_k = (
-                log_m_k - 0.5 * x_logvar_k - (m - x_μ_k).pow(2) / (2 * x_logvar_k.exp())
+                log_m_k - 0.5 * x_logvar_k - (x - x_μ_k).pow(2) / (2 * x_logvar_k.exp())
             )
             b.append(b_k.unsqueeze(1))
 
@@ -80,16 +80,16 @@ class MONet(nn.Module):
 
         return x_tilde, m, m_tilde_logits
 
-    def loss(self, β: float, γ: float):
+    def loss(self, β: float = 0.5, γ: float = 0.5):
         def func(model, x, y, progress):
             _, m, m_tilde_logits = model(x, y)
             ℒ_M = F.kl_div(m_tilde_logits.log_softmax(dim=1), m, reduction="batchmean")
             ℒ = self.ℒ_D + β * self.ℒ_E + γ * ℒ_M + self.ℒ_R
 
-            self.losses['encoder'].append(self.ℒ_E)
-            self.losses['decoder'].append(self.ℒ_D)
-            self.losses['reconstruction'].append(self.ℒ_R)
-            self.losses['mask'].append(ℒ_M)
+            self.losses['encoder'].append(self.ℒ_E.detach().item())
+            self.losses['decoder'].append(self.ℒ_D.detach.item())
+            self.losses['reconstruction'].append(self.ℒ_R.detach().item())
+            self.losses['mask'].append(ℒ_M.detach().item())
             return ℒ
 
         return func

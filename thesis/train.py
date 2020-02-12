@@ -111,10 +111,10 @@ def train(
                 "Time/train": mean(it_times),
                 "LR": optimizer.param_groups[0]["lr"],
             }
-            if hasattr(model, 'losses'):
+            if hasattr(model.module, 'losses'):
                 for k, v in model.losses:
                     log[f"Loss/{k}"] = mean(v)
-                    model.losses[k] = []
+                    model.module.losses[k] = []
             _print_log(log, step=it)
             if wandb:
                 _wandb.log(log, step=it)

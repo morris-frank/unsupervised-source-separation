@@ -66,7 +66,7 @@ def monet():
 
     max_batch_size = 2
     model = MONet(slots=4)
-    loss_function = model.loss(β=1., γ=1.)
+    loss_function = model.loss()
     return model, loss_function, max_batch_size
 
 

@@ -60,7 +60,12 @@ class ToyDataSpectral(ToyData):
     def __init__(self, *args, **kwargs):
         super(ToyDataSpectral, self).__init__(*args, **kwargs)
         self.n_fft = 2 ** 7
-        self.f = lambda x: np.abs(stft(x, n_fft=self.n_fft))
+
+    def f(self, x):
+        y = np.zeros((64, 96))
+        _y = np.abs(stft(x, n_fft=self.n_fft))
+        y[:, :] = _y[:-1, :-1]
+        return y
 
     def __getitem__(self, idx: int) -> Tuple[torch.Tensor, torch.Tensor]:
         item = self.data[idx]

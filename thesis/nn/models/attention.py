@@ -30,11 +30,11 @@ class Attention(nn.Module):
         # self.downblock6 = AttentionBlock(ngf * 8, ngf * 8, resize=False)
 
         self.mlp = nn.Sequential(
-            nn.Linear(4 * 4 * ngf * 8, 128),
+            nn.Linear(4 * 6 * ngf * 8, 128),
             nn.ReLU(),
             nn.Linear(128, 128),
             nn.ReLU(),
-            nn.Linear(128, 4 * 4 * ngf * 8),
+            nn.Linear(128, 4 * 6 * ngf * 8),
             nn.ReLU(),
         )
 
