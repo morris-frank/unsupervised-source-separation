@@ -112,7 +112,7 @@ def train(
                 "LR": optimizer.param_groups[0]["lr"],
             }
             if hasattr(model.module, 'losses'):
-                for k, v in model.losses:
+                for k, v in model.module.losses:
                     log[f"Loss/{k}"] = mean(v)
                     model.module.losses[k] = []
             _print_log(log, step=it)
