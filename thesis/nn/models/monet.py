@@ -87,7 +87,7 @@ class MONet(nn.Module):
             ℒ = self.ℒ_D + β * self.ℒ_E + γ * ℒ_M + self.ℒ_R
 
             self.losses['encoder'].append(self.ℒ_E.detach().item())
-            self.losses['decoder'].append(self.ℒ_D.detach.item())
+            self.losses['decoder'].append(self.ℒ_D.detach().item())
             self.losses['reconstruction'].append(self.ℒ_R.detach().item())
             self.losses['mask'].append(ℒ_M.detach().item())
             return ℒ
