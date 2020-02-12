@@ -13,7 +13,7 @@ class MONet(nn.Module):
         super(MONet, self).__init__()
         self.params = clean_init_args(locals().copy())
         self.slots = slots
-        self.attention = Attention(in_channels=1, out_channels=1, ngf=32)
+        self.attention = Attention(in_channels=1, out_channels=1, ngf=64)
         self.component = ComponentVAE(in_channels=1)
         self.ε = torch.finfo(torch.float).eps
 

@@ -64,7 +64,7 @@ def hydra():
 def monet():
     from thesis.nn.models.monet import MONet
 
-    max_batch_size = 2
+    max_batch_size = 75
     model = MONet(slots=4)
     loss_function = model.loss()
     return model, loss_function, max_batch_size
