@@ -10,6 +10,7 @@ import wandb as _wandb
 from torch import nn
 from torch import optim
 from torch.utils import data
+from torch.nn.utils import clip_grad_norm_
 
 from .nn.models import BaseModel
 
@@ -96,6 +97,7 @@ def train(
         if torch.isnan(ℒ):
             exit(1)
         ℒ.backward()
+        clip_grad_norm_(model.parameters(), 10)
         optimizer.step()
         scheduler.step(it)
 
