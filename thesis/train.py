@@ -26,9 +26,10 @@ def _test(
 ):
     test_time, test_losses = time.time(), []
     model.eval()
-    for x, y in test_loader:
-        ℒ = model.test(x, y)
-        test_losses.append(ℒ.detach().item())
+    with torch.no_grad():
+        for x, y in test_loader:
+            ℒ = model.test(x, y)
+            test_losses.append(ℒ.detach().item())
 
     log = {"Loss/test": mean(test_losses), "Time/test": time.time() - test_time}
 
@@ -89,10 +90,11 @@ def train(
             x, y = next(train_iterator)
 
         model.train()
+        model.zero_grad()
+
         ℒ = model.test(x, y)
         if torch.isnan(ℒ):
             exit(1)
-        model.zero_grad()
         ℒ.backward()
         optimizer.step()
         scheduler.step(it)

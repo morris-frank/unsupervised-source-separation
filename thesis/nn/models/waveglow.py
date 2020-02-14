@@ -1,8 +1,6 @@
-from typing import Optional
-
 import torch
 from torch import nn
-from torch.autograd import Variable
+from torch.nn import functional as F
 
 from . import BaseModel
 from ..modules import ChannelConvInvert
@@ -27,7 +25,6 @@ class WaveGlow(BaseModel):
                 Wavenet(
                     in_channels=channels // 2,
                     out_channels=channels,
-                    c_channels=1,
                     n_blocks=1,
                     n_layers=wn_layers,
                     residual_width=2 * wn_width,
@@ -35,26 +32,24 @@ class WaveGlow(BaseModel):
                 )
             )
 
-    def forward(self, m: torch.Tensor, S: torch.Tensor):
-        assert S.shape[1] == self.channels
-
-        f_s = S
+    def forward(self, m: torch.Tensor):
+        f_m = m.repeat(1, self.channels, 1)
 
         ℒ_log_s, ℒ_det_W = 0, 0
         for k in range(self.n_flows):
             # First mix the channels
-            f_s, log_det_W = self.conv[k](f_s)
+            f_m, log_det_W = self.conv[k](f_m)
 
             # Separate them and get scale and translate
-            s_a, s_b = f_s.chunk(2, dim=1)
-            log_s_t = self.waves[k](s_a, m)
+            m_a, m_b = f_m.chunk(2, dim=1)
+            log_s_t = self.waves[k](m_a)
             log_s, t = log_s_t.chunk(2, dim=1)
 
             # Affine transform right part
-            s_b = log_s.exp() * s_b + t
+            m_b = log_s.exp() * m_b + t
 
             # Merge them back
-            f_s = torch.cat([s_a, s_b], 1)
+            f_m = torch.cat([m_a, m_b], 1)
 
             # Save for loss
             ℒ_det_W += log_det_W
@@ -62,38 +57,24 @@ class WaveGlow(BaseModel):
 
         self.ℒ.det_W = ℒ_det_W
         self.ℒ.log_s = ℒ_log_s
-        z = f_s
-        return z
+        S_tilde = f_m
+        return S_tilde
 
-    def infer(
-        self, m: torch.Tensor, σ: float = 1.0, z: Optional[torch.Tensor] = None
-    ) -> torch.Tensor:
-        N, _, L = m.shape
-
-        # Sample a z
-        if z is not None:
-            f_z = z.type(m.dtype).to(m.device)
-        else:
-            f_z = torch.empty(N, self.channels, L).type(m.dtype).to(m.device)
-            f_z = Variable(σ * f_z.normal_())
-
-        for k in reversed(range(self.n_flows)):
-            z_a, z_b = f_z.chunk(2, dim=1)
-
-            log_s_t = self.waves[k](z_a, m)
-            log_s, t = log_s_t.chunk(2, dim=1)
-            z_b = (z_b - t) / (log_s.exp())
-
-            f_z = torch.cat([z_a, z_b], 1)
-
-            f_z = self.conv[k](f_z, reverse=True)
-
-        return f_z
+    def infer(self, m: torch.Tensor) -> torch.Tensor:
+        return self.forward(m)
 
     def test(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
         σ = 1.0
-        z = self(m, S)
-        self.ℒ.z = (z * z).sum() / (2 * σ ** 2)
-        ℒ = self.ℒ.z - self.ℒ.log_s - self.ℒ.det_W
-        ℒ /= z.numel()
+        α, β = 1., 1.
+        S_tilde = self(m, S)
+        self.ℒ.p_z_likelihood = (S_tilde * S_tilde).sum() / (2 * σ ** 2)
+        self.ℒ.reconstruction = F.mse_loss(S_tilde, S)
+        print()
+        print()
+        print()
+        import ipdb; ipdb.set_trace()
+        print()
+        print()
+        print()
+        ℒ = α * self.ℒ.p_z_likelihood - self.ℒ.det_W - self.ℒ.log_s + β * self.ℒ.reconstruction
         return ℒ
