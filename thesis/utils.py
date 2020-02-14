@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 from itertools import product
 from typing import Dict, Any
+import torch
 
 
 def clean_init_args(_locals: Dict) -> Dict[str, Any]:
@@ -45,3 +46,17 @@ def optional(condition, context_manager):
             yield
     else:
         yield
+
+
+class _LossLogger(object):
+    def __init__(self):
+        self.log = {}
+
+    def __setattr__(self, key: str, value: Any):
+        super(_LossLogger, self).__setattr__(key, value)
+        if key != "log":
+            if key not in self.log:
+                self.log[key] = []
+            if isinstance(value, torch.Tensor):
+                value = value.detach().item()
+            self.log[key].append(value)

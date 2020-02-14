@@ -1,7 +1,7 @@
 from torch import nn
 import torch
 
-from ..modules import Flatten
+from thesis.nn.modules import Flatten
 
 
 class ComponentVAE(nn.Module):

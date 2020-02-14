@@ -5,12 +5,13 @@ from torch import nn
 from torch.autograd import Variable
 from torch.nn import functional as F
 
-from .wavenet import Wavenet
+from . import BaseModel
+from ..wavenet import Wavenet
 from ...functional import split, interleave
 from ...utils import clean_init_args
 
 
-class RealNVP(nn.Module):
+class RealNVP(BaseModel):
     def __init__(
         self, channels: int, n_flows: int = 15, wn_layers: int = 12, wn_width: int = 32
     ):
@@ -53,7 +54,7 @@ class RealNVP(nn.Module):
         assert S.shape[1] == self.channels
 
         f_s = S
-        total_log_s = 0
+        ℒ_log_s = 0
         for k in range(self.n_flows):
             # Separate them and get scale and translate
             s_a, s_b, log_s, t = self.apply_wave(f_s, k, m)
@@ -66,9 +67,10 @@ class RealNVP(nn.Module):
             f_s = interleave(s_a, s_b)
 
             # Save for loss
-            total_log_s = log_s.sum() + total_log_s
+            ℒ_log_s += log_s.sum()
         z = f_s
-        return z, total_log_s
+        self.ℒ.log_s = ℒ_log_s
+        return z
 
     def infer(
         self,
@@ -97,15 +99,13 @@ class RealNVP(nn.Module):
 
         return f_z
 
-    @staticmethod
-    def loss(σ: float = 1.0):
-        def func(model, x, y, progress):
-            _ = progress
-            z, total_log_s = model(x, y)
-            loss = (z * z).sum() / (2 * σ ** 2) - total_log_s
-            return loss / z.numel()
-
-        return func
+    def loss(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
+        σ = 1.0
+        z = self(m, S)
+        self.ℒ.z = (z * z).sum() / (2 * σ ** 2)
+        ℒ = self.ℒ.z - self.ℒ.log_s
+        ℒ /= z.numel()
+        return ℒ
 
 
 class ConditionalRealNVP(RealNVP):
@@ -121,9 +121,9 @@ class ConditionalRealNVP(RealNVP):
         y = F.one_hot(y, self.classes).float().to(m.device)
         σ, μ = self.conditioner(y).unsqueeze(-1).chunk(2, dim=1)
         σ = F.softplus(σ) + 1e-7
-        f_s, total_log_s = super(ConditionalRealNVP, self).forward(m, s)
+        f_s = super(ConditionalRealNVP, self).forward(m, s)
         z = (f_s - μ) / σ
-        return z, total_log_s, σ
+        return z, σ
 
     def infer(
         self, x: Tuple[torch.Tensor, torch.Tensor], z: Optional[torch.Tensor] = None
@@ -135,78 +135,9 @@ class ConditionalRealNVP(RealNVP):
         f_z = super(ConditionalRealNVP, self).infer(m, σ, μ, z)
         return f_z
 
-    @staticmethod
-    def loss():
-        def func(model, x, y, progress):
-            _ = progress
-
-            z, total_log_s, σ = model(x, y)
-            loss = (z * z / (2 * σ * σ)).sum() - total_log_s
-            return loss / z.numel()
-
-        return func
-
-
-class ExperimentalRealNVP(RealNVP):
-    def __init__(self, classes, *args, **kwargs):
-        super(ExperimentalRealNVP, self).__init__(channels=1, *args, **kwargs)
-        self.params = clean_init_args(locals().copy())
-        self.classes = classes
-
-        self.conditioner = nn.Sequential(
-            nn.Conv1d(1, 8, 3, padding=1), nn.Conv1d(8, 2, 1)
-        )
-
-    def forward(self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor):
-        m, y = x
-        μ, σ = self.conditioner(m).chunk(2, dim=1)
-        σ = F.softplus(σ) + 1e-7
-        bs, _, rf = m.shape
-        Y = y.view(bs, 1, 1).repeat(1, 1, rf).type(m.dtype).to(m.device)
-        f_s, total_log_s = super(ExperimentalRealNVP, self).forward(Y, s)
-        z = (f_s - μ) / σ
-        return z, total_log_s, σ
-
-    def infer(
-        self, x: Tuple[torch.Tensor, torch.Tensor], z: Optional[torch.Tensor] = None
-    ):
-        m, y = x  # y is channel label
-        μ, _ = self.conditioner(m).chunk(2, dim=1)
-        bs, _, rf = m.shape
-        Y = y.view(bs, 1, 1).repeat(1, 1, rf).type(m.dtype).to(m.device)
-        f_z = super(ExperimentalRealNVP, self).infer(Y, 0, μ, z)
-        return f_z
-
-    @staticmethod
-    def loss():
-        return ConditionalRealNVP.loss()
-
-
-class MultiRealNVP(nn.Module):
-    def __init__(self, channels, *args, **kwargs):
-        super(MultiRealNVP, self).__init__()
-        self.params = clean_init_args(locals().copy())
-        self.channels = channels
-
-        self.flows = nn.ModuleList()
-        for _ in range(channels):
-            self.flows.append(RealNVP(channels=1, *args, **kwargs))
-
-    def forward(self, m: torch.Tensor, S: torch.Tensor):
-        z, total_log_s = [], 0
-        for i in range(self.channels):
-            z_i, total_log_s_i = self.flows[i](m, S[:, i, :].unsqueeze(1))
-            z.append(z_i)
-            total_log_s = total_log_s_i + total_log_s
-        return torch.cat(z, dim=1), total_log_s
-
-    def infer(self, m: torch.Tensor, σ: float = 1.0):
-        f_z = []
-        for k in range(self.channels):
-            f_z_i = self.flows[k].infer(m, σ)
-            f_z.append(f_z_i)
-        return torch.cat(f_z, dim=1)
-
-    @staticmethod
-    def loss(σ: float = 1.0):
-        return RealNVP.loss(σ)
+    def loss(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
+        z, σ = self(m, S)
+        self.ℒ.z = ((z * z) / (2 * σ ** 2)).sum()
+        ℒ = self.ℒ.z - self.ℒ.log_s
+        ℒ /= z.numel()
+        return ℒ

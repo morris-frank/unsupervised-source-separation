@@ -1,18 +1,15 @@
-from .ae import WavenetAE
-from .nvp import RealNVP, MultiRealNVP, ConditionalRealNVP
-from .temporal_encoder import TemporalEncoder
-from .vae import ConditionalWavenetVQVAE, WavenetVAE
-from .waveglow import WaveGlow
-from .wavenet import Wavenet
+from typing import Any
 
-__all__ = [
-    Wavenet,
-    TemporalEncoder,
-    WavenetVAE,
-    WavenetAE,
-    ConditionalWavenetVQVAE,
-    WaveGlow,
-    RealNVP,
-    MultiRealNVP,
-    ConditionalRealNVP,
-]
+import torch
+from torch import nn
+
+from ...utils import _LossLogger
+
+
+class BaseModel(nn.Module):
+    def __init__(self):
+        super(BaseModel, self).__init__()
+        self.ℒ = _LossLogger()
+
+    def loss(self, x: Any, y: Any) -> torch.Tensor:
+        raise NotImplementedError

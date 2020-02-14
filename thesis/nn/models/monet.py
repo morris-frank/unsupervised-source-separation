@@ -1,14 +1,15 @@
 from typing import Optional
+
 import torch
 from torch.nn import functional as F
-from torch import nn
 
-from .attention import Attention
-from .compvae import ComponentVAE
+from . import BaseModel
+from ..attention import Attention
+from ..compvae import ComponentVAE
 from ...utils import clean_init_args
 
 
-class MONet(nn.Module):
+class MONet(BaseModel):
     def __init__(self, slots: int):
         super(MONet, self).__init__()
         self.params = clean_init_args(locals().copy())
@@ -17,26 +18,22 @@ class MONet(nn.Module):
         self.component = ComponentVAE(in_channels=1)
         self.ε = torch.finfo(torch.float).eps
 
-        # Save losses during training:
-        self.ℒ_E = None  # Encoder loss
-        self.ℒ_D = None  # Decoder loss
-        self.ℒ_R = None  # Possible reconstruction loss
-        self.losses = dict(encoder=[], decoder=[], reconstruction=[], mask=[])
-
-    def forward(self, x: torch.Tensor, S: Optional[torch.Tensor] = None):
+    def forward(
+        self, x: torch.Tensor, S: Optional[torch.Tensor] = None, infer: bool = False
+    ):
         bs, _, h, w = x.shape
 
         if S is not None:
             assert S.shape[1] == self.slots
 
         log_s_k = x.new_zeros((bs, 1, h, w))
-        x_tilde = 0
 
-        self.ℒ_E = 0
-        self.ℒ_R = 0
+        ℒ_encoder = 0
+        ℒ_recon = 0
         b = []
         m = []
         m_tilde_logits = []
+        x_tilde = [] if infer else 0
 
         for k in range(self.slots):
             if k != self.slots - 1:
@@ -51,13 +48,17 @@ class MONet(nn.Module):
             )
 
             # KLD is additive for independent distributions
-            self.ℒ_E += -0.5 * (1 + z_logvar_k - z_μ_k.pow(2) - z_logvar_k.exp()).sum()
+            ℒ_encoder += -0.5 * (1 + z_logvar_k - z_μ_k.pow(2) - z_logvar_k.exp()).sum()
 
             m_k = log_m_k.exp()
             x_k_masked = m_k * x_μ_k
+            if infer:
+                x_tilde.append(x_k_masked.detach())
+            else:
+                x_tilde += x_k_masked
 
             if S is not None:
-                self.ℒ_R += F.mse_loss(x_k_masked, S[:, k, ...])
+                ℒ_recon += F.mse_loss(x_k_masked, S[:, k, ...])
 
             # Exponents for the decoder loss
             b_k = (
@@ -65,8 +66,6 @@ class MONet(nn.Module):
             )
             b.append(b_k.unsqueeze(1))
 
-            # Iteratively reconstruct the output image
-            x_tilde += x_k_masked
             # Accumulate
             m.append(m_k)
             m_tilde_logits.append(m_tilde_k_logits)
@@ -75,21 +74,24 @@ class MONet(nn.Module):
         m = torch.cat(m, dim=1)
         m_tilde_logits = torch.cat(m_tilde_logits, dim=1)
 
-        self.ℒ_E /= bs
-        self.ℒ_D = -torch.logsumexp(b, dim=1).sum() / bs
+        self.ℒ.encoder = ℒ_encoder / bs
+        self.ℒ.decoder = -torch.logsumexp(b, dim=1).sum() / bs
+        self.ℒ.recon = ℒ_recon
 
+        if infer:
+            return torch.cat(x_tilde, dim=1)
         return x_tilde, m, m_tilde_logits
 
-    def loss(self, β: float = 0.5, γ: float = 0.5, ρ: float = 1.0):
-        def func(model, x, y, progress):
-            _, m, m_tilde_logits = model(x, y)
-            ℒ_M = F.kl_div(m_tilde_logits.log_softmax(dim=1), m, reduction="batchmean")
-            ℒ = self.ℒ_D + β * self.ℒ_E + γ * ℒ_M + ρ * self.ℒ_R
+    def infer(self, x):
+        x_tilde = self.forward(x, infer=True)
+        return x_tilde
 
-            self.losses['encoder'].append(self.ℒ_E.detach().item())
-            self.losses['decoder'].append(self.ℒ_D.detach().item())
-            self.losses['reconstruction'].append(self.ℒ_R.detach().item())
-            self.losses['mask'].append(ℒ_M.detach().item())
-            return ℒ
+    def loss(self, m: torch.Tensor, S: Optional[torch.Tensor]) -> torch.Tensor:
+        β, γ, ρ = 0.5, 0.5, 1.0
+        _, m, m_tilde_logits = self.forward(m, S)
+        self.ℒ.mask = F.kl_div(
+            m_tilde_logits.log_softmax(dim=1), m, reduction="batchmean"
+        )
 
-        return func
+        ℒ = self.ℒ.decoder + β * self.ℒ.encoder + γ * self.ℒ.mask + ρ * self.ℒ.recon
+        return ℒ

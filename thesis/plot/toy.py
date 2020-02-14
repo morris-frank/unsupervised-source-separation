@@ -61,10 +61,16 @@ def plot_reconstruction(
     p_length = 500
     n = S.shape[0]
     fig, axs = plt.subplots(n + 1, 2, sharex="all")
-    for i in range(n):
-        axs[i, 0].plot(S[i, 100:p_length], c="r")
-        axs[i, 1].plot(S_tilde[i, 100:p_length], c="b")
-        axs[-1, 0].plot(m[0, 100:p_length], c="g")
+    if S_tilde.ndim == 2:
+        for i in range(n):
+            axs[i, 0].plot(S[i, 100:p_length], c="r")
+            axs[i, 1].plot(S_tilde[i, 100:p_length], c="b")
+            axs[-1, 0].plot(m[0, 100:p_length], c="g")
+    else:
+        for i in range(n):
+            axs[i, 0].imshow(S[i])
+            axs[i, 1].imshow(S_tilde[i])
+            axs[-1, 0].imshow(m[0])
     return fig
 
 

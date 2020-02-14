@@ -1,16 +1,15 @@
-from typing import Callable
-
 import torch
 from torch import nn
 
-from .temporal_encoder import TemporalEncoder
-from .wavenet import Wavenet
+from . import BaseModel
 from ..optim import multi_cross_entropy
+from ..temporal_encoder import TemporalEncoder
+from ..wavenet import Wavenet
 from ...functional import shift1d, destroy_along_channels
 from ...utils import clean_init_args
 
 
-class WavenetAE(nn.Module):
+class WavenetAE(BaseModel):
     """
     The complete WaveNetAutoEncoder model.
     """
@@ -67,28 +66,22 @@ class WavenetAE(nn.Module):
             [Wavenet(**decoder_args) for _ in range(n_decoders)]
         )
 
-    def _decode(self, x: torch.Tensor, embedding: torch.Tensor) -> torch.Tensor:
-        x = shift1d(x, -1)
-        logits = [dec(x, embedding) for dec in self.decoders]
+    def _decode(self, m: torch.Tensor, embedding: torch.Tensor) -> torch.Tensor:
+        m = shift1d(m, -1)
+        S_tilde = [dec(m, embedding) for dec in self.decoders]
         # TODO change cat to stack!
-        return torch.cat(logits, dim=1)
+        return torch.cat(S_tilde, dim=1)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        embedding = self.encoder(x)
-        return self._decode(x, embedding)
+    def forward(self, m: torch.Tensor) -> torch.Tensor:
+        embedding = self.encoder(m)
+        return self._decode(m, embedding)
 
-    def infer(self, x: torch.Tensor, destroy: float = 0) -> torch.Tensor:
-        embedding = self.encoder(x)
+    def infer(self, m: torch.Tensor, destroy: float = 0) -> torch.Tensor:
+        embedding = self.encoder(m)
         embedding = destroy_along_channels(embedding, destroy)
-        return self._decode(x, embedding)
+        return self._decode(m, embedding)
 
-    def loss(self) -> Callable:
-        def func(model, x, y, progress):
-            _ = progress  # Ignore arg
-            y_tilde = model(x)
-            loss = multi_cross_entropy(
-                y_tilde, y, len(self.decoders), self.out_channels
-            )
-            return loss
-
-        return func
+    def loss(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
+        S_tilde = self(m)
+        ℒ = multi_cross_entropy(S_tilde, S)
+        return ℒ

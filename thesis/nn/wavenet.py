@@ -4,8 +4,8 @@ import torch
 from torch import nn
 from torch.nn.utils import weight_norm
 
-from ...functional import dilate, remove_list_weight_norm
-from ...utils import range_product
+from thesis.functional import dilate, remove_list_weight_norm
+from thesis.utils import range_product
 
 
 class Wavenet(nn.Module):

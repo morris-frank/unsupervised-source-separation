@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from ..modules import AttentionBlock
+from thesis.nn.modules import AttentionBlock
 
 
 class Attention(nn.Module):

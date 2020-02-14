@@ -11,6 +11,8 @@ from torch import nn
 from torch import optim
 from torch.utils import data
 
+from .nn.models import BaseModel
+
 
 def _print_log(items: Dict, step: int):
     print(f"step {step:>9}", end="\t")
@@ -20,18 +22,13 @@ def _print_log(items: Dict, step: int):
 
 
 def _test(
-    model: nn.Module,
-    loss_function: Callable,
-    test_loader: data.DataLoader,
-    it: int,
-    iterations: int,
-    wandb: bool,
+    model: nn.Module, test_loader: data.DataLoader, it: int, wandb: bool,
 ):
     test_time, test_losses = time.time(), []
     model.eval()
     for x, y in test_loader:
-        loss = loss_function(model, x, y, it / iterations)
-        test_losses.append(loss.detach().item())
+        ℒ = model.loss(x, y)
+        test_losses.append(ℒ.detach().item())
 
     log = {"Loss/test": mean(test_losses), "Time/test": time.time() - test_time}
 
@@ -41,8 +38,7 @@ def _test(
 
 
 def train(
-    model: nn.Module,
-    loss_function: Callable,
+    model: BaseModel,
     gpu: List[int],
     train_loader: data.DataLoader,
     test_loader: data.DataLoader,
@@ -52,18 +48,15 @@ def train(
     """
     Args:
         model: the module to train
-        loss_function: the static loss function
         gpu: list of GPUs to use (int indexes)
         train_loader: dataset loader for the training data
         test_loader: dataset loader for the test data
         iterations: number of iterations to train for
         wandb: Whether to log wandb
     """
-    model_id = f"{datetime.today():%y-%m-%d_%H}_{type(model).__name__}"
+    model_id = f"{datetime.today():%b%d-%H%M}_{type(model).__name__}"
 
     os.makedirs("./checkpoints/", exist_ok=True)
-    save_path = f"checkpoints/{model_id}_{{:06}}.pt"
-    model_args = model.params
 
     # Move model to device(s):
     device = f"cuda:{gpu[0]}" if gpu else "cpu"
@@ -73,13 +66,16 @@ def train(
 
     if wandb:
         _wandb.init(
-            name=model_id, config=model_args["kwargs"], project=__name__.split(".")[0]
+            name=model_id,
+            config=model.module.params["kwargs"],
+            project=__name__.split(".")[0],
         )
 
     # Setup optimizer and learning rate scheduler
     optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=1e-3)
     lr_milestones = torch.linspace(iterations * 0.36, iterations, 5).tolist()
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, lr_milestones, gamma=0.6)
+
     losses, it_times = [], []
     train_iterator = iter(train_loader)
     it_timer = time.time()
@@ -93,15 +89,15 @@ def train(
             x, y = next(train_iterator)
 
         model.train()
-        loss = loss_function(model, x, y, it / iterations)
-        if torch.isnan(loss):
+        ℒ = model.loss(x, y)
+        if torch.isnan(ℒ):
             exit(1)
         model.zero_grad()
-        loss.backward()
+        ℒ.backward()
         optimizer.step()
         scheduler.step(it)
 
-        losses.append(loss.detach().item())
+        losses.append(ℒ.detach().item())
         it_times.append(time.time() - it_start_time)
 
         # LOG INFO (every 10 mini batches)
@@ -111,8 +107,8 @@ def train(
                 "Time/train": mean(it_times),
                 "LR": optimizer.param_groups[0]["lr"],
             }
-            if hasattr(model.module, 'losses'):
-                for k, v in model.module.losses.items():
+            if hasattr(model.module, "ℒ"):
+                for k, v in model.module.ℒ.log.items():
                     log[f"Loss/{k}"] = mean(v)
                     model.module.losses[k] = []
             _print_log(log, step=it)
@@ -127,10 +123,10 @@ def train(
                     "it": it,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
-                    "loss": loss,
-                    "params": model_args,
+                    "loss": ℒ,
+                    "params": model.module.params,
                 },
-                save_path.format(it),
+                f"checkpoints/{model_id}_{it:06}.pt",
             )
             # _test(model, loss_function, test_loader, it, iterations, wandb)
             it_timer = time.time()

@@ -1,15 +1,14 @@
-from typing import Callable
-
 import torch
 from torch import nn
 from torch.nn import functional as F
 
-from .wavenet import Wavenet
+from . import BaseModel
+from ..wavenet import Wavenet
 from ..optim import multi_cross_entropy
 from ...utils import clean_init_args
 
 
-class Hydra(nn.Module):
+class Hydra(BaseModel):
     def __init__(
         self, classes: int, in_channels: int, out_channels: int, wn_width: int
     ):
@@ -46,20 +45,15 @@ class Hydra(nn.Module):
         S_tilde = S_tilde.argmax(dim=2)
         return S_tilde
 
-    def loss(self) -> Callable:
-        def func(model, m, S, progress):
-            _ = progress
-            S_tilde = model(m)
-            hμ = (S_tilde.shape[2] - 1) / 2
-            # Sum of channel wise cross-entropy
+    def loss(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
+        S_tilde = self(m)
 
-            ce_S = multi_cross_entropy(S_tilde, S)
+        hμ = (S_tilde.shape[2] - 1) / 2
+        self.ℒ.ce_S = multi_cross_entropy(S_tilde, S)
 
-            m_tilde = (S_tilde.argmax(dim=2) - hμ) / hμ
-            m_tilde = m_tilde.unsqueeze(1)
-            mse_m = F.mse_loss(m.to(m_tilde.device), m_tilde)
+        m_tilde = (S_tilde.argmax(dim=2) - hμ) / hμ
+        m_tilde = m_tilde.unsqueeze(1)
+        self.ℒ.mse_m = F.mse_loss(m.to(m_tilde.device), m_tilde)
 
-            loss = ce_S + mse_m
-            return loss
-
-        return func
+        ℒ = self.ℒ.ce_S + self.ℒ.mse_m
+        return ℒ
