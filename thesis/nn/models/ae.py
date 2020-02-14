@@ -81,7 +81,7 @@ class WavenetAE(BaseModel):
         embedding = destroy_along_channels(embedding, destroy)
         return self._decode(m, embedding)
 
-    def loss(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
+    def test(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
         S_tilde = self(m)
         ℒ = multi_cross_entropy(S_tilde, S)
         return ℒ

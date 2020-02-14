@@ -99,7 +99,7 @@ class RealNVP(BaseModel):
 
         return f_z
 
-    def loss(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
+    def test(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
         σ = 1.0
         z = self(m, S)
         self.ℒ.z = (z * z).sum() / (2 * σ ** 2)
@@ -135,7 +135,7 @@ class ConditionalRealNVP(RealNVP):
         f_z = super(ConditionalRealNVP, self).infer(m, σ, μ, z)
         return f_z
 
-    def loss(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
+    def test(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
         z, σ = self(m, S)
         self.ℒ.z = ((z * z) / (2 * σ ** 2)).sum()
         ℒ = self.ℒ.z - self.ℒ.log_s

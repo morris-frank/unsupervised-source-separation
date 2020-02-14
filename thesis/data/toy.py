@@ -71,8 +71,8 @@ class ToyDataSpectral(ToyData):
         item = self.data[idx]
         p = random.randint(0, item["mix"].size - self.crop)
         mix, _sources = item["mix"], item["sources"]
-        mix = mix[p:p+self.crop]
-        _sources = _sources[:, p:p+self.crop]
+        mix = mix[p : p + self.crop]
+        _sources = _sources[:, p : p + self.crop]
         mix = self.f(mix)
         mix = torch.tensor(mix, dtype=torch.float32).unsqueeze(0)
         sources = []

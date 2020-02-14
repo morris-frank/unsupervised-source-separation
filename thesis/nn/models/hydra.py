@@ -45,7 +45,7 @@ class Hydra(BaseModel):
         S_tilde = S_tilde.argmax(dim=2)
         return S_tilde
 
-    def loss(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
+    def test(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
         S_tilde = self(m)
 
         hμ = (S_tilde.shape[2] - 1) / 2

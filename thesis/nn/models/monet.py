@@ -86,7 +86,7 @@ class MONet(BaseModel):
         x_tilde = self.forward(x, infer=True)
         return x_tilde
 
-    def loss(self, m: torch.Tensor, S: Optional[torch.Tensor]) -> torch.Tensor:
+    def test(self, m: torch.Tensor, S: Optional[torch.Tensor]) -> torch.Tensor:
         β, γ, ρ = 0.5, 0.5, 1.0
         _, m, m_tilde_logits = self.forward(m, S)
         self.ℒ.mask = F.kl_div(

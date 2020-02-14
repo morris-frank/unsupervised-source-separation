@@ -67,7 +67,7 @@ class ConditionalWavenetVQVAE(BaseModel):
         S_tilde = self.decoder(m, z)
         return S_tilde
 
-    def loss(self, x: torch.Tensor, S: torch.Tensor):
+    def test(self, x: torch.Tensor, S: torch.Tensor):
         β = 1.1
         m, y = x
         S_tilde, z_e_m, z_q_m = self(m, y)

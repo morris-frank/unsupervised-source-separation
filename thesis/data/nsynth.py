@@ -113,7 +113,7 @@ class AudioOnlyNSynthDataset(NSynthDataset):
             attrs["audio"] = attrs["audio"][:, pivot : pivot + self.crop]
         # μ-Law gives us range [-128, 128]
         # Input is in range [-1, 1]
-        # The loss CrossEntropy Targets are range [0, 255]
+        # The test CrossEntropy Targets are range [0, 255]
         audio = encode_μ_law(attrs["audio"])
         audio_scaled = audio / 128
         audio_target = (audio.squeeze() + 128).long()

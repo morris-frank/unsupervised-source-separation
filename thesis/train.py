@@ -3,7 +3,7 @@ import time
 from datetime import datetime
 from statistics import mean
 from typing import Dict
-from typing import List, Callable
+from typing import List
 
 import torch
 import wandb as _wandb
@@ -22,12 +22,12 @@ def _print_log(items: Dict, step: int):
 
 
 def _test(
-    model: nn.Module, test_loader: data.DataLoader, it: int, wandb: bool,
+    model: BaseModel, test_loader: data.DataLoader, it: int, wandb: bool,
 ):
     test_time, test_losses = time.time(), []
     model.eval()
     for x, y in test_loader:
-        ℒ = model.loss(x, y)
+        ℒ = model.test(x, y)
         test_losses.append(ℒ.detach().item())
 
     log = {"Loss/test": mean(test_losses), "Time/test": time.time() - test_time}
@@ -89,7 +89,7 @@ def train(
             x, y = next(train_iterator)
 
         model.train()
-        ℒ = model.loss(x, y)
+        ℒ = model.test(x, y)
         if torch.isnan(ℒ):
             exit(1)
         model.zero_grad()
@@ -123,7 +123,7 @@ def train(
                     "it": it,
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
-                    "loss": ℒ,
+                    "test": ℒ,
                     "params": model.module.params,
                 },
                 f"checkpoints/{model_id}_{it:06}.pt",
