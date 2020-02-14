@@ -66,8 +66,6 @@ class ChannelConvInvert(nn.Module):
         self.inv_w = None
 
     def forward(self, z: torch.Tensor, reverse: bool = False):
-        [n, _, l] = z.size()
-
         w = self.conv.weight.squeeze()
 
         if reverse:
@@ -77,7 +75,7 @@ class ChannelConvInvert(nn.Module):
             z = F.conv1d(z, self.inv_w, bias=None)
             return z
         else:
-            logdet_w = n * l * torch.logdet(w)
+            logdet_w = torch.logdet(w)
             z = self.conv(z)
             return z, logdet_w
 

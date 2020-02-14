@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
-from os import path
+from os import path, uname
 
 from torch import autograd
 
@@ -9,11 +9,10 @@ from thesis.train import train
 from thesis.utils import optional
 
 
-def four_channel_unconditioned():
+def glow():
     from thesis.nn.models.waveglow import WaveGlow
-
     max_batch_size = 12
-    model = WaveGlow(channels=4, n_flows=15, wn_layers=12)  # rf: 2^11
+    model = WaveGlow(channels=4, n_flows=10, wn_layers=12)  # rf: 2^11
     return model, max_batch_size
 
 
@@ -50,6 +49,8 @@ def main(args):
     model, max_batch_size = EXPERIMENTS[args.experiment]()
 
     batch_size = args.batch_size or max_batch_size
+    if uname().nodename == 'hermes':
+        batch_size = 2
     train_loader = map_dataset(model, args.data, "train").loader(batch_size)
     test_loader = map_dataset(model, args.data, "test").loader(batch_size)
 
@@ -65,8 +66,7 @@ def main(args):
 
 
 EXPERIMENTS = {
-    "4cu": four_channel_unconditioned,
-    "four_channel_unconditioned": four_channel_unconditioned,
+    "glow": glow,
     "1cc": one_channel_conditioned,
     "one_channel_conditioned": one_channel_conditioned,
     "hydra": hydra,

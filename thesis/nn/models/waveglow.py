@@ -17,6 +17,8 @@ class WaveGlow(BaseModel):
         self.channels = channels
         self.n_flows = n_flows
 
+        # This will be a channel-wise time-global scaling parameter
+        self.a = nn.Parameter(torch.ones(1, self.channels, 1), requires_grad=True)
         self.conv = nn.ModuleList()
         self.waves = nn.ModuleList()
         for _ in range(n_flows):
@@ -53,11 +55,14 @@ class WaveGlow(BaseModel):
 
             # Save for loss
             ℒ_det_W += log_det_W
-            ℒ_log_s += log_s.sum()
+            ℒ_log_s += log_s.mean()
+
+        # Apply final global scaler
+        S_tilde = self.a * f_m
 
         self.ℒ.det_W = ℒ_det_W
         self.ℒ.log_s = ℒ_log_s
-        S_tilde = f_m
+
         return S_tilde
 
     def infer(self, m: torch.Tensor) -> torch.Tensor:
@@ -65,16 +70,14 @@ class WaveGlow(BaseModel):
 
     def test(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
         σ = 1.0
-        α, β = 1., 1.
-        S_tilde = self(m, S)
-        self.ℒ.p_z_likelihood = (S_tilde * S_tilde).sum() / (2 * σ ** 2)
+        α, β = 1.0, 1.0
+        S_tilde = self(m)
+        self.ℒ.p_z_likelihood = (S_tilde ** 2).mean() / (2 * σ ** 2)
         self.ℒ.reconstruction = F.mse_loss(S_tilde, S)
-        print()
-        print()
-        print()
-        import ipdb; ipdb.set_trace()
-        print()
-        print()
-        print()
-        ℒ = α * self.ℒ.p_z_likelihood - self.ℒ.det_W - self.ℒ.log_s + β * self.ℒ.reconstruction
+        ℒ = (
+            α * self.ℒ.p_z_likelihood
+            - self.ℒ.det_W
+            - self.ℒ.log_s
+            + β * self.ℒ.reconstruction
+        )
         return ℒ
