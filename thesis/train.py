@@ -7,7 +7,6 @@ from typing import List
 
 import torch
 import wandb as _wandb
-from torch import nn
 from torch import optim
 from torch.utils import data
 from torch.nn.utils import clip_grad_norm_
@@ -23,17 +22,21 @@ def _print_log(items: Dict, step: int):
 
 
 def _test(
-    model: BaseModel, test_loader: data.DataLoader, it: int, wandb: bool,
+    model: BaseModel, test_loader: data.DataLoader, it: int, device: str, wandb: bool,
 ):
     test_time, test_losses = time.time(), []
     model.eval()
     with torch.no_grad():
         for x, y in test_loader:
+            x, y = x.to(device), y.to(device)
             ℒ = model.test(x, y)
             test_losses.append(ℒ.detach().item())
 
     log = {"Loss/test": mean(test_losses), "Time/test": time.time() - test_time}
-
+    if hasattr(model, "ℒ"):
+        for k, v in model.ℒ.log.items():
+            log[f"Loss/test/{k}"] = mean(v)
+            model.losses[k] = []
     _print_log(log, step=it)
     if wandb:
         _wandb.log(log, step=it)
@@ -64,7 +67,7 @@ def train(
     device = f"cuda:{gpu[0]}" if gpu else "cpu"
     if gpu:
         model = model.to(device)
-        model = nn.DataParallel(model, device_ids=gpu)
+        # model = nn.DataParallel(model, device_ids=gpu)
 
     if wandb:
         _wandb.init(
@@ -93,6 +96,8 @@ def train(
         model.train()
         model.zero_grad()
 
+        x, y = x.to(device), y.to(device)
+
         ℒ = model.test(x, y)
         if torch.isnan(ℒ):
             exit(1)
@@ -111,10 +116,10 @@ def train(
                 "Time/train": mean(it_times),
                 "LR": optimizer.param_groups[0]["lr"],
             }
-            if hasattr(model.module, "ℒ"):
-                for k, v in model.module.ℒ.log.items():
-                    log[f"Loss/{k}"] = mean(v)
-                    model.module.losses[k] = []
+            if hasattr(model, "ℒ"):
+                for k, v in model.ℒ.log.items():
+                    log[f"Loss/train/{k}"] = mean(v)
+                    model.losses[k] = []
             _print_log(log, step=it)
             if wandb:
                 _wandb.log(log, step=it)
@@ -128,9 +133,9 @@ def train(
                     "model_state_dict": model.state_dict(),
                     "optimizer_state_dict": optimizer.state_dict(),
                     "test": ℒ,
-                    "params": model.module.params,
+                    "params": model.params,
                 },
                 f"checkpoints/{model_id}_{it:06}.pt",
             )
-            # _test(model, loss_function, test_loader, it, iterations, wandb)
+            _test(model, test_loader, it, device, wandb)
             it_timer = time.time()

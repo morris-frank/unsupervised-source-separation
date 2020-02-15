@@ -11,7 +11,7 @@ from thesis.utils import optional
 
 def glow():
     from thesis.nn.models.waveglow import WaveGlow
-    max_batch_size = 12
+    max_batch_size = 32
     model = WaveGlow(channels=4, n_flows=10, wn_layers=12)  # rf: 2^11
     return model, max_batch_size
 
