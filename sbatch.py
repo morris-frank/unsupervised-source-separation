@@ -25,7 +25,7 @@ def main(args):
         "mem": "10000M",
         "partition": p,
         "gres": "gpu:1",
-        "output": f"./log/{datetime.today():%y-%m-%d_%H:%M}_%x_{p}.out",
+        "output": f"./log/{datetime.today():%b%d-%H%M}_%x_{p}.out",
     }
 
     f = f"#!/usr/bin/env bash\n\n"

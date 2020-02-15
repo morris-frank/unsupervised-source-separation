@@ -1,3 +1,4 @@
+from typing import Optional
 import os
 import time
 from datetime import datetime
@@ -10,19 +11,39 @@ import wandb as _wandb
 from torch import optim
 from torch.utils import data
 from torch.nn.utils import clip_grad_norm_
+from colorama import Fore
 
 from .nn.models import BaseModel
+from collections import defaultdict
 
 
-def _print_log(items: Dict, step: int):
+LAST_LOG = defaultdict(float)
+
+
+def print_log(model: BaseModel, add_log: Dict, step: Optional[int] = None, sub: Optional[str] = None):
+    log = add_log
+    _k = f'{sub}/' if sub else ''
+
+    # Add new logs from ℒ logger
+    if hasattr(model, "ℒ"):
+        for k, v in model.ℒ.log.items():
+            log[f"Loss/{_k}{k}"] = mean(v)
+            model.losses[k] = []
+
+    # Print to console
+    _step = step or '---'
     print(f"step {step:>9}", end="\t")
-    for k, v in items.items():
-        print(f"{k}={v:.3e}, ", end="")
-    print()
+    for k, v in log.items():
+        col = Fore.GREEN if v > LAST_LOG[k] else Fore.RED
+        print(f"{Fore.YELLOW}{k}={col}{v:.3e}{Fore.RESET}, ", end="")
+        LAST_LOG[k] = v
+
+    if _wandb.run is not None:
+        _wandb.log(log, step=step)
 
 
-def _test(
-    model: BaseModel, test_loader: data.DataLoader, it: int, device: str, wandb: bool,
+def test(
+    model: BaseModel, test_loader: data.DataLoader, device: str
 ):
     test_time, test_losses = time.time(), []
     model.eval()
@@ -33,13 +54,8 @@ def _test(
             test_losses.append(ℒ.detach().item())
 
     log = {"Loss/test": mean(test_losses), "Time/test": time.time() - test_time}
-    if hasattr(model, "ℒ"):
-        for k, v in model.ℒ.log.items():
-            log[f"Loss/test/{k}"] = mean(v)
-            model.losses[k] = []
-    _print_log(log, step=it)
-    if wandb:
-        _wandb.log(log, step=it)
+
+    print_log(model, log, sub='test')
 
 
 def train(
@@ -72,7 +88,7 @@ def train(
     if wandb:
         _wandb.init(
             name=model_id,
-            config=model.module.params["kwargs"],
+            config=model.params["kwargs"],
             project=__name__.split(".")[0],
         )
 
@@ -116,13 +132,7 @@ def train(
                 "Time/train": mean(it_times),
                 "LR": optimizer.param_groups[0]["lr"],
             }
-            if hasattr(model, "ℒ"):
-                for k, v in model.ℒ.log.items():
-                    log[f"Loss/train/{k}"] = mean(v)
-                    model.losses[k] = []
-            _print_log(log, step=it)
-            if wandb:
-                _wandb.log(log, step=it)
+            print_log(model, log, step=it, sub='train')
             losses, it_times = [], []
 
         # TEST AND SAVE THE MODEL (every 30min)
@@ -137,5 +147,5 @@ def train(
                 },
                 f"checkpoints/{model_id}_{it:06}.pt",
             )
-            _test(model, test_loader, it, device, wandb)
+            test(model, test_loader, device)
             it_timer = time.time()
