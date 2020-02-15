@@ -20,14 +20,13 @@ from collections import defaultdict
 LAST_LOG = defaultdict(float)
 
 
-def print_log(model: BaseModel, add_log: Dict, step: Optional[int] = None, sub: Optional[str] = None):
+def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = None):
     log = add_log
-    _k = f'{sub}/' if sub else ''
 
     # Add new logs from ℒ logger
     if hasattr(model, "ℒ"):
         for k, v in model.ℒ.log.items():
-            log[f"Loss/{_k}{k}"] = mean(v)
+            log[f"{k}/{cat}"] = mean(v)
             model.losses[k] = []
 
     # Print to console
@@ -56,7 +55,7 @@ def test(
 
     log = {"Loss/test": mean(test_losses), "Time/test": time.time() - test_time}
 
-    print_log(model, log, sub='test')
+    print_log(model, log, 'test')
 
 
 def train(
@@ -133,7 +132,7 @@ def train(
                 "Time/train": mean(it_times),
                 "LR": optimizer.param_groups[0]["lr"],
             }
-            print_log(model, log, step=it, sub='train')
+            print_log(model, log, 'train', step=it)
             losses, it_times = [], []
 
         # TEST AND SAVE THE MODEL (every 30min)
