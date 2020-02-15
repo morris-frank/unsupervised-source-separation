@@ -30,7 +30,7 @@ def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = N
             model.ℒ.log[k] = []
 
     # Print to console
-    _step = step or "---"
+    _step = step if step is not None else "---"
     print(f"step {step:>9}", end="\t")
     for k, v in log.items():
         col = (
