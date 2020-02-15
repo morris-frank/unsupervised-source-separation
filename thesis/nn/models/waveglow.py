@@ -60,8 +60,8 @@ class WaveGlow(BaseModel):
         # Apply final global scaler
         S_tilde = self.a * f_m
 
-        self.ℒ.det_W = ℒ_det_W
-        self.ℒ.log_s = ℒ_log_s
+        self.ℒ.det_W = -ℒ_det_W
+        self.ℒ.log_s = -ℒ_log_s
 
         return S_tilde
 
@@ -76,8 +76,8 @@ class WaveGlow(BaseModel):
         self.ℒ.reconstruction = F.mse_loss(S_tilde, S).log()
         ℒ = (
             α * self.ℒ.p_z_likelihood
-            - self.ℒ.det_W
-            - self.ℒ.log_s
+            + self.ℒ.det_W
+            + self.ℒ.log_s
             + β * self.ℒ.reconstruction
         )
         return ℒ
