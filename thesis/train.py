@@ -21,19 +21,24 @@ LAST_LOG = defaultdict(float)
 
 
 def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = None):
-    log = add_log
+    log = add_log.copy()
 
     # Add new logs from ℒ logger
-    if hasattr(model, "ℒ"):
+    if hasattr(model, "L"):
         for k, v in model.ℒ.log.items():
             log[f"{k}/{cat}"] = mean(v)
+            print(f'log[f"{k}/{cat}"] = mean(v)')
             model.losses[k] = []
 
     # Print to console
-    _step = step or '---'
+    _step = step or "---"
     print(f"step {step:>9}", end="\t")
     for k, v in log.items():
-        col = Fore.GREEN if v < LAST_LOG[k] else Fore.RED
+        col = (
+            Fore.CYAN
+            if v == LAST_LOG[k]
+            else (Fore.GREEN if v < LAST_LOG[k] else Fore.RED)
+        )
         print(f"{Fore.YELLOW}{k}={col}{v:.3e}{Fore.RESET}, ", end="")
         LAST_LOG[k] = v
     print()
@@ -42,9 +47,7 @@ def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = N
         _wandb.log(log, step=step)
 
 
-def test(
-    model: BaseModel, test_loader: data.DataLoader, device: str
-):
+def test(model: BaseModel, test_loader: data.DataLoader, device: str):
     test_time, test_losses = time.time(), []
     model.eval()
     with torch.no_grad():
@@ -55,7 +58,7 @@ def test(
 
     log = {"Loss/test": mean(test_losses), "Time/test": time.time() - test_time}
 
-    print_log(model, log, 'test')
+    print_log(model, log, "test")
 
 
 def train(
@@ -132,7 +135,7 @@ def train(
                 "Time/train": mean(it_times),
                 "LR": optimizer.param_groups[0]["lr"],
             }
-            print_log(model, log, 'train', step=it)
+            print_log(model, log, "train", step=it)
             losses, it_times = [], []
 
         # TEST AND SAVE THE MODEL (every 30min)
