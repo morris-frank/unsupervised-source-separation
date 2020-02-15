@@ -27,8 +27,7 @@ def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = N
     if hasattr(model, "L"):
         for k, v in model.ℒ.log.items():
             log[f"{k}/{cat}"] = mean(v)
-            print(f'log[f"{k}/{cat}"] = mean(v)')
-            model.losses[k] = []
+            model.ℒ.log[k] = []
 
     # Print to console
     _step = step or "---"
