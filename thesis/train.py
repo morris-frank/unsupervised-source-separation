@@ -34,9 +34,10 @@ def print_log(model: BaseModel, add_log: Dict, step: Optional[int] = None, sub: 
     _step = step or '---'
     print(f"step {step:>9}", end="\t")
     for k, v in log.items():
-        col = Fore.GREEN if v > LAST_LOG[k] else Fore.RED
+        col = Fore.GREEN if v < LAST_LOG[k] else Fore.RED
         print(f"{Fore.YELLOW}{k}={col}{v:.3e}{Fore.RESET}, ", end="")
         LAST_LOG[k] = v
+    print()
 
     if _wandb.run is not None:
         _wandb.log(log, step=step)

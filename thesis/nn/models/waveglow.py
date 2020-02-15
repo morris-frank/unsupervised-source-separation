@@ -73,7 +73,7 @@ class WaveGlow(BaseModel):
         α, β = 1.0, 1.0
         S_tilde = self.forward(m)
         self.ℒ.p_z_likelihood = (S_tilde ** 2).mean() / (2 * σ ** 2)
-        self.ℒ.reconstruction = F.mse_loss(S_tilde, S)
+        self.ℒ.reconstruction = F.mse_loss(S_tilde, S).log()
         ℒ = (
             α * self.ℒ.p_z_likelihood
             - self.ℒ.det_W
