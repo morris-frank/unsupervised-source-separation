@@ -38,7 +38,7 @@ def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = N
             if v == LAST_LOG[k]
             else (Fore.GREEN if v < LAST_LOG[k] else Fore.RED)
         )
-        print(f"{Fore.YELLOW}{k}={col}{v:.3e}{Fore.RESET}, ", end="")
+        print(f"{Fore.RESET}{k}={col}{v:.3e}{Fore.RESET}, ", end="")
         LAST_LOG[k] = v
     print()
 
