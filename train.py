@@ -18,7 +18,6 @@ def glow():
 
 def one_channel_conditioned():
     from thesis.nn.models.nvp import ConditionalRealNVP
-
     max_batch_size = 26
     model = ConditionalRealNVP(
         classes=4, n_flows=15, wn_layers=10, wn_width=64
@@ -28,7 +27,6 @@ def one_channel_conditioned():
 
 def hydra():
     from thesis.nn.models.hydra import Hydra
-
     max_batch_size = 18
     model = Hydra(classes=4, in_channels=1, out_channels=101, wn_width=32)
     return model, max_batch_size
@@ -36,7 +34,6 @@ def hydra():
 
 def monet():
     from thesis.nn.models.monet import MONet
-
     max_batch_size = 75
     model = MONet(slots=4)
     return model, max_batch_size
