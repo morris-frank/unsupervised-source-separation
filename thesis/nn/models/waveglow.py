@@ -69,15 +69,10 @@ class WaveGlow(BaseModel):
         return self.forward(m)
 
     def test(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
-        σ = 1.0
-        α, β = 1.0, 1.0
+        σ = 1.
+        α, β = 1., 10.
         S_tilde = self.forward(m)
-        self.ℒ.p_z_likelihood = (S_tilde ** 2).mean() / (2 * σ ** 2)
-        self.ℒ.reconstruction = F.mse_loss(S_tilde, S)
-        ℒ = (
-            α * self.ℒ.p_z_likelihood
-            + self.ℒ.det_W
-            + self.ℒ.log_s
-            + β * self.ℒ.reconstruction
-        )
+        self.ℒ.p_z_likelihood = α * (S_tilde ** 2).mean() / (2 * σ ** 2)
+        self.ℒ.reconstruction = β * F.mse_loss(S_tilde, S)
+        ℒ = self.ℒ.p_z_likelihood + self.ℒ.det_W + self.ℒ.log_s + self.ℒ.reconstruction
         return ℒ
