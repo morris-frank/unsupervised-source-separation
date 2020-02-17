@@ -4,7 +4,6 @@ from typing import Tuple, Optional
 
 import numpy as np
 import torch
-from librosa import stft
 from torch.utils import data
 
 from ..data import Dataset
@@ -62,6 +61,8 @@ class ToyDataSpectral(ToyData):
         self.n_fft = 2 ** 7
 
     def f(self, x):
+        from librosa import stft
+
         y = np.zeros((64, 96))
         _y = np.abs(stft(x, n_fft=self.n_fft))
         y[:, :] = _y[:-1, :-1]
