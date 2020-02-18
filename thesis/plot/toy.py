@@ -89,6 +89,8 @@ def example_reconstruction(
 ) -> Generator[plt.Figure, None, None]:
     for i, (x, S) in enumerate(data):
         m, x = _tuple_unsequeeze(x)
+        #for S_tilde in model.infer(x):
+         #   S_tilde = S_tilde.squeeze()
         S_tilde = model.infer(x).squeeze()
         fig = plot_reconstruction(m, S, S_tilde)
         fig.savefig(f"./figures/{type(model).__name__}_{i}.png")
