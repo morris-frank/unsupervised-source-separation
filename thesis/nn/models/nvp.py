@@ -73,7 +73,7 @@ class RealNVP(BaseModel):
 
     def test(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
         σ = 1.0
-        α, β = 1.0, 1.0
+        α, β = 10., 10.
         S_tilde = self.forward(m)
         self.ℒ.p_z_likelihood = α * (S_tilde ** 2).mean() / (2 * σ ** 2)
         self.ℒ.reconstruction = β * F.mse_loss(S_tilde, S)
