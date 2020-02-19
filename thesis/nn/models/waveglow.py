@@ -10,8 +10,10 @@ from ...utils import clean_init_args
 
 def plot(list_of_waves):
     import matplotlib
-    matplotlib.use('TkAgg')
+
+    matplotlib.use("TkAgg")
     from matplotlib import pyplot as plt
+
     n = len(list_of_waves)
     l = 500
 
@@ -69,7 +71,8 @@ class WaveGlow(BaseModel):
 
             # Merge them back
             f_m = torch.cat([m_a, m_b], 1)
-            self.ℒ.__setattr__(f'skip_{k}', F.mse_loss(f_m, self.S))
+            if hasattr(self, "S"):
+                self.ℒ.__setattr__(f"skip_{k}", F.mse_loss(f_m, self.S))
 
             # Save for loss
             ℒ_det_W += log_det_W
@@ -79,7 +82,7 @@ class WaveGlow(BaseModel):
         S_tilde = self.a * f_m
 
         self.ℒ.det_W = -ℒ_det_W
-        self.ℒ.log_s = - ℒ_log_s
+        self.ℒ.log_s = -ℒ_log_s
 
         return S_tilde
 
@@ -87,13 +90,13 @@ class WaveGlow(BaseModel):
         return self.forward(m)
 
     def test(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
-        σ = 1.
-        α, β = 1., 1.
+        σ = 1.0
+        α, β = 1.0, 1.0
         self.S = S
         S_tilde = self.forward(m)
         self.ℒ.p_z_likelihood = α * (S_tilde ** 2).mean() / (2 * σ ** 2)
         self.ℒ.reconstruction = β * F.mse_loss(S_tilde, S)
         ℒ = self.ℒ.p_z_likelihood + self.ℒ.det_W + self.ℒ.log_s + self.ℒ.reconstruction
         for k in range(self.n_flows):
-            ℒ = ℒ + self.ℒ.__getattribute__(f'skip_{k}')
+            ℒ = ℒ + self.ℒ.__getattribute__(f"skip_{k}")
         return ℒ

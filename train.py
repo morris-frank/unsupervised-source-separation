@@ -11,17 +11,15 @@ from thesis.utils import optional
 
 def glow():
     from thesis.nn.models.waveglow import WaveGlow
-    max_batch_size = 32
+    max_batch_size = 42
     model = WaveGlow(channels=4, n_flows=10, wn_layers=12)  # rf: 2^11
     return model, max_batch_size
 
 
-def one_channel_conditioned():
-    from thesis.nn.models.nvp import ConditionalRealNVP
-    max_batch_size = 26
-    model = ConditionalRealNVP(
-        classes=4, n_flows=15, wn_layers=10, wn_width=64
-    )  # rf: 2*2**9
+def nvp():
+    from thesis.nn.models.nvp import RealNVP
+    max_batch_size = 4
+    model = RealNVP(channels=4, n_flows=10, wn_layers=10)
     return model, max_batch_size
 
 
@@ -64,8 +62,7 @@ def main(args):
 
 EXPERIMENTS = {
     "glow": glow,
-    "1cc": one_channel_conditioned,
-    "one_channel_conditioned": one_channel_conditioned,
+    "nvp": nvp,
     "hydra": hydra,
     "monet": monet,
 }
