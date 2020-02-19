@@ -1,15 +1,25 @@
 #!/usr/bin/env python
-import torch
 from argparse import ArgumentParser
-from os.path import abspath
+from glob import glob
+from os.path import abspath, getmtime
+from colorama import Fore
 
+import torch
 from matplotlib import pyplot as plt
 
 from thesis.data.wrapper import map_dataset
 from thesis.io import load_model
 
 
+def get_newest_file(folder):
+    return sorted(glob(f"{folder}/*pt"), key=lambda x: getmtime(x))[-1]
+
+
 def main(args):
+    if args.weights is None:
+        args.weights = get_newest_file("./checkpoints")
+        print(f'{Fore.YELLOW}Weights not given. Using instead: {Fore.GREEN}{args.weights}{Fore.RESET}')
+
     if args.command == "sample":
         from thesis.plot.toy import example_reconstruction
 
