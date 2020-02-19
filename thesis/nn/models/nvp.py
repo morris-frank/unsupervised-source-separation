@@ -20,6 +20,8 @@ class RealNVP(BaseModel):
         self.channels = channels
         self.n_flows = n_flows
 
+        # This will be a channel-wise time-global scaling parameter
+        self.a = nn.Parameter(torch.ones(1, self.channels, 1), requires_grad=True)
         self.waves = nn.ModuleList()
         for _ in range(n_flows):
             self.waves.append(
@@ -64,7 +66,7 @@ class RealNVP(BaseModel):
             # Save for loss
             ℒ_log_s += log_s.mean()
 
-        S_tilde = f_m
+        S_tilde = self.a * f_m
         self.ℒ.log_s = -ℒ_log_s
         return S_tilde
 
@@ -73,9 +75,9 @@ class RealNVP(BaseModel):
 
     def test(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
         σ = 1.0
-        α, β = 10., 10.
+        α, β = 1.0, 1.0
         S_tilde = self.forward(m)
         self.ℒ.p_z_likelihood = α * (S_tilde ** 2).mean() / (2 * σ ** 2)
         self.ℒ.reconstruction = β * F.mse_loss(S_tilde, S)
-        ℒ = self.ℒ.p_z_likelihood + self.ℒ.reconstruction + self.ℒ.log_s
+        ℒ = self.ℒ.p_z_likelihood + self.ℒ.reconstruction
         return ℒ

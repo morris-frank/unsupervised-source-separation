@@ -19,7 +19,7 @@ def glow():
 def nvp():
     from thesis.nn.models.nvp import RealNVP
     max_batch_size = 60
-    model = RealNVP(channels=4, n_flows=10, wn_layers=10)
+    model = RealNVP(channels=4, n_flows=14, wn_layers=11)
     return model, max_batch_size
 
 
