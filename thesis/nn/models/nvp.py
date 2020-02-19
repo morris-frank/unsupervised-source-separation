@@ -79,5 +79,6 @@ class RealNVP(BaseModel):
         S_tilde = self.forward(m)
         self.ℒ.p_z_likelihood = α * (S_tilde ** 2).mean() / (2 * σ ** 2)
         self.ℒ.reconstruction = β * F.mse_loss(S_tilde, S)
-        ℒ = self.ℒ.p_z_likelihood + self.ℒ.reconstruction
+        #ℒ = self.ℒ.p_z_likelihood + self.ℒ.reconstruction + self.ℒ.log_s
+        ℒ = self.ℒ.reconstruction
         return ℒ
