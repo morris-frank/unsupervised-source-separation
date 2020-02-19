@@ -33,16 +33,13 @@ class RealNVP(BaseModel):
                 )
             )
 
-    def apply_wave(
-        self, x: torch.Tensor, k: int, c: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    def apply_wave(self, x: torch.Tensor, k: int):
         x_left, x_right = split(x)
-        c_left, c_right = split(c)
 
         if k % 2 == 0:
-            log_s_t = self.waves[k](x_left, c_left)
+            log_s_t = self.waves[k](x_left)
         else:
-            log_s_t = self.waves[k](x_right, c_right)
+            log_s_t = self.waves[k](x_right)
 
         log_s, t = log_s_t.chunk(2, dim=1)
         return x_left, x_right, log_s, t
@@ -55,7 +52,7 @@ class RealNVP(BaseModel):
         ℒ_log_s = 0
         for k in range(self.n_flows):
             # Separate them and get scale and translate
-            m_a, m_b, log_s, t = self.apply_wave(f_m, k, m)
+            m_a, m_b, log_s, t = self.apply_wave(f_m, k)
 
             if k % 2 == 0:
                 m_b = log_s.exp() * m_b + t
