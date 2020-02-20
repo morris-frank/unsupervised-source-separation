@@ -1,3 +1,4 @@
+from torch.nn import functional as F
 import torch
 from torch import nn
 
@@ -76,8 +77,8 @@ class RealNVP(BaseModel):
         α, β = 1.0, 1.0
         S_tilde = self.forward(m)
         self.ℒ.p_z_likelihood = α * (S_tilde ** 2).mean() / (2 * σ ** 2)
-        #self.ℒ.reconstruction = β * F.l1_loss(S_tilde, S)
-        self.ℒ.reconstruction = β * sqrt_l1_loss(S, S_tilde)
+        self.ℒ.reconstruction = β * F.l1_loss(S_tilde, S)
+        #self.ℒ.reconstruction = β * sqrt_l1_loss(S_tilde, S)
         #ℒ = self.ℒ.p_z_likelihood + self.ℒ.reconstruction + self.ℒ.log_s
         ℒ = self.ℒ.reconstruction
         return ℒ
