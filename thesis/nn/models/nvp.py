@@ -1,8 +1,8 @@
 import torch
 from torch import nn
-from torch.nn import functional as F
 
 from . import BaseModel
+from ..optim import sqrt_l1_loss
 from ..wavenet import Wavenet
 from ...functional import split, interleave
 from ...utils import clean_init_args
@@ -77,7 +77,7 @@ class RealNVP(BaseModel):
         S_tilde = self.forward(m)
         self.ℒ.p_z_likelihood = α * (S_tilde ** 2).mean() / (2 * σ ** 2)
         #self.ℒ.reconstruction = β * F.l1_loss(S_tilde, S)
-        self.ℒ.reconstruction = β * torch.mean(torch.sqrt(torch.abs(S - S_tilde)))
+        self.ℒ.reconstruction = β * sqrt_l1_loss(S, S_tilde)
         #ℒ = self.ℒ.p_z_likelihood + self.ℒ.reconstruction + self.ℒ.log_s
         ℒ = self.ℒ.reconstruction
         return ℒ

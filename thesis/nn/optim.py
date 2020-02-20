@@ -3,6 +3,13 @@ from torch import distributions as dist
 from torch.nn import functional as F
 
 
+def sqrt_l1_loss(input, target):
+    ret = torch.abs(input - target)
+    ret = torch.sqrt(ret)
+    ret = torch.mean(ret)
+    return ret
+
+
 def multi_cross_entropy(x: torch.Tensor, t: torch.Tensor) -> torch.Tensor:
     """
     Get cross entropy of a multiple multi-class problem.
