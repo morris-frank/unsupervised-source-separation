@@ -93,6 +93,17 @@ class ToyDataSingle(ToyData):
         return (mix, t), source
 
 
+class ToyDataSingleSourceOnly(ToyData):
+    def __init__(self, k: int, *args, **kwargs):
+        super(ToyDataSingleSourceOnly, self).__init__(*args, **kwargs)
+        self.k = k
+
+    def __getitem__(self, item: int):
+        _, sources = super(ToyDataSingleSourceOnly, self).__getitem__(item)
+        source = sources[None, self.k, :]
+        return source
+
+
 class ToyDataSequential(Dataset):
     def __init__(
         self,

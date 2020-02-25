@@ -11,6 +11,7 @@ class BaseModel(ABC, nn.Module):
     def __init__(self):
         super(BaseModel, self).__init__()
         self.ℒ = _LossLogger()
+        self.name = ""
 
     def test(self, x: Any, y: Any) -> torch.Tensor:
         pass

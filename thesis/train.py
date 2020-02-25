@@ -77,7 +77,7 @@ def train(
         iterations: number of iterations to train for
         wandb: Whether to log wandb
     """
-    model_id = f"{datetime.today():%b%d-%H%M}_{type(model).__name__}"
+    model_id = f"{datetime.today():%b%d-%H%M}_{type(model).__name__}_{model.name}"
 
     os.makedirs("./checkpoints/", exist_ok=True)
 

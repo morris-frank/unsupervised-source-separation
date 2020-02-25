@@ -9,7 +9,7 @@ from ...functional import shift1d, destroy_along_channels
 from ...utils import clean_init_args
 
 
-class ConditionalWavenetVQVAE(BaseModel):
+class CVQVAE(BaseModel):
     def __init__(
         self,
         n_classes: int,
@@ -22,7 +22,7 @@ class ConditionalWavenetVQVAE(BaseModel):
         in_channels: int = 1,
         out_channels: int = 256,
     ):
-        super(ConditionalWavenetVQVAE, self).__init__()
+        super(CVQVAE, self).__init__()
         self.params = clean_init_args(locals().copy())
 
         self.n_classes = n_classes

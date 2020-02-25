@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
+from functools import partial
 from os import path, uname
 
 from torch import autograd
@@ -9,8 +10,17 @@ from thesis.train import train
 from thesis.utils import optional
 
 
+def prior(k: int):
+    from thesis.nn.models.prior import PriorNVP
+
+    max_batch_size = 2
+    model = PriorNVP(k=k, n_flows=10, wn_layers=12)
+    return model, max_batch_size
+
+
 def glow():
     from thesis.nn.models.waveglow import WaveGlow
+
     max_batch_size = 42
     model = WaveGlow(channels=4, n_flows=10, wn_layers=12)  # rf: 2^11
     return model, max_batch_size
@@ -18,6 +28,7 @@ def glow():
 
 def nvp():
     from thesis.nn.models.nvp import RealNVP
+
     max_batch_size = 60
     model = RealNVP(channels=4, n_flows=14, wn_layers=11)
     return model, max_batch_size
@@ -25,6 +36,7 @@ def nvp():
 
 def hydra():
     from thesis.nn.models.hydra import Hydra
+
     max_batch_size = 18
     model = Hydra(classes=4, in_channels=1, out_channels=101, wn_width=32)
     return model, max_batch_size
@@ -32,6 +44,7 @@ def hydra():
 
 def monet():
     from thesis.nn.models.monet import MONet
+
     max_batch_size = 75
     model = MONet(slots=4)
     return model, max_batch_size
@@ -44,7 +57,7 @@ def main(args):
     model, max_batch_size = EXPERIMENTS[args.experiment]()
 
     batch_size = args.batch_size or max_batch_size
-    if uname().nodename == 'hermes':
+    if uname().nodename == "hermes":
         batch_size = 2
     train_loader = map_dataset(model, args.data, "train").loader(batch_size)
     test_loader = map_dataset(model, args.data, "test").loader(batch_size)
@@ -65,6 +78,10 @@ EXPERIMENTS = {
     "nvp": nvp,
     "hydra": hydra,
     "monet": monet,
+    "prior-0": partial(prior, k=0),
+    "prior-1": partial(prior, k=1),
+    "prior-2": partial(prior, k=2),
+    "prior-3": partial(prior, k=3),
 }
 
 if __name__ == "__main__":
