@@ -51,8 +51,12 @@ def test(model: BaseModel, test_loader: data.DataLoader, device: str):
     model.eval()
     with torch.no_grad():
         for x, y in test_loader:
-            x, y = x.to(device), y.to(device)
-            ℒ = model.test(x, y)
+            x = x.to(device)
+            if y is None:
+                ℒ = model.test(x)
+            else:
+                y = y.to(device)
+                ℒ = model.test(x, y)
             test_losses.append(ℒ.detach().item())
 
     log = {"Loss/test": mean(test_losses), "Time/test": time.time() - test_time}
@@ -114,9 +118,13 @@ def train(
         model.train()
         model.zero_grad()
 
-        x, y = x.to(device), y.to(device)
+        x = x.to(device)
+        if y is None:
+            ℒ = model.test(x)
+        else:
+            y = y.to(device)
+            ℒ = model.test(x, y)
 
-        ℒ = model.test(x, y)
         if torch.isnan(ℒ):
             exit(1)
         ℒ.backward()

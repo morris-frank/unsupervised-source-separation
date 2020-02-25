@@ -9,8 +9,10 @@ class PriorNVP(RealNVP):
         super(PriorNVP, self).__init__(channels=1, *args, **kwargs)
         self.params = clean_init_args(locals().copy())
 
+        del self.a
         self.a = 1.
         self.name = k
+        self.k = k
 
     def test(self, s: torch.Tensor) -> torch.Tensor:
         σ = 1.0

@@ -14,7 +14,7 @@ def prior(k: int):
     from thesis.nn.models.prior import PriorNVP
 
     max_batch_size = 2
-    model = PriorNVP(k=k, n_flows=10, wn_layers=12)
+    model = PriorNVP(k=k, n_flows=10, wn_layers=11)
     return model, max_batch_size
 
 
