@@ -22,7 +22,7 @@ def remove_list_weight_norm(ml: nn.ModuleList) -> nn.ModuleList:
     return _ml
 
 
-@torch.jit.script
+#@torch.jit.script
 def dilate(x: torch.Tensor, new: int, old: int = 1) -> torch.Tensor:
     """
     Will dilate the input tensor of shape [N, C, L]
