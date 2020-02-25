@@ -14,7 +14,8 @@ class PriorNVP(RealNVP):
         self.name = k
         self.k = k
 
-    def test(self, s: torch.Tensor) -> torch.Tensor:
+    def test(self, s: torch.Tensor, k) -> torch.Tensor:
+        del k
         σ = 1.0
         α = 1.0
         z = self.forward(s)

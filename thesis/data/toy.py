@@ -101,7 +101,7 @@ class ToyDataSingleSourceOnly(ToyData):
     def __getitem__(self, item: int):
         _, sources = super(ToyDataSingleSourceOnly, self).__getitem__(item)
         source = sources[None, self.k, :]
-        return source
+        return source, self.k
 
 
 class ToyDataSequential(Dataset):
