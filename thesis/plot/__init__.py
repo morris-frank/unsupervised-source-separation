@@ -1,6 +1,8 @@
 from pathlib import Path
 import matplotlib as mpl
 
+from . import toy
+
 mpl.use("TkAgg")
 mpl.style.use(f"{Path(__file__).parent.absolute()}/mpl.style")
 mpl.colors._colors_full_map["r"] = (0.80, 0.14, 0.11)

@@ -20,6 +20,7 @@ class Wavenet(nn.Module):
         skip_width: int = 256,
         kernel_size: int = 3,
         normalize: bool = False,
+        zero_final: bool = False,
     ):
         super(Wavenet, self).__init__()
         assert kernel_size % 2 != 0
@@ -76,8 +77,9 @@ class Wavenet(nn.Module):
                 )
 
         final = nn.Conv1d(skip_width, out_channels, 1)
-        final.weight.data.zero_()
-        final.bias.data.zero_()
+        if zero_final:
+            final.weight.data.zero_()
+            final.bias.data.zero_()
         self.final = final
 
     def forward(

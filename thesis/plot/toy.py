@@ -12,6 +12,9 @@ from ..data import Dataset
 from ..data.toy import ToyData
 
 
+PRINT_LENGTH = 2000
+
+
 def fig_summary(fname: str):
     df = pd.read_pickle(fname)
     df.destroy = df.destroy.astype("category")
@@ -37,7 +40,8 @@ def fig_summary(fname: str):
     ax3 = fig.add_subplot(3, 2, 5)
     plt.title("Loss over shapes @ no destroy ")
     sns.scatterplot(
-        x="periodicity", y="loss", hue="shape", data=df[df.destroy == zer], ax=ax3
+        x="periodicity", y="loss", hue="shape", data=df[df.destroy == zer],
+        ax=ax3
     )
 
     ax4 = fig.add_subplot(2, 2, 2)
@@ -54,23 +58,36 @@ def fig_summary(fname: str):
 
 
 def plot_reconstruction(
-    m: torch.Tensor, S: torch.Tensor, S_tilde: torch.Tensor
+        S: torch.Tensor, S_tilde: torch.Tensor, m: torch.Tensor = None
 ) -> plt.Figure:
+    if S.ndim == 3:
+        S = S.squeeze()
+    if S.ndim == 1:
+        S = S.unsqueeze(0)
     if S_tilde.ndim == 1:
         S_tilde = S_tilde.unsqueeze(0)
-    p_length = 500
     n = S.shape[0]
-    fig, axs = plt.subplots(n + 1, 2, sharex="all")
+    cols = n + 1 if m is not None else n
+    fig, axs = plt.subplots(cols, 2, sharex="all")
+    if axs.ndim == 1:
+        axs = axs[None, ...]
     if S_tilde.ndim == 2:
         for i in range(n):
-            axs[i, 0].plot(S[i, 100:p_length], c="r")
-            axs[i, 1].plot(S_tilde[i, 100:p_length], c="b")
-            axs[-1, 0].plot(m[0, 100:p_length], c="g")
+            axs[i, 0].plot(S[i, 100:PRINT_LENGTH], c="r")
+            axs[i, 1].plot(S_tilde[i, 100:PRINT_LENGTH], c="b")
+            if m is not None:
+                axs[-1, 0].plot(m[0, 100:PRINT_LENGTH], c="g")
     else:
         for i in range(n):
             axs[i, 0].imshow(S[i])
             axs[i, 1].imshow(S_tilde[i])
             axs[-1, 0].imshow(m[0])
+    return fig
+
+
+def plot_one_singal(s: torch.Tensor) -> plt.Figure:
+    fig = plt.figure()
+    plt.plot(s.squeeze()[100:PRINT_LENGTH])
     return fig
 
 
@@ -85,12 +102,12 @@ def _tuple_unsequeeze(x):
 
 
 def example_reconstruction(
-    model: nn.Module, data: Dataset
+        model: nn.Module, data: Dataset
 ) -> Generator[plt.Figure, None, None]:
     for i, (x, S) in enumerate(data):
         m, x = _tuple_unsequeeze(x)
-        #for S_tilde in model.infer(x):
-         #   S_tilde = S_tilde.squeeze()
+        # for S_tilde in model.infer(x):
+        #   S_tilde = S_tilde.squeeze()
         S_tilde = model.infer(x).squeeze()
         fig = plot_reconstruction(m, S, S_tilde)
         fig.savefig(f"./figures/{type(model).__name__}_{i}.png")
@@ -98,26 +115,24 @@ def example_reconstruction(
 
 
 def z_example_reconstruction(
-    model: nn.Module, data: Dataset
+        model: nn.Module, data: Dataset
 ) -> Generator[plt.Figure, None, None]:
-    for i, (x, S) in enumerate(data):
-        m, x = _tuple_unsequeeze(x)
-        r = model(x, S.unsqueeze(0))
-        z = r[0]  # account for multiple outputs
-        S_tilde = model.infer(x, z=z).squeeze()
-        fig = plot_reconstruction(m, S, S_tilde)
-        fig.savefig(f"./figures/{type(model).__name__}_z_{i}.png")
-        yield fig
+    for i, (x, y) in enumerate(data):
+        x = x.unsqueeze(0)
+        z = model(x, y)
+        yield plot_one_singal(z)
+        x_tilde = model.infer(z)
+        yield plot_reconstruction(x, x_tilde)
 
 
 def prepare_plot_freq_loss(
-    model: nn.Module,
-    data: ToyData,
-    ns: int,
-    μ: int,
-    destroy: float = 0.0,
-    single: bool = False,
-    device: str = "cpu",
+        model: nn.Module,
+        data: ToyData,
+        ns: int,
+        μ: int,
+        destroy: float = 0.0,
+        single: bool = False,
+        device: str = "cpu",
 ) -> pd.DataFrame:
     d = {"n": [], "shape": [], "loss": [], "periodicity": [], "destroy": []}
     model = model.to(device)
@@ -137,7 +152,7 @@ def prepare_plot_freq_loss(
             d["periodicity"].append(prms[i]["φ"])
             d["loss"].append(
                 F.cross_entropy(
-                    logits[:, i * μ : (i + 1) * μ, :], stems[None, i, :]
+                    logits[:, i * μ: (i + 1) * μ, :], stems[None, i, :]
                 ).item()
             )
     df = pd.DataFrame(data=d)

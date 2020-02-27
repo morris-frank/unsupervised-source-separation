@@ -48,6 +48,7 @@ class WaveGlow(BaseModel):
                     n_layers=wn_layers,
                     residual_width=2 * wn_width,
                     skip_width=wn_width,
+                    zero_final=True,
                 )
             )
 

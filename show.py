@@ -9,6 +9,7 @@ from matplotlib import pyplot as plt
 
 from thesis.data.wrapper import map_dataset
 from thesis.io import load_model
+from thesis import plot
 
 
 def get_newest_file(folder):
@@ -45,6 +46,21 @@ def main(args):
                 input("?")
                 plt.close(fig)
 
+    elif args.command == "rand-z":
+        model = load_model(args.weights, args.device)
+        model.eval()
+        with torch.no_grad():
+            while True:
+                z = torch.rand(1, 1, 2**11)
+                #z = torch.zeros(1, 1, 2**11)
+                #z.fill_(torch.rand(1).item())
+                m = model.infer(z)
+                m.clamp_(-1, 1)
+                fig = plot.toy.plot_one_singal(m)
+                fig.show()
+                input("?")
+                plt.close()
+
     else:
         raise ValueError("Invalid command given")
 
@@ -54,5 +70,5 @@ if __name__ == "__main__":
     parser.add_argument("command", type=str)
     parser.add_argument("--weights", type=abspath)
     parser.add_argument("--device", type=str, default="cpu")
-    parser.add_argument("--data", type=abspath)
+    parser.add_argument("--data", type=abspath, default="/home/morris/var/data/toy_wave")
     main(parser.parse_args())

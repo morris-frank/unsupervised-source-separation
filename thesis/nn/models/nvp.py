@@ -31,6 +31,7 @@ class RealNVP(BaseModel):
                     n_layers=wn_layers,
                     residual_width=2 * wn_width,
                     skip_width=wn_width,
+                    zero_final=True
                 )
             )
 
@@ -45,7 +46,7 @@ class RealNVP(BaseModel):
         log_s, t = log_s_t.chunk(2, dim=1)
         return x_left, x_right, log_s, t
 
-    def forward(self, m: torch.Tensor):
+    def forward(self, m: torch.Tensor, *args):
         bs, _, l = m.shape
         f_m = torch.zeros((bs, self.channels, l), device=m.device, dtype=m.dtype)
         f_m[:, 0, :] = m[:, 0, :]
@@ -62,15 +63,29 @@ class RealNVP(BaseModel):
 
             f_m = interleave(m_a, m_b)
 
-            # Save for loss
+            # Sum log_s over batch size
+            #ℒ_log_s = log_s.view(log_s.size(0), -1).sum(-1) + ℒ_log_s
             ℒ_log_s += log_s.mean()
 
         S_tilde = self.a * f_m
         self.ℒ.log_s = -ℒ_log_s
         return S_tilde
 
-    def infer(self, m: torch.Tensor) -> torch.Tensor:
-        return self.forward(m)
+    def infer(self, z: torch.Tensor):
+        f_z = z
+
+        for k in reversed(range(self.n_flows)):
+            z_a, z_b, log_s, t = self.apply_wave(f_z, k)
+
+            if k % 2 == 0:
+                z_b = (z_b - t) / log_s.exp()
+            else:
+                z_a = (z_a - t) / log_s.exp()
+
+            f_z = interleave(z_a, z_b)
+
+        m = f_z[:, 0, :]
+        return m
 
     def test(self, m: torch.Tensor, S: torch.Tensor) -> torch.Tensor:
         σ = 1.0
