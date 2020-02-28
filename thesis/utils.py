@@ -57,5 +57,5 @@ class _LossLogger(object):
         super(_LossLogger, self).__setattr__(key, value)
         if key != "log":
             if isinstance(value, torch.Tensor):
-                value = value.detach().item()
+                value = value.detach().mean().item()
             self.log[key].append(value)

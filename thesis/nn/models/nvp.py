@@ -64,8 +64,8 @@ class RealNVP(BaseModel):
             f_m = interleave(m_a, m_b)
 
             # Sum log_s over batch size
-            #ℒ_log_s = log_s.view(log_s.size(0), -1).sum(-1) + ℒ_log_s
-            ℒ_log_s += log_s.mean()
+            ℒ_log_s = log_s.view(log_s.size(0), -1).sum(-1) + ℒ_log_s
+            #ℒ_log_s += log_s.mean()
 
         S_tilde = self.a * f_m
         self.ℒ.log_s = -ℒ_log_s
