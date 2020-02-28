@@ -1,9 +1,8 @@
-from torch.nn import functional as F
 import torch
 from torch import nn
+from torch.nn import functional as F
 
 from . import BaseModel
-from ..optim import sqrt_l1_loss
 from ..wavenet import Wavenet
 from ...functional import split, interleave
 from ...utils import clean_init_args
@@ -51,10 +50,18 @@ class RealNVP(BaseModel):
         f_m = torch.zeros((bs, self.channels, l), device=m.device, dtype=m.dtype)
         f_m[:, 0, :] = m[:, 0, :]
 
+        if torch.any(torch.isnan(f_m)):
+            print('f_m')
+            import ipdb; ipdb.set_trace()
+
         ℒ_log_s = 0
         for k in range(self.n_flows):
             # Separate them and get scale and translate
             m_a, m_b, log_s, t = self.apply_wave(f_m, k)
+
+            if torch.any(torch.isnan(f_m)):
+                print('f_m')
+                import ipdb; ipdb.set_trace()
 
             if k % 2 == 0:
                 m_b = log_s.exp() * m_b + t

@@ -118,11 +118,12 @@ def train(
         ℒ = model.test(x, y)
 
         if torch.isnan(ℒ):
-            exit(1)
-        ℒ.backward()
-        clip_grad_norm_(model.parameters(), 10)
-        optimizer.step()
-        scheduler.step(it)
+            print(Fore.RED + 'nan loss. skip optim!' + Fore.RESET)
+        else:
+            ℒ.backward()
+            clip_grad_norm_(model.parameters(), 10)
+            optimizer.step()
+            scheduler.step(it)
 
         losses.append(ℒ.detach().item())
         it_times.append(time.time() - it_start_time)

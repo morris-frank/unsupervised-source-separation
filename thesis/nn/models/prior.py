@@ -1,6 +1,7 @@
 import torch
 
 from .nvp import RealNVP
+from .waveglow import WaveGlow
 from ...utils import clean_init_args
 
 
@@ -15,9 +16,23 @@ class PriorNVP(RealNVP):
         self.k = k
 
     def test(self, s: torch.Tensor, *args) -> torch.Tensor:
-        σ = 1.0
-        α = 1.0
+        α, σ = 1., 1.
         z = self.forward(s)
-        self.ℒ.p_z_likelihood = α * (z ** 2).mean() / (2 * σ ** 2)
+        self.ℒ.p_z_likelihood = α * (z*z).mean() / (2*σ*σ)
         ℒ = self.ℒ.p_z_likelihood + self.ℒ.log_s
-        return ℒ
+        return ℒ.mean()
+
+
+class PriorGlow(WaveGlow):
+    def __init__(self, k: int, channels: int, *args, **kwargs):
+        super(PriorGlow, self).__init__(channels, *args, **kwargs)
+
+        self.name = k
+        self.k = k
+
+    def test(self, s: torch.Tensor, *args) -> torch.Tensor:
+        α, σ = 1., 1.
+        z = self.forward(s)
+        self.ℒ.p_z_likelihood = α * (z*z).mean() / (2*σ*σ)
+        ℒ = self.ℒ.p_z_likelihood + self.ℒ.log_s + self.ℒ.det_W
+        return ℒ.mean()
