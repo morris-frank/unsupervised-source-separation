@@ -19,7 +19,7 @@ def map_dataset(model: nn.Module, data_dir: abspath, subset: str) -> Dataset:
         dset = ToyDataSingleSourceOnly(
             k=model.k, filepath=filepath, crop=receptive_field
         )
-    elif model.__class__.__name == "VQVAE":
+    elif model.__class__.__name__ == "VQVAE":
         n_layers = model.params["kwargs"]["n_layers"]
         receptive_field = int(2 * pow(2, n_layers - 1))
         μ = model.out_channels

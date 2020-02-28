@@ -23,6 +23,7 @@ class VQVAE(BaseModel):
     ):
         super(VQVAE, self).__init__()
         self.params = clean_init_args(locals().copy())
+        self.out_channels = out_channels
 
         self.z_eǀs = TemporalEncoder(
             in_channels=in_channels,
@@ -43,7 +44,7 @@ class VQVAE(BaseModel):
 
     def forward(self, s: torch.Tensor) -> torch.Tensor:
         z_e = self.z_eǀs(s)
-        z_q_st, z_q = self.q_zǀs(z_e)
+        z_q_st, z_q = self.q_zǀs.straight_through(z_e)
         s_tilde = self.p_sǀzq(z_q_st)
 
         # Vector quantization objective
@@ -55,10 +56,12 @@ class VQVAE(BaseModel):
 
     def test(self, s: torch.Tensor, *args) -> torch.Tensor:
         β = 1.1
-        s_tilde = self.forward(s)
+        hμ = (self.out_channels - 1) // 2
+        s_ = (s.float() - hμ) / hμ
+        s_tilde = self.forward(s_)
 
         # Reconstruction loss
-        self.ℒ.log_p_sǀzq = F.cross_entropy(s_tilde, s)
+        self.ℒ.log_p_sǀzq = F.cross_entropy(s_tilde, s.squeeze())
         ℒ = self.ℒ.log_p_sǀzq + self.ℒ.vec_quant + β * self.ℒ.commitment
         return ℒ
 

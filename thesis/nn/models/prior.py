@@ -40,7 +40,7 @@ class PriorGlow(WaveGlow):
 
 
 class VQVAE(_VQVAE):
-    def __int__(self, k: int, *args, **kwargs):
-        super(VQVAE, self).__int__(*args, **kwargs)
+    def __init__(self, k: int, *args, **kwargs):
+        super(VQVAE, self).__init__(*args, **kwargs)
         self.name = k
         self.k = k
