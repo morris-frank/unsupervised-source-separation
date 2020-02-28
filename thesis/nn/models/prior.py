@@ -1,5 +1,6 @@
 import torch
 
+from .vqvae import VQVAE as _VQVAE
 from .nvp import RealNVP
 from .waveglow import WaveGlow
 from ...utils import clean_init_args
@@ -36,3 +37,10 @@ class PriorGlow(WaveGlow):
         self.ℒ.p_z_likelihood = α * (z*z).mean() / (2*σ*σ)
         ℒ = self.ℒ.p_z_likelihood + self.ℒ.log_s + self.ℒ.det_W
         return ℒ.mean()
+
+
+class VQVAE(_VQVAE):
+    def __int__(self, k: int, *args, **kwargs):
+        super(VQVAE, self).__int__(*args, **kwargs)
+        self.name = k
+        self.k = k

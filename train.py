@@ -18,6 +18,15 @@ def prior(k: int):
     return model, max_batch_size
 
 
+def prior_vae(k: int):
+    from thesis.nn.models.prior import VQVAE
+    μ = 101
+
+    max_batch_size = 32
+    model = VQVAE(k=k, in_channels=1, out_channels=μ, K=1, D=128, encoder_width=32, decoder_width=32, n_blocks=1, n_layers=11)
+    return model, max_batch_size
+
+
 def glow():
     from thesis.nn.models.waveglow import WaveGlow
 
@@ -78,10 +87,10 @@ EXPERIMENTS = {
     "nvp": nvp,
     "hydra": hydra,
     "monet": monet,
-    "prior-0": partial(prior, k=0),
-    "prior-1": partial(prior, k=1),
-    "prior-2": partial(prior, k=2),
-    "prior-3": partial(prior, k=3),
+    "prior-0": partial(prior_vae, k=0),
+    "prior-1": partial(prior_vae, k=1),
+    "prior-2": partial(prior_vae, k=2),
+    "prior-3": partial(prior_vae, k=3),
 }
 
 if __name__ == "__main__":

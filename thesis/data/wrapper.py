@@ -19,10 +19,11 @@ def map_dataset(model: nn.Module, data_dir: abspath, subset: str) -> Dataset:
         dset = ToyDataSingleSourceOnly(
             k=model.k, filepath=filepath, crop=receptive_field
         )
-    elif model.__class__.__name == "PriorGlow":
-        wn_layers = model.params["kwargs"]["wn_layers"]
-        receptive_field = int(2 * pow(2, wn_layers - 1))
-        dset = ToyDataSingleSourceOnly(k=model.k, filepath=filepath, crop=receptive_field, )
+    elif model.__class__.__name == "VQVAE":
+        n_layers = model.params["kwargs"]["n_layers"]
+        receptive_field = int(2 * pow(2, n_layers - 1))
+        μ = model.out_channels
+        dset = ToyDataSingleSourceOnly(k=model.k, filepath=filepath, crop=receptive_field, μ=μ)
     elif model.__class__.__name__ == "WaveGlow":
         wn_layers = model.params["kwargs"]["wn_layers"]
         receptive_field = int(pow(2, wn_layers - 1))

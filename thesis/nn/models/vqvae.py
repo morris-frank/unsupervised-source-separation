@@ -9,6 +9,60 @@ from ...functional import shift1d, destroy_along_channels
 from ...utils import clean_init_args
 
 
+class VQVAE(BaseModel):
+    def __init__(
+        self,
+        in_channels: int = 1,
+        out_channels: int = 256,
+        K: int = 1,
+        D: int = 128,
+        n_blocks: int = 1,
+        n_layers: int = 10,
+        encoder_width: int = 64,
+        decoder_width: int = 64,
+    ):
+        super(VQVAE, self).__init__()
+        self.params = clean_init_args(locals().copy())
+
+        self.z_eǀs = TemporalEncoder(
+            in_channels=in_channels,
+            out_channels=D,
+            n_blocks=n_blocks,
+            n_layers=n_layers,
+            width=encoder_width,
+        )
+        self.q_zǀs = VQEmbedding(K, D)
+        self.p_sǀzq = Wavenet(
+            in_channels=D,
+            out_channels=out_channels,
+            n_blocks=n_blocks,
+            n_layers=n_layers,
+            skip_width=decoder_width,
+            residual_width=2 * decoder_width,
+        )
+
+    def forward(self, s: torch.Tensor) -> torch.Tensor:
+        z_e = self.z_eǀs(s)
+        z_q_st, z_q = self.q_zǀs(z_e)
+        s_tilde = self.p_sǀzq(z_q_st)
+
+        # Vector quantization objective
+        self.ℒ.vec_quant = F.mse_loss(z_q, z_e.detach())
+        # Commitment loss
+        self.ℒ.commitment = F.mse_loss(z_e, z_q.detach())
+
+        return s_tilde
+
+    def test(self, s: torch.Tensor, *args) -> torch.Tensor:
+        β = 1.1
+        s_tilde = self.forward(s)
+
+        # Reconstruction loss
+        self.ℒ.log_p_sǀzq = F.cross_entropy(s_tilde, s)
+        ℒ = self.ℒ.log_p_sǀzq + self.ℒ.vec_quant + β * self.ℒ.commitment
+        return ℒ
+
+
 class CVQVAE(BaseModel):
     def __init__(
         self,
