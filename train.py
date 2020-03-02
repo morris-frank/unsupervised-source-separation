@@ -23,7 +23,7 @@ def prior_vae(k: int):
     μ = 101
 
     max_batch_size = 32
-    model = VQVAE(k=k, in_channels=1, out_channels=μ, K=1, D=128, encoder_width=32, decoder_width=32, n_blocks=1, n_layers=11)
+    model = VQVAE(k=k, in_channels=1, out_channels=μ, K=1, D=128, encoder_width=64, decoder_width=64, n_blocks=3, n_layers=11)
     return model, max_batch_size
 
 
