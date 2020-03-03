@@ -114,7 +114,7 @@ def train(
         model.train()
         model.zero_grad()
 
-        if isinstance(batch, tuple):
+        if isinstance(batch, list):
             x, y = batch[0].to(device), batch[1].to(device)
             ℒ = model.test(x, y)
         else:

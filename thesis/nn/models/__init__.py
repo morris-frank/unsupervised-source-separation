@@ -1,5 +1,4 @@
 from abc import ABC
-from typing import Any
 
 import torch
 from torch import nn
@@ -13,8 +12,8 @@ class BaseModel(ABC, nn.Module):
         self.ℒ = _LossLogger()
         self.name = name
 
-    def test(self, x: Any, y: Any) -> torch.Tensor:
+    def test(self, *args) -> torch.Tensor:
         pass
 
-    def infer(self, m: torch.Tensor, *args, **kwargs) -> torch.Tensor:
+    def infer(self, *args, **kwargs) -> torch.Tensor:
         pass

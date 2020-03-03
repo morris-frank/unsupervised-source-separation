@@ -121,7 +121,7 @@ class Wavenet(nn.Module):
             else:
                 h, _ = block(h, c)
         if self.skip:
-            out = self.final_conv(skip)
+            out = self.final(skip)
         else:
-            out = self.final_conv(h)
+            out = self.final(h)
         return out

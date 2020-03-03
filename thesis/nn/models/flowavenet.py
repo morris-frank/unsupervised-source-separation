@@ -184,14 +184,15 @@ class Block(nn.Module):
             self.prior = Wavenet(
                 in_channels=squeeze_dim // 2,
                 out_channels=squeeze_dim,
-                num_blocks=1,
-                num_layers=2,
+                n_blocks=1,
+                n_layers=2,
                 residual_channels=256,
                 gate_channels=256,
                 skip_channels=256,
                 kernel_size=3,
                 cin_channels=squeeze_dim_c,
                 causal=False,
+                zero_final=True
             )
 
     def forward(self, x, c):
@@ -245,9 +246,9 @@ class Flowavenet(BaseModel):
         affine=True,
         pretrained=False,
         block_per_split=8,
-        **kwargs,
+        **kwargs
     ):
-        super(Flowavenet).__init__(**kwargs)
+        super(Flowavenet, self).__init__(**kwargs)
         self.params = clean_init_args(locals().copy())
         self.block_per_split = block_per_split
         self.blocks = nn.ModuleList()

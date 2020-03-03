@@ -10,9 +10,7 @@ from glob import glob
 
 
 def μ_enc(
-    mix: np.ndarray,
-    sources: np.ndarray,
-    μ: Optional[int] = None,
+    mix: np.ndarray, sources: np.ndarray, μ: Optional[int] = None,
 ):
     assert μ & 1
     hμ = (μ - 1) // 2
@@ -48,7 +46,7 @@ class ToyData(Dataset):
         ).transpose(0, 1)
         datum["mel_sources"] = torch.tensor(
             datum["mel_sources"], dtype=torch.float32
-        ).transpose(0, 1)
+        ).transpose(1, 2)
         return datum
 
     def __getitem__(self, idx: int):

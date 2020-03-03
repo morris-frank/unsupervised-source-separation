@@ -24,7 +24,6 @@ def prior_flo(path: str, k: int):
         block_per_split=3,
         name=k
     )
-
     train_set = ToyDataSourceK(path=path % "train", k=k, mel=True)
     test_set = ToyDataSourceK(path=path % "test", k=k, mel=True)
     return model, train_set, test_set
@@ -34,7 +33,7 @@ def main(args):
     if args.experiment not in EXPERIMENTS:
         raise ValueError("Invalid experiment given.")
 
-    model, train_set, test_set = EXPERIMENTS[args.experiment](f"{args.data}/{{}}/")
+    model, train_set, test_set = EXPERIMENTS[args.experiment](f"{args.data}/%s/")
 
     if os.uname().nodename == "hermes":
         args.batch_size = 2
