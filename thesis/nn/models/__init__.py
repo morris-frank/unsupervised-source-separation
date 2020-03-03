@@ -8,10 +8,10 @@ from ...utils import _LossLogger
 
 
 class BaseModel(ABC, nn.Module):
-    def __init__(self):
+    def __init__(self, name: str = ""):
         super(BaseModel, self).__init__()
         self.ℒ = _LossLogger()
-        self.name = ""
+        self.name = name
 
     def test(self, x: Any, y: Any) -> torch.Tensor:
         pass

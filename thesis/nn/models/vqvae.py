@@ -4,7 +4,7 @@ from torch.nn import functional as F
 from . import BaseModel
 from ..modules import VQEmbedding
 from ..temporal_encoder import TemporalEncoder
-from ..wavenet import Wavenet
+from ..old_wavenet import Wavenet
 from ...functional import shift1d, destroy_along_channels
 from ...utils import clean_init_args
 

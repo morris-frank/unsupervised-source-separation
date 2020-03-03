@@ -54,18 +54,22 @@ def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
 
     """
     save_point = torch.load(fp, map_location=torch.device(device))
-    state_dict = save_point["model_state_dict"]
 
-    model_class = save_point["params"]["__class__"]
-    args = save_point["params"]["args"]
-    kwargs = save_point["params"]["kwargs"].copy()
-    model = model_class(k=0, *args, **kwargs)
+    if "model_state_dict" in save_point:
+        state_dict = save_point["model_state_dict"]
 
-    if next(iter(state_dict.keys())).startswith("module."):
-        _state_dict = OrderedDict({k[7:]: v for k, v in state_dict.items()})
-        state_dict = _state_dict
+        model_class = save_point["params"]["__class__"]
+        args = save_point["params"]["args"]
+        kwargs = save_point["params"]["kwargs"].copy()
+        model = model_class(k=0, *args, **kwargs)
 
-    model.load_state_dict(state_dict)
+        if next(iter(state_dict.keys())).startswith("module."):
+            _state_dict = OrderedDict({k[7:]: v for k, v in state_dict.items()})
+            state_dict = _state_dict
+
+        model.load_state_dict(state_dict)
+    else:
+        model = save_point["model"]
 
     if not train:
         return model

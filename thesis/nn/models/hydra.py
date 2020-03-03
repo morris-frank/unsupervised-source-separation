@@ -3,7 +3,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from . import BaseModel
-from ..wavenet import Wavenet
+from ..old_wavenet import Wavenet
 from ..optim import multi_cross_entropy
 from ...utils import clean_init_args
 

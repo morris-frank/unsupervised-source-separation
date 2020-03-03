@@ -1,83 +1,45 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
 from functools import partial
-from os import path, uname
+import os
 
 from torch import autograd
 
-from thesis.data.wrapper import map_dataset
 from thesis.train import train
 from thesis.utils import optional
+from thesis.data.toy import ToyDataSourceK
 
 
-def prior(k: int):
-    from thesis.nn.models.prior import PriorNVP
-
-    max_batch_size = 16
-    model = PriorNVP(k=k, n_flows=10, wn_layers=11)
-    return model, max_batch_size
-
-
-def prior_vae(k: int):
-    from thesis.nn.models.prior import VQVAE
-    μ = 101
-
-    max_batch_size = 32
-    model = VQVAE(k=k, in_channels=1, out_channels=μ, K=1, D=128, encoder_width=64, decoder_width=64, n_blocks=3, n_layers=11)
-    return model, max_batch_size
-
-
-def prior_flo(k: int):
+def prior_flo(path: str, k: int):
     from thesis.nn.models.flowavenet import Flowavenet
-    max_batch_size = 2
+
     mel_channels = 80
-    model = Flowavenet(k=k, in_channel=1, cin_channel=mel_channels, n_block=4, n_flow=3, n_layer=2, affine=True, block_per_split=2)
-    return model, max_batch_size
+    model = Flowavenet(
+        in_channel=1,
+        cin_channel=mel_channels,
+        n_block=6,
+        n_flow=4,
+        n_layer=2,
+        affine=True,
+        block_per_split=3,
+        name=k
+    )
 
-
-def glow():
-    from thesis.nn.models.waveglow import WaveGlow
-
-    max_batch_size = 42
-    model = WaveGlow(channels=4, n_flows=10, wn_layers=12)  # rf: 2^11
-    return model, max_batch_size
-
-
-def nvp():
-    from thesis.nn.models.nvp import RealNVP
-
-    max_batch_size = 60
-    model = RealNVP(channels=4, n_flows=14, wn_layers=11)
-    return model, max_batch_size
-
-
-def hydra():
-    from thesis.nn.models.hydra import Hydra
-
-    max_batch_size = 18
-    model = Hydra(classes=4, in_channels=1, out_channels=101, wn_width=32)
-    return model, max_batch_size
-
-
-def monet():
-    from thesis.nn.models.monet import MONet
-
-    max_batch_size = 75
-    model = MONet(slots=4)
-    return model, max_batch_size
+    train_set = ToyDataSourceK(path=path % "train", k=k, mel=True)
+    test_set = ToyDataSourceK(path=path % "test", k=k, mel=True)
+    return model, train_set, test_set
 
 
 def main(args):
     if args.experiment not in EXPERIMENTS:
         raise ValueError("Invalid experiment given.")
 
-    model, max_batch_size = EXPERIMENTS[args.experiment]()
+    model, train_set, test_set = EXPERIMENTS[args.experiment](f"{args.data}/{{}}/")
 
-    batch_size = args.batch_size or max_batch_size
-    if uname().nodename == "hermes":
-        batch_size = 2
-    train_loader = map_dataset(model, args.data, "train").loader(batch_size)
-    test_loader = map_dataset(model, args.data, "test").loader(batch_size)
+    if os.uname().nodename == "hermes":
+        args.batch_size = 2
+    train_loader = train_set.loader(args.batch_size)
+    test_loader = test_set.loader(args.batch_size)
 
     with optional(args.debug, autograd.detect_anomaly()):
         train(
@@ -91,10 +53,6 @@ def main(args):
 
 
 EXPERIMENTS = {
-    "glow": glow,
-    "nvp": nvp,
-    "hydra": hydra,
-    "monet": monet,
     "prior-0": partial(prior_flo, k=0),
     "prior-1": partial(prior_flo, k=1),
     "prior-2": partial(prior_flo, k=2),
@@ -113,7 +71,7 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--data",
-        type=path.abspath,
+        type=os.path.abspath,
         required=True,
         help="The top-level directory of dataset.",
     )

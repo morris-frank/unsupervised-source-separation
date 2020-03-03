@@ -116,7 +116,12 @@ def z_example_reconstruction(
 ) -> Generator[plt.Figure, None, None]:
     for i, (x, y) in enumerate(data):
         x = x.unsqueeze(0)
+        if isinstance(y, torch.Tensor):
+            y.unsqueeze_(0)
         z = model(x, y)
+        print(f"log_p: {z[0]}, log_det: {z[1]}")
+        input()
+        continue
         yield plot_one_singal(z)
         x_tilde = model.infer(z)
         yield plot_reconstruction(x, x_tilde)

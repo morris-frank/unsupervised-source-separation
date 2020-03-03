@@ -7,6 +7,49 @@ from .functions import VectorQuantizationStraightThrough, VectorQuantization
 from ..functional import orthonormal
 
 
+class Conv1d(nn.Module):
+    def __init__(
+        self, in_channels, out_channels, kernel_size=3, dilation=1, causal=False
+    ):
+        super(Conv1d, self).__init__()
+
+        self.causal = causal
+        if self.causal:
+            self.padding = dilation * (kernel_size - 1)
+        else:
+            self.padding = dilation * (kernel_size - 1) // 2
+        self.conv = nn.Conv1d(
+            in_channels,
+            out_channels,
+            kernel_size,
+            dilation=dilation,
+            padding=self.padding,
+        )
+        self.conv = nn.utils.weight_norm(self.conv)
+        nn.init.kaiming_normal_(self.conv.weight)
+
+    def forward(self, tensor):
+        out = self.conv(tensor)
+        if self.causal and self.padding is not 0:
+            out = out[:, :, : -self.padding]
+        return out
+
+
+class ZeroConv1d(nn.Module):
+    def __init__(self, in_channel, out_channel):
+        super().__init__()
+
+        self.conv = nn.Conv1d(in_channel, out_channel, 1, padding=0)
+        self.conv.weight.data.zero_()
+        self.conv.bias.data.zero_()
+        self.scale = nn.Parameter(torch.zeros(1, out_channel, 1))
+
+    def forward(self, x):
+        out = self.conv(x)
+        out = out * torch.exp(self.scale * 3)
+        return out
+
+
 class VQEmbedding(nn.Module):
     def __init__(self, K, D):
         super(VQEmbedding, self).__init__()

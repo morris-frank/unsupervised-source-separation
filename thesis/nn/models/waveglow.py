@@ -4,7 +4,7 @@ from torch.nn import functional as F
 
 from . import BaseModel
 from ..modules import ChannelConvInvert
-from ..wavenet import Wavenet
+from ..old_wavenet import Wavenet
 from ...utils import clean_init_args
 
 

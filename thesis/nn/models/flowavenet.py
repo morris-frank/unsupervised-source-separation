@@ -1,167 +1,12 @@
-import math
+from ...utils import clean_init_args
+from . import BaseModel
 from math import log, pi
 
 import torch
 from torch import nn
+from ..wavenet import Wavenet
 
 logabs = lambda x: torch.log(torch.abs(x))
-
-
-class Conv(nn.Module):
-    def __init__(
-        self, in_channels, out_channels, kernel_size=3, dilation=1, causal=True
-    ):
-        super(Conv, self).__init__()
-
-        self.causal = causal
-        if self.causal:
-            self.padding = dilation * (kernel_size - 1)
-        else:
-            self.padding = dilation * (kernel_size - 1) // 2
-        self.conv = nn.Conv1d(
-            in_channels,
-            out_channels,
-            kernel_size,
-            dilation=dilation,
-            padding=self.padding,
-        )
-        self.conv = nn.utils.weight_norm(self.conv)
-        nn.init.kaiming_normal_(self.conv.weight)
-
-    def forward(self, tensor):
-        out = self.conv(tensor)
-        if self.causal and self.padding is not 0:
-            out = out[:, :, : -self.padding]
-        return out
-
-
-class ZeroConv1d(nn.Module):
-    def __init__(self, in_channel, out_channel):
-        super().__init__()
-
-        self.conv = nn.Conv1d(in_channel, out_channel, 1, padding=0)
-        self.conv.weight.data.zero_()
-        self.conv.bias.data.zero_()
-        self.scale = nn.Parameter(torch.zeros(1, out_channel, 1))
-
-    def forward(self, x):
-        out = self.conv(x)
-        out = out * torch.exp(self.scale * 3)
-        return out
-
-
-class ResBlock(nn.Module):
-    def __init__(
-        self,
-        in_channels,
-        out_channels,
-        skip_channels,
-        kernel_size,
-        dilation,
-        cin_channels=None,
-        local_conditioning=True,
-        causal=False,
-    ):
-        super(ResBlock, self).__init__()
-        self.causal = causal
-        self.local_conditioning = local_conditioning
-        self.cin_channels = cin_channels
-        self.skip = True if skip_channels is not None else False
-
-        self.filter_conv = Conv(
-            in_channels, out_channels, kernel_size, dilation, causal
-        )
-        self.gate_conv = Conv(in_channels, out_channels, kernel_size, dilation, causal)
-        self.res_conv = nn.Conv1d(out_channels, in_channels, kernel_size=1)
-        self.res_conv = nn.utils.weight_norm(self.res_conv)
-        nn.init.kaiming_normal_(self.res_conv.weight)
-        if self.skip:
-            self.skip_conv = nn.Conv1d(out_channels, skip_channels, kernel_size=1)
-            self.skip_conv = nn.utils.weight_norm(self.skip_conv)
-            nn.init.kaiming_normal_(self.skip_conv.weight)
-
-        if self.local_conditioning:
-            self.filter_conv_c = nn.Conv1d(cin_channels, out_channels, kernel_size=1)
-            self.gate_conv_c = nn.Conv1d(cin_channels, out_channels, kernel_size=1)
-            self.filter_conv_c = nn.utils.weight_norm(self.filter_conv_c)
-            self.gate_conv_c = nn.utils.weight_norm(self.gate_conv_c)
-            nn.init.kaiming_normal_(self.filter_conv_c.weight)
-            nn.init.kaiming_normal_(self.gate_conv_c.weight)
-
-    def forward(self, tensor, c=None):
-        h_filter = self.filter_conv(tensor)
-        h_gate = self.gate_conv(tensor)
-
-        if self.local_conditioning:
-            h_filter += self.filter_conv_c(c)
-            h_gate += self.gate_conv_c(c)
-
-        out = torch.tanh(h_filter) * torch.sigmoid(h_gate)
-
-        res = self.res_conv(out)
-        skip = self.skip_conv(out) if self.skip else None
-        return (tensor + res) * math.sqrt(0.5), skip
-
-
-class Wavenet(nn.Module):
-    def __init__(
-        self,
-        in_channels=1,
-        out_channels=2,
-        num_blocks=1,
-        num_layers=6,
-        residual_channels=256,
-        gate_channels=256,
-        skip_channels=256,
-        kernel_size=3,
-        cin_channels=80,
-        causal=True,
-    ):
-        super(Wavenet, self).__init__()
-
-        self.skip = True if skip_channels is not None else False
-        self.front_conv = nn.Sequential(
-            Conv(in_channels, residual_channels, 3, causal=causal), nn.ReLU()
-        )
-
-        self.res_blocks = nn.ModuleList()
-        for b in range(num_blocks):
-            for n in range(num_layers):
-                self.res_blocks.append(
-                    ResBlock(
-                        residual_channels,
-                        gate_channels,
-                        skip_channels,
-                        kernel_size,
-                        dilation=2 ** n,
-                        cin_channels=cin_channels,
-                        local_conditioning=True,
-                        causal=causal,
-                    )
-                )
-
-        last_channels = skip_channels if self.skip else residual_channels
-        self.final_conv = nn.Sequential(
-            nn.ReLU(),
-            Conv(last_channels, last_channels, 1, causal=causal),
-            nn.ReLU(),
-            ZeroConv1d(last_channels, out_channels),
-        )
-
-    def forward(self, x, c=None):
-        h = self.front_conv(x)
-        skip = 0
-        for i, f in enumerate(self.res_blocks):
-            if self.skip:
-                h, s = f(h, c)
-                skip += s
-            else:
-                h, _ = f(h, c)
-        if self.skip:
-            out = self.final_conv(skip)
-        else:
-            out = self.final_conv(h)
-        return out
 
 
 class ActNorm(nn.Module):
@@ -214,14 +59,15 @@ class AffineCoupling(nn.Module):
         self.net = Wavenet(
             in_channels=in_channel // 2,
             out_channels=in_channel if self.affine else in_channel // 2,
-            num_blocks=1,
-            num_layers=num_layer,
+            n_blocks=1,
+            n_layers=num_layer,
             residual_channels=filter_size,
             gate_channels=filter_size,
             skip_channels=filter_size,
             kernel_size=3,
             cin_channels=cin_channel // 2,
             causal=False,
+            zero_final=True
         )
 
     def forward(self, x, c=None):
@@ -356,7 +202,7 @@ class Block(nn.Module):
         c = squeezed_c.contiguous().view(b_size, -1, T // 2)
         logdet, log_p = 0, 0
 
-        for flow in self.flows:
+        for k, flow in enumerate(self.flows):
             out, c, det = flow(out, c)
             logdet = logdet + det
         if self.split:
@@ -388,10 +234,9 @@ class Block(nn.Module):
         return unsqueezed_x, unsqueezed_c
 
 
-class Flowavenet(nn.Module):
+class Flowavenet(BaseModel):
     def __init__(
         self,
-        k,
         in_channel,
         cin_channel,
         n_block,
@@ -400,11 +245,11 @@ class Flowavenet(nn.Module):
         affine=True,
         pretrained=False,
         block_per_split=8,
+        **kwargs,
     ):
-        super().__init__()
+        super(Flowavenet).__init__(**kwargs)
+        self.params = clean_init_args(locals().copy())
         self.block_per_split = block_per_split
-        self.k = k
-        self.name = k
         self.blocks = nn.ModuleList()
         self.n_block = n_block
         for i in range(self.n_block):
@@ -443,7 +288,8 @@ class Flowavenet(nn.Module):
         logdet, log_p_sum = 0, 0
         out = x
         c = self.upsample(c)
-        for block in self.blocks:
+        c = c[:, :, :T]
+        for k, block in enumerate(self.blocks):
             out, c, logdet_new, logp_new = block(out, c)
             logdet = logdet + logdet_new
             log_p_sum = log_p_sum + logp_new
@@ -452,7 +298,7 @@ class Flowavenet(nn.Module):
         log_p = log_p_sum / (B * T)
         return log_p, logdet
 
-    def reverse(self, z, c):
+    def infer(self, z, c):
         _, _, T = z.size()
         _, _, t_c = c.size()
         if T != t_c:
@@ -483,3 +329,9 @@ class Flowavenet(nn.Module):
             c = f(c)
         c = c.squeeze(1)
         return c
+
+    def test(self, source, mel):
+        log_p, logdet = self.forward(source, mel)
+        self.ℒ.log_p, self.ℒ.logdet = - torch.mean(log_p),  - torch.mean(logdet)
+        ℒ = self.ℒ.log_p + self.ℒ.logdet
+        return ℒ

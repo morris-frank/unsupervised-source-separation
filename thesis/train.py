@@ -106,16 +106,20 @@ def train(
         it_start_time = time.time()
         # Load next random batch
         try:
-            x, y = next(train_iterator)
+            batch = next(train_iterator)
         except StopIteration:
             train_iterator = iter(train_loader)
-            x, y = next(train_iterator)
+            batch = next(train_iterator)
 
         model.train()
         model.zero_grad()
 
-        x, y = x.to(device), y.to(device)
-        ℒ = model.test(x, y)
+        if isinstance(batch, tuple):
+            x, y = batch[0].to(device), batch[1].to(device)
+            ℒ = model.test(x, y)
+        else:
+            x = batch.to(device)
+            ℒ = model.test(x)
 
         if torch.isnan(ℒ):
             print(Fore.RED + 'nan loss. skip optim!' + Fore.RESET)
