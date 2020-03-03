@@ -9,6 +9,8 @@ from thesis.train import train
 from thesis.utils import optional
 from thesis.data.toy import ToyDataSourceK
 
+signals = ['sin', 'square', 'saw', 'triangle']
+
 
 def prior_flo(path: str, k: int):
     from thesis.nn.models.flowavenet import Flowavenet
@@ -22,7 +24,7 @@ def prior_flo(path: str, k: int):
         n_layer=2,
         affine=True,
         block_per_split=3,
-        name=k
+        name=signals[k]
     )
     train_set = ToyDataSourceK(path=path % "train", k=k, mel=True)
     test_set = ToyDataSourceK(path=path % "test", k=k, mel=True)
