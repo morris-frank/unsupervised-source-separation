@@ -27,7 +27,7 @@ class PriorNVP(RealNVP):
 class PriorGlow(WaveGlow):
     def __init__(self, k: int, channels: int, *args, **kwargs):
         super(PriorGlow, self).__init__(channels, *args, **kwargs)
-
+        self.params = clean_init_args(locals().copy())
         self.name = k
         self.k = k
 
@@ -42,5 +42,6 @@ class PriorGlow(WaveGlow):
 class VQVAE(_VQVAE):
     def __init__(self, k: int, *args, **kwargs):
         super(VQVAE, self).__init__(*args, **kwargs)
+        self.params = clean_init_args(locals().copy())
         self.name = k
         self.k = k

@@ -27,6 +27,14 @@ def prior_vae(k: int):
     return model, max_batch_size
 
 
+def prior_flo(k: int):
+    from thesis.nn.models.flowavenet import Flowavenet
+    max_batch_size = 2
+    mel_channels = 80
+    model = Flowavenet(k=k, in_channel=1, cin_channel=mel_channels, n_block=4, n_flow=3, n_layer=2, affine=True, block_per_split=2)
+    return model, max_batch_size
+
+
 def glow():
     from thesis.nn.models.waveglow import WaveGlow
 
@@ -87,10 +95,10 @@ EXPERIMENTS = {
     "nvp": nvp,
     "hydra": hydra,
     "monet": monet,
-    "prior-0": partial(prior_vae, k=0),
-    "prior-1": partial(prior_vae, k=1),
-    "prior-2": partial(prior_vae, k=2),
-    "prior-3": partial(prior_vae, k=3),
+    "prior-0": partial(prior_flo, k=0),
+    "prior-1": partial(prior_flo, k=1),
+    "prior-2": partial(prior_flo, k=2),
+    "prior-3": partial(prior_flo, k=3),
 }
 
 if __name__ == "__main__":

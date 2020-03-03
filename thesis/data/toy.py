@@ -82,6 +82,42 @@ class ToyDataSpectral(ToyData):
         return mix, torch.stack(sources)
 
 
+class ToyDataSpectralSingleSourceOnly(ToyData):
+    def __init__(self, k: int, *args, **kwargs):
+        super(ToyDataSpectralSingleSourceOnly, self).__init__(*args, **kwargs)
+        self.n_fft = 2 ** 7
+        self.k = k
+
+    def f(self, x):
+        import librosa
+        n_fft = 1024
+        hop_length = 256
+        reference = 20.0
+        min_db = -100
+        sr = 16000
+
+        # Compute a mel-scale spectrogram from the trimmed wav:
+        # (N, D)
+        mel_spectrogram = librosa.feature.melspectrogram(x, sr=sr,
+                                                         n_fft=n_fft,
+                                                         hop_length=hop_length,
+                                                         n_mels=80,
+                                                         fmin=125, fmax=7600).T
+
+        # mel_spectrogram = np.round(mel_spectrogram, decimals=2)
+        mel_spectrogram = 20 * np.log10(
+            np.maximum(1e-4, mel_spectrogram)) - reference
+        mel_spectrogram = np.clip((mel_spectrogram - min_db) / (-min_db), 0, 1)
+
+        return mel_spectrogram
+
+    def __getitem__(self, item: int):
+        _, sources = super(ToyDataSpectralSingleSourceOnly, self).__getitem__(item)
+        source = sources[None, self.k, :]
+        mel = self.f(source)
+        return source, mel
+
+
 class ToyDataSingle(ToyData):
     def __init__(self, *args, **kwargs):
         super(ToyDataSingle, self).__init__(*args, **kwargs)

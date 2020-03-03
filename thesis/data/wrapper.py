@@ -4,7 +4,7 @@ from os.path import abspath
 from torch import nn
 
 from . import Dataset
-from .toy import ToyData, ToyDataSpectral, ToyDataSingleSourceOnly
+from .toy import ToyData, ToyDataSpectral, ToyDataSingleSourceOnly, ToyDataSpectralSingleSourceOnly
 
 
 def map_dataset(model: nn.Module, data_dir: abspath, subset: str) -> Dataset:
@@ -24,6 +24,10 @@ def map_dataset(model: nn.Module, data_dir: abspath, subset: str) -> Dataset:
         receptive_field = int(2 * pow(2, n_layers - 1))
         μ = model.out_channels
         dset = ToyDataSingleSourceOnly(k=model.k, filepath=filepath, crop=receptive_field, μ=μ)
+    elif model.__class__.__name__ == "Flowavenet":
+        n_layers = 11
+        receptive_field = int(2 * pow(2, n_layers - 1))
+        dset = ToyDataSpectralSingleSourceOnly(k=model.k, filepath=filepath, crop=receptive_field)
     elif model.__class__.__name__ == "WaveGlow":
         wn_layers = model.params["kwargs"]["wn_layers"]
         receptive_field = int(pow(2, wn_layers - 1))

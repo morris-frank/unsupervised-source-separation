@@ -143,7 +143,7 @@ def train(
             torch.save(
                 {
                     "it": it,
-                    "model_state_dict": model.state_dict(),
+                    "model": model,
                     "optimizer_state_dict": optimizer.state_dict(),
                     "test": ℒ,
                     "params": model.params,

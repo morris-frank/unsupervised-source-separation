@@ -104,13 +104,10 @@ def _tuple_unsequeeze(x):
 def example_reconstruction(
         model: nn.Module, data: Dataset
 ) -> Generator[plt.Figure, None, None]:
-    for i, (x, S) in enumerate(data):
-        m, x = _tuple_unsequeeze(x)
-        # for S_tilde in model.infer(x):
-        #   S_tilde = S_tilde.squeeze()
-        S_tilde = model.infer(x).squeeze()
-        fig = plot_reconstruction(m, S, S_tilde)
-        fig.savefig(f"./figures/{type(model).__name__}_{i}.png")
+    for i, (s, _) in enumerate(data):
+        s_tilde = model.infer(s.unsqueeze(0)).squeeze()
+        s_tilde = s_tilde.argmax(0)
+        fig = plot_reconstruction(s, s_tilde)
         yield fig
 
 

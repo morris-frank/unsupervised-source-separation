@@ -54,6 +54,11 @@ class VQVAE(BaseModel):
 
         return s_tilde
 
+    def infer(self, s):
+        hμ = (self.out_channels - 1) // 2
+        s_ = (s.float() - hμ) / hμ
+        return self(s_)
+
     def test(self, s: torch.Tensor, *args) -> torch.Tensor:
         β = 1.1
         hμ = (self.out_channels - 1) // 2
