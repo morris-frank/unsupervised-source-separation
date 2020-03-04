@@ -1,8 +1,11 @@
-from contextlib import contextmanager
-from itertools import product
-from typing import Dict, Any
-import torch
 from collections import defaultdict
+from contextlib import contextmanager
+from glob import glob
+from itertools import product
+from os.path import getmtime
+from typing import Dict, Any
+
+import torch
 
 
 def clean_init_args(_locals: Dict) -> Dict[str, Any]:
@@ -59,3 +62,7 @@ class _LossLogger(object):
             if isinstance(value, torch.Tensor):
                 value = value.detach().mean().item()
             self.log[key].append(value)
+
+
+def get_newest_file(folder):
+    return sorted(glob(f"{folder}/*pt"), key=lambda x: getmtime(x))[-1]

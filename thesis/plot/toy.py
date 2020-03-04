@@ -1,3 +1,7 @@
+from math import tau as τ
+from scipy.signal import sawtooth, square
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+import numpy as np
 from typing import Generator
 
 import matplotlib.pyplot as plt
@@ -167,3 +171,45 @@ def plot_freq_loss(fname: str):
     # zer = df.destroy.iloc[0]
     sns.scatterplot(x="periodicity", y="loss", hue="shape", data=df)
     plt.show()
+
+
+def add_plot_tick(ax, symbol, pos=0.5, where='x', size=0.05):
+
+    if 'x' in where:
+        anchor, loc = (pos, 1), 8
+    else:
+        anchor, loc = (0, pos), 7
+
+    _ax = inset_axes(ax, width=size, height=size, bbox_transform=ax.transAxes, bbox_to_anchor=anchor, loc=loc)
+    _ax.axison = False
+
+    x = np.linspace(0, τ)
+
+    if 'sin' in symbol:
+        _ax.plot(x, np.sin(x), c='k')
+    elif 'tri' in symbol:
+        _ax.plot(x, sawtooth(x, width=0.5), c='k')
+    elif 'saw' in symbol:
+        _ax.plot(x, sawtooth(x, width=1.), c='k')
+    elif 'sq' in symbol:
+        _ax.plot(x, square(x), c='k')
+    else:
+        raise ValueError("unknown symbol")
+
+
+def plot_signal_heatmap(data, symbols):
+    n = len(symbols)
+    assert data.shape[0] == n == data.shape[1]
+
+    fig, ax = plt.subplots()
+    ax.axison = False
+    ax.imshow(data)
+
+    pos_tick = np.linspace(0, 1, 2*n+1)[1::2]
+    size = 1/n * 2.5
+
+    for i in range(n):
+        add_plot_tick(ax, symbols[i], pos=pos_tick[i], where='x', size=size)
+        add_plot_tick(ax, symbols[i], pos=pos_tick[-i-1], where='y', size=size)
+    return fig
+

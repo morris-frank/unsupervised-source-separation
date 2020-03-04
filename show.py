@@ -1,19 +1,14 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
-from glob import glob
-from os.path import abspath, getmtime
-from colorama import Fore
+from os.path import abspath
 
 import torch
+from colorama import Fore
 from matplotlib import pyplot as plt
 
-from thesis.data.wrapper import map_dataset
-from thesis.io import load_model
 from thesis import plot
-
-
-def get_newest_file(folder):
-    return sorted(glob(f"{folder}/*pt"), key=lambda x: getmtime(x))[-1]
+from thesis.io import load_model
+from thesis.utils import get_newest_file
 
 
 def main(args):
@@ -61,6 +56,21 @@ def main(args):
                 input("?")
                 plt.close()
 
+    elif args.command == "cross-likelihood":
+        import numpy as np
+        data = np.load('./figures/cross_likelihood.npy')
+        log_p = data[..., 0].mean(-1)
+        log_det = data[..., 1].mean(-1)
+
+        fig = plot.toy.plot_signal_heatmap(np.exp(log_p), ['sin', 'sq', 'saw', 'tri'])
+        fig.suptitle('exp of log likelihood')
+        fig.show()
+        input("?")
+        fig = plot.toy.plot_signal_heatmap(log_det, ['sin', 'sq', 'saw', 'tri'])
+        fig.suptitle('log det')
+        fig.show()
+        input("?")
+        plt.close()
     else:
         raise ValueError("Invalid command given")
 
@@ -70,5 +80,5 @@ if __name__ == "__main__":
     parser.add_argument("command", type=str)
     parser.add_argument("--weights", type=abspath)
     parser.add_argument("--device", type=str, default="cpu")
-    parser.add_argument("--data", type=abspath, default="/home/morris/var/data/toy_wave")
+    parser.add_argument("--data", type=abspath, default="/home/morris/var/data/toy")
     main(parser.parse_args())
