@@ -59,18 +59,19 @@ def main(args):
     elif args.command == "cross-likelihood":
         import numpy as np
         data = np.load('./figures/cross_likelihood.npy')
-        log_p = data[..., 0].mean(-1)
-        log_det = data[..., 1].mean(-1)
+        log_p = data[..., 0]
+        #log_det = data[..., 1]
 
-        fig = plot.toy.plot_signal_heatmap(np.exp(log_p), ['sin', 'sq', 'saw', 'tri'])
-        fig.suptitle('exp of log likelihood')
+        fig = plot.toy.plot_signal_heatmap(np.exp(log_p.mean(-1)), ['sin', 'sq', 'saw', 'tri'])
+        fig.suptitle(r'exp of mean of log p(s)')
         fig.show()
         input("?")
-        fig = plot.toy.plot_signal_heatmap(log_det, ['sin', 'sq', 'saw', 'tri'])
-        fig.suptitle('log det')
+        fig = plot.toy.plot_signal_heatmap(np.exp(log_p).var(-1), ['sin', 'sq', 'saw', 'tri'])
+        fig.suptitle('var of exp of log p(s)')
         fig.show()
         input("?")
         plt.close()
+
     else:
         raise ValueError("Invalid command given")
 
