@@ -3,6 +3,7 @@ from contextlib import contextmanager
 from glob import glob
 from itertools import product
 from os.path import getmtime
+import os
 from typing import Dict, Any
 
 import torch
@@ -64,5 +65,10 @@ class _LossLogger(object):
             self.log[key].append(value)
 
 
-def get_newest_file(folder):
+def get_newest_file(folder: str):
     return sorted(glob(f"{folder}/*pt"), key=lambda x: getmtime(x))[-1]
+
+
+def remove_glob(path: str):
+    for fp in glob(path):
+        os.remove(fp)

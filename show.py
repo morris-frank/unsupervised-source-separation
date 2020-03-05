@@ -2,6 +2,7 @@
 from argparse import ArgumentParser
 from os.path import abspath
 
+import numpy as np
 import torch
 from colorama import Fore
 from matplotlib import pyplot as plt
@@ -11,10 +12,31 @@ from thesis.io import load_model
 from thesis.utils import get_newest_file
 
 
+def show_cross_likelihood():
+    data = np.load("./figures/cross_likelihood.npy")
+    log_p = data[..., 0]
+
+    fig = plot.toy.plot_signal_heatmap(
+        (log_p.mean(-1)), ["sin", "sq", "saw", "tri"]
+    )
+    fig.suptitle(r"mean of likelihood log p(s)")
+    fig.show()
+    input("?")
+    fig = plot.toy.plot_signal_heatmap(
+        log_p.var(-1), ["sin", "sq", "saw", "tri"]
+    )
+    fig.suptitle("var of likelihood log p(s)")
+    fig.show()
+    input("?")
+    plt.close()
+
+
 def main(args):
     if args.weights is None:
         args.weights = get_newest_file("./checkpoints")
-        print(f'{Fore.YELLOW}Weights not given. Using instead: {Fore.GREEN}{args.weights}{Fore.RESET}')
+        print(
+            f"{Fore.YELLOW}Weights not given. Using instead: {Fore.GREEN}{args.weights}{Fore.RESET}"
+        )
 
     if args.command == "sample":
         from thesis.plot.toy import example_reconstruction
@@ -46,9 +68,9 @@ def main(args):
         model.eval()
         with torch.no_grad():
             while True:
-                z = torch.rand(1, 1, 2**11)
-                #z = torch.zeros(1, 1, 2**11)
-                #z.fill_(torch.rand(1).item())
+                z = torch.rand(1, 1, 2 ** 11)
+                # z = torch.zeros(1, 1, 2**11)
+                # z.fill_(torch.rand(1).item())
                 m = model.infer(z)
                 m.clamp_(-1, 1)
                 fig = plot.toy.plot_one_singal(m)
@@ -57,20 +79,7 @@ def main(args):
                 plt.close()
 
     elif args.command == "cross-likelihood":
-        import numpy as np
-        data = np.load('./figures/cross_likelihood.npy')
-        log_p = data[..., 0]
-        #log_det = data[..., 1]
-
-        fig = plot.toy.plot_signal_heatmap(np.exp(log_p.mean(-1)), ['sin', 'sq', 'saw', 'tri'])
-        fig.suptitle(r'exp of mean of log p(s)')
-        fig.show()
-        input("?")
-        fig = plot.toy.plot_signal_heatmap(np.exp(log_p).var(-1), ['sin', 'sq', 'saw', 'tri'])
-        fig.suptitle('var of exp of log p(s)')
-        fig.show()
-        input("?")
-        plt.close()
+        show_cross_likelihood()
 
     else:
         raise ValueError("Invalid command given")

@@ -5,45 +5,48 @@ import torch
 from colorama import Fore
 from argparse import ArgumentParser
 from os import makedirs
-from os.path import abspath
+from os.path import abspath, exists
 from thesis.utils import get_newest_file
 
 from thesis.data.toy import ToyDataSourceK
 
 
 def make_cross_likelihood_plot(data):
+    fp = "./figures/cross_likelihood.npy"
     K = 4
 
     weights = [
-        'Mar03-2158_Flowavenet_sin_049999.pt',
-        'Mar03-2158_Flowavenet_square_006486.pt',
-        'Mar03-2158_Flowavenet_saw_049999.pt',
-        'Mar03-2158_Flowavenet_triangle_049999.pt',
+        "Mar03-2158_Flowavenet_sin_049999.pt",
+        "Mar04-2242_Flowavenet_square_040177.pt",
+        "Mar03-2158_Flowavenet_saw_049999.pt",
+        "Mar03-2158_Flowavenet_triangle_049999.pt",
     ]
 
     results = None
     for n in trange(len(weights)):
-        model = torch.load(f'./checkpoints/{weights[n]}')['model'].to('cuda')
+        model = torch.load(f"./checkpoints/{weights[n]}")["model"].to("cuda")
         model.eval()
         for k in trange(K, leave=False):
             test_set = ToyDataSourceK(path=f"{data}/test/", k=k, mel=True)
             if results is None:
                 results = np.zeros((K, K, len(test_set), 2))
             for i, (sig, mel) in enumerate(tqdm(test_set, leave=False)):
-                sig = sig.unsqueeze(0).to('cuda')
-                mel = mel.unsqueeze(0).to('cuda')
+                sig = sig.unsqueeze(0).to("cuda")
+                mel = mel.unsqueeze(0).to("cuda")
                 results[n, k, i, :] = model.forward(sig, mel)
-            np.save('./figures/cross_likelihood', results)
+            np.save(fp, results)
 
 
 def main(args):
     if args.weights is None:
         args.weights = get_newest_file("./checkpoints")
-        print(f'{Fore.YELLOW}Weights not given. Using instead: {Fore.GREEN}{args.weights}{Fore.RESET}')
+        print(
+            f"{Fore.YELLOW}Weights not given. Using instead: {Fore.GREEN}{args.weights}{Fore.RESET}"
+        )
 
     makedirs("./figures", exist_ok=True)
 
-    if args.command == 'cross-likelihood':
+    if args.command == "cross-likelihood":
         make_cross_likelihood_plot(args.data)
     else:
         raise ValueError("Invalid Command given")

@@ -1,21 +1,19 @@
-from typing import Optional
 import os
 import time
+from collections import defaultdict
 from datetime import datetime
 from statistics import mean
-from typing import Dict
-from typing import List
+from typing import Dict, List, Optional
 
 import torch
 import wandb as _wandb
-from torch import optim
-from torch.utils import data
-from torch.nn.utils import clip_grad_norm_
 from colorama import Fore
+from torch import optim
+from torch.nn.utils import clip_grad_norm_
+from torch.utils import data
 
+from .utils import remove_glob
 from .nn.models import BaseModel
-from collections import defaultdict
-
 
 LAST_LOG = defaultdict(float)
 
@@ -67,6 +65,8 @@ def train(
     test_loader: data.DataLoader,
     iterations: int,
     wandb: bool = False,
+    keep_checkpoints: bool = False,
+    keep_optim: bool = False,
 ):
     """
     Args:
@@ -76,6 +76,8 @@ def train(
         test_loader: dataset loader for the test data
         iterations: number of iterations to train for
         wandb: Whether to log wandb
+        keep_checkpoints: whether to keep all checkpoints not just the last one
+        keep_optim: whether to also save the optimizer
     """
     model_id = f"{datetime.today():%b%d-%H%M}_{type(model).__name__}_{model.name}"
 
@@ -122,7 +124,7 @@ def train(
             ℒ = model.test(x)
 
         if torch.isnan(ℒ):
-            print(Fore.RED + 'nan loss. skip optim!' + Fore.RESET)
+            print(Fore.RED + "nan loss. skip optim!" + Fore.RESET)
         else:
             ℒ.backward()
             clip_grad_norm_(model.parameters(), 10)
@@ -144,15 +146,17 @@ def train(
 
         # TEST AND SAVE THE MODEL (every 30min)
         if (time.time() - it_timer) > 1800 or it == iterations - 1:
-            torch.save(
-                {
-                    "it": it,
-                    "model": model,
-                    "optimizer_state_dict": optimizer.state_dict(),
-                    "test": ℒ,
-                    "params": model.params,
-                },
-                f"checkpoints/{model_id}_{it:06}.pt",
-            )
+            if not keep_checkpoints:
+                remove_glob((f"checkpoints/{model_id}_*.pt"))
+            save_point = {
+                "it": it,
+                "model_state_dict": model.state_dict(),
+                "params": model.params,
+            }
+            if keep_optim:
+                save_point.update(
+                    {"optimizer_state_dict": optimizer.state_dict(), "test": ℒ}
+                )
+            torch.save(save_point, f"checkpoints/{model_id}_{it:06}.pt")
             test(model, test_loader, device)
             it_timer = time.time()

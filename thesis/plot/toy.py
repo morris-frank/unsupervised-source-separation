@@ -1,20 +1,20 @@
 from math import tau as τ
-from scipy.signal import sawtooth, square
-from mpl_toolkits.axes_grid1.inset_locator import inset_axes
-import numpy as np
 from typing import Generator
 
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 import seaborn as sns
 import torch
+from matplotlib import colors
+from mpl_toolkits.axes_grid1.inset_locator import inset_axes
+from scipy.signal import sawtooth, square
 from torch import nn
 from torch.nn import functional as F
 from tqdm import trange
 
 from ..data import Dataset
 from ..data.toy import ToyData
-
 
 PRINT_LENGTH = 2000
 
@@ -176,9 +176,9 @@ def plot_freq_loss(fname: str):
 def add_plot_tick(ax, symbol, pos=0.5, where='x', size=0.05):
 
     if 'x' in where:
-        anchor, loc = (pos, 1), 8
+        anchor, loc = (pos, 1.01), 8
     else:
-        anchor, loc = (0, pos), 7
+        anchor, loc = (-0.025, pos), 7
 
     _ax = inset_axes(ax, width=size, height=size, bbox_transform=ax.transAxes, bbox_to_anchor=anchor, loc=loc)
     _ax.axison = False
@@ -203,7 +203,7 @@ def plot_signal_heatmap(data, symbols):
 
     fig, ax = plt.subplots()
     ax.axison = False
-    ax.imshow(data)
+    ax.imshow(data, norm=colors.SymLogNorm(linthresh=0.03))
 
     pos_tick = np.linspace(0, 1, 2*n+1)[1::2]
     size = 1/n * 2.5
