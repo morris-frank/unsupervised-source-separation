@@ -76,7 +76,7 @@ class Wavenet(nn.Module):
         gate_channels: int = 256,
         skip_channels: int = 256,
         kernel_size: int = 3,
-        cin_channels: int = 80,
+        cin_channels: Opt[int] = 80,
         causal: bool = False,
         zero_final: bool = False,
     ):

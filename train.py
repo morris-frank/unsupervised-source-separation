@@ -8,11 +8,12 @@ from torch import autograd
 from thesis.train import train
 from thesis.utils import optional
 from thesis.data.toy import ToyDataSourceK
+from thesis.io import load_model
 
 signals = ['sin', 'square', 'saw', 'triangle']
 
 
-def prior_flo(path: str, k: int):
+def train_prior(path: str, k: int):
     from thesis.nn.models.flowavenet import Flowavenet
 
     mel_channels = 80
@@ -30,6 +31,27 @@ def prior_flo(path: str, k: int):
     test_set = ToyDataSourceK(path=path % "test", k=k, mel=True)
     return model, train_set, test_set
 
+
+def train_umix(path: str):
+    from thesis.nn.models.umix import UMixer
+
+    weights = [
+        "Mar03-2158_Flowavenet_sin_049999.pt",
+        "Mar04-2242_Flowavenet_square_040177.pt",
+        "Mar03-2158_Flowavenet_saw_049999.pt",
+        "Mar03-2158_Flowavenet_triangle_049999.pt",
+    ]
+
+    priors = []
+    for weight in weights:
+        priors.append(load_model(f'./checkpoints/{weight}', 'cpu'))
+
+    model = UMixer()
+    model.p_s = priors
+
+    train_set = ToyDataSourceK(path=path % "train", k=0, mel=True)
+    test_set = ToyDataSourceK(path=path % "test", k=0, mel=True)
+    return model, train_set, test_set
 
 def main(args):
     if args.experiment not in EXPERIMENTS:
@@ -54,10 +76,10 @@ def main(args):
 
 
 EXPERIMENTS = {
-    "prior-0": partial(prior_flo, k=0),
-    "prior-1": partial(prior_flo, k=1),
-    "prior-2": partial(prior_flo, k=2),
-    "prior-3": partial(prior_flo, k=3),
+    "prior-0": partial(train_prior, k=0),
+    "prior-1": partial(train_prior, k=1),
+    "prior-2": partial(train_prior, k=2),
+    "prior-3": partial(train_prior, k=3),
 }
 
 if __name__ == "__main__":
