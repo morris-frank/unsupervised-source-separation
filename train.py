@@ -10,7 +10,7 @@ from thesis.utils import optional
 from thesis.data.toy import ToyDataSourceK
 from thesis.io import load_model
 
-signals = ['sin', 'square', 'saw', 'triangle']
+signals = ["sin", "square", "saw", "triangle"]
 
 
 def train_prior(path: str, k: int):
@@ -25,7 +25,7 @@ def train_prior(path: str, k: int):
         n_layer=2,
         affine=True,
         block_per_split=3,
-        name=signals[k]
+        name=signals[k],
     )
     train_set = ToyDataSourceK(path=path % "train", k=k, mel=True)
     test_set = ToyDataSourceK(path=path % "test", k=k, mel=True)
@@ -44,7 +44,7 @@ def train_umix(path: str):
 
     priors = []
     for weight in weights:
-        priors.append(load_model(f'./checkpoints/{weight}', 'cpu'))
+        priors.append(load_model(f"./checkpoints/{weight}", "cpu"))
 
     model = UMixer()
     model.p_s = priors
@@ -52,6 +52,7 @@ def train_umix(path: str):
     train_set = ToyDataSourceK(path=path % "train", k=0, mel=True)
     test_set = ToyDataSourceK(path=path % "test", k=0, mel=True)
     return model, train_set, test_set
+
 
 def main(args):
     if args.experiment not in EXPERIMENTS:
@@ -80,6 +81,7 @@ EXPERIMENTS = {
     "prior-1": partial(train_prior, k=1),
     "prior-2": partial(train_prior, k=2),
     "prior-3": partial(train_prior, k=3),
+    "umix": train_umix,
 }
 
 if __name__ == "__main__":
