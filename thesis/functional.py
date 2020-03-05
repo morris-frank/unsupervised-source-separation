@@ -1,3 +1,4 @@
+from math import pi as π
 import math
 import random
 from typing import Tuple
@@ -190,7 +191,7 @@ def norm_cdf(x: torch.Tensor):
 
 
 def rsample_truncated_normal(
-    μ: torch.Tensor, σ: torch.Tensor, a: float = -1.0, b: float = 1.0
+    μ: torch.Tensor, σ: torch.Tensor, ll: bool = False, a: float = -1.0, b: float = 1.0
 ):
     """
     Takes an rsample from a truncated normal distribution given the mean μ and
@@ -199,6 +200,7 @@ def rsample_truncated_normal(
     Args:
         μ: Means
         σ: Variances
+        ll: if true also returns the log likelihood of the samples!
         a: Left/lower bound/truncation
         b: Right/upper bound/truncation
 
@@ -218,4 +220,28 @@ def rsample_truncated_normal(
     tensor.add_(μ)
 
     tensor.clamp_(a, b)
-    return tensor
+
+    if ll:
+        denom = torch.log(u - l)
+        ξ = (tensor - μ) / σ
+        num = -0.5 * ξ * ξ - 0.5 * math.log(2 * π)
+        log_l = -torch.log(σ) + num - denom
+        return tensor, log_l
+    else:
+        return tensor
+
+
+def likelihood_truncated_normal(
+    x: torch.Tensor, μ: torch.Tensor, σ: torch.Tensor, a: float = -1.0, b: float = 1.0
+):
+    assert μ.shape == σ.shape
+
+    l = norm_cdf((-μ + a) / σ)
+    u = norm_cdf((-μ + b) / σ)
+
+    ξ = (x - μ) / σ
+    φ_ξ = 1 / math.sqrt(2 * π) * torch.exp(-0.5 * ξ * ξ)
+
+    f_x = φ_ξ / (u - l) / σ
+
+    return f_x
