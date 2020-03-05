@@ -3,6 +3,7 @@ import random
 from typing import Tuple
 
 import torch
+from torch import distributions as dist
 from torch import nn
 from torch.nn import functional as F
 from torch.nn.utils import remove_weight_norm
@@ -22,7 +23,7 @@ def remove_list_weight_norm(ml: nn.ModuleList) -> nn.ModuleList:
     return _ml
 
 
-#@torch.jit.script
+# @torch.jit.script
 def dilate(x: torch.Tensor, new: int, old: int = 1) -> torch.Tensor:
     """
     Will dilate the input tensor of shape [N, C, L]
@@ -30,10 +31,10 @@ def dilate(x: torch.Tensor, new: int, old: int = 1) -> torch.Tensor:
     Args:
         x: input tensor
         new: new amount of dilation to get
-        old: current amount if dilation of x
+        old: current amount if dilation of tensor
 
     Returns:
-        dilated x
+        dilated tensor
     """
     n, c, w = x.shape  # N == Batch size × old
     dilation = new / old
@@ -97,7 +98,7 @@ def decode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
     """
     assert μ & 1
     x = x.type(torch.float32)
-    # out = (x + 0.5) * 2. / (μ + 1)
+    # out = (tensor + 0.5) * 2. / (μ + 1)
     μ = μ - 1
     out = x / (μ // 2)
     out = torch.sign(out) / μ * (torch.pow(μ, torch.abs(out)) - 1)
@@ -114,7 +115,7 @@ def destroy_along_channels(x: torch.Tensor, amount: float) -> torch.Tensor:
         amount: percentage amount to destroy
 
     Returns:
-        Destroyed x
+        Destroyed tensor
     """
     if amount == 0:
         return x
@@ -173,3 +174,48 @@ def interleave(left: torch.Tensor, right: torch.Tensor) -> torch.Tensor:
     assert left.shape == right.shape
     bs, c, l = left.shape
     return torch.stack((left, right), dim=3).view(bs, c, 2 * l)
+
+
+def norm_cdf(x: torch.Tensor):
+    """
+    Element-wise cumulative value for tensor x under a normal distribution.
+
+    Args:
+        x: the tensor
+
+    Returns:
+        the norm cdfs
+    """
+    return (1.0 + torch.erf(x / math.sqrt(2.0))) / 2.0
+
+
+def rsample_truncated_normal(
+    μ: torch.Tensor, σ: torch.Tensor, a: float = -1.0, b: float = 1.0
+):
+    """
+    Takes an rsample from a truncated normal distribution given the mean μ and
+    the variance σ. Sample is same sized as μ and σ.
+
+    Args:
+        μ: Means
+        σ: Variances
+        a: Left/lower bound/truncation
+        b: Right/upper bound/truncation
+
+    Returns:
+        A sample from the truncated normal sized as μ/σ.
+    """
+    assert μ.shape == σ.shape
+
+    l = norm_cdf((-μ + a) / σ)
+    u = norm_cdf((-μ + b) / σ)
+
+    udist = dist.uniform.Uniform(2 * l - 1, 2 * u - 1)
+    tensor = udist.rsample(sample_shape=μ.shape)
+
+    tensor.erfinv_()
+    tensor.mul_(σ * math.sqrt(2.0))
+    tensor.add_(μ)
+
+    tensor.clamp_(a, b)
+    return tensor

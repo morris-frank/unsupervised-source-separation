@@ -173,9 +173,9 @@ def plot_freq_loss(fname: str):
     plt.show()
 
 
-def add_plot_tick(ax, symbol, pos=0.5, where='x', size=0.05):
+def add_plot_tick(ax, symbol, pos=0.5, where='tensor', size=0.05):
 
-    if 'x' in where:
+    if 'tensor' in where:
         anchor, loc = (pos, 1.01), 8
     else:
         anchor, loc = (-0.025, pos), 7
@@ -209,7 +209,7 @@ def plot_signal_heatmap(data, symbols):
     size = 1/n * 2.5
 
     for i in range(n):
-        add_plot_tick(ax, symbols[i], pos=pos_tick[i], where='x', size=size)
+        add_plot_tick(ax, symbols[i], pos=pos_tick[i], where='tensor', size=size)
         add_plot_tick(ax, symbols[i], pos=pos_tick[-i-1], where='y', size=size)
     return fig
 
