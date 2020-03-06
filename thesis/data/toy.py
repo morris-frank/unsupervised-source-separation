@@ -75,7 +75,7 @@ class ToyDataMixes(ToyData):
         super(ToyDataMixes, self).__init__(*args, **kwargs)
         self.mel = mel
 
-    def __getinitargs__(self, idx: int):
+    def __getitem__(self, idx: int):
         datum = self.get(idx)
         mix = datum["mix"].contiguous()
         mel = datum["mel_mix"].contiguous()
