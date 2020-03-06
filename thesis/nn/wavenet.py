@@ -1,5 +1,6 @@
 import math
 from typing import Optional as Opt
+from functools import partial
 
 import torch
 from torch import nn
@@ -103,7 +104,7 @@ class Wavenet(nn.Module):
                 )
 
         last_channels = skip_channels if self.skip else residual_channels
-        last_layer = ZeroConv1d if zero_final else nn.Conv1d
+        last_layer = ZeroConv1d if zero_final else partial(nn.Conv1d, kernel_size=1)
         self.final = nn.Sequential(
             nn.ReLU(),
             Conv1d(last_channels, last_channels, 1, causal=causal),

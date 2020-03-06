@@ -210,7 +210,8 @@ class Block(nn.Module):
             out, z = out.chunk(2, 1)
             # WaveNet prior
             mean, log_sd = self.prior(out, c).chunk(2, 1)
-            log_p = gaussian_log_p(z, mean, log_sd).sum()
+            # Sum over everything except Batch dim:
+            log_p = gaussian_log_p(z, mean, log_sd).sum((1, 2))
         return out, c, logdet, log_p
 
     def reverse(self, output, c, eps=None):
@@ -293,11 +294,12 @@ class Flowavenet(BaseModel):
         for k, block in enumerate(self.blocks):
             out, c, logdet_new, logp_new = block(out, c)
             logdet = logdet + logdet_new
-            log_p_sum = log_p_sum + logp_new
-        log_p_sum += 0.5 * (-log(2.0 * pi) - out.pow(2)).sum()
+            log_p_sum = logp_new + log_p_sum
+        log_p_sum += 0.5 * (-log(2.0 * pi) - out.pow(2)).sum((1, 2))
+        log_p_sum = log_p_sum / T
+        # log_p_sum is sized (B) batch size!
         logdet = logdet / (B * T)
-        log_p = log_p_sum / (B * T)
-        return log_p, logdet
+        return log_p_sum, logdet
 
     def infer(self, z, c):
         _, _, T = z.size()
@@ -332,6 +334,7 @@ class Flowavenet(BaseModel):
         return c
 
     def test(self, source, mel):
+        B, _, T = source.size()
         log_p, logdet = self.forward(source, mel)
         self.ℒ.log_p, self.ℒ.logdet = - torch.mean(log_p),  - torch.mean(logdet)
         ℒ = self.ℒ.log_p + self.ℒ.logdet

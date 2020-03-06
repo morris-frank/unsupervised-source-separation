@@ -1,14 +1,15 @@
 #!/usr/bin/env python
-from tqdm import tqdm, trange
+from argparse import ArgumentParser
+from os import makedirs
+from os.path import abspath
+
 import numpy as np
 import torch
 from colorama import Fore
-from argparse import ArgumentParser
-from os import makedirs
-from os.path import abspath, exists
-from thesis.utils import get_newest_file
+from tqdm import tqdm, trange
 
 from thesis.data.toy import ToyDataSourceK
+from thesis.utils import get_newest_file
 
 
 def make_cross_likelihood_plot(data):
@@ -17,7 +18,7 @@ def make_cross_likelihood_plot(data):
 
     weights = [
         "Mar03-2158_Flowavenet_sin_049999.pt",
-        "Mar04-2242_Flowavenet_square_040177.pt",
+        "Mar04-2242_Flowavenet_square_049999.pt",
         "Mar03-2158_Flowavenet_saw_049999.pt",
         "Mar03-2158_Flowavenet_triangle_049999.pt",
     ]

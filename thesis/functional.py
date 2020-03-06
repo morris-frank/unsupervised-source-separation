@@ -213,7 +213,7 @@ def rsample_truncated_normal(
     u = norm_cdf((-μ + b) / σ)
 
     udist = dist.uniform.Uniform(2 * l - 1, 2 * u - 1)
-    tensor = udist.rsample(sample_shape=μ.shape)
+    tensor = udist.rsample()
 
     tensor.erfinv_()
     tensor.mul_(σ * math.sqrt(2.0))

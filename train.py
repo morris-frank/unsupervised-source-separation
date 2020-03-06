@@ -37,14 +37,14 @@ def train_umix(path: str):
 
     weights = [
         "Mar03-2158_Flowavenet_sin_049999.pt",
-        "Mar04-2242_Flowavenet_square_040177.pt",
+        "Mar04-2242_Flowavenet_square_049999.pt",
         "Mar03-2158_Flowavenet_saw_049999.pt",
         "Mar03-2158_Flowavenet_triangle_049999.pt",
     ]
 
     priors = []
     for weight in weights:
-        priors.append(load_model(f"./checkpoints/{weight}", "cpu"))
+        priors.append(load_model(f"./checkpoints/{weight}", "cuda").to("cuda"))
 
     model = UMixer()
     model.p_s = priors
