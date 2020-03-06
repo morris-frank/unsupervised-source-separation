@@ -1,14 +1,14 @@
 #!/usr/bin/env python
+import os
 from argparse import ArgumentParser
 from functools import partial
-import os
 
 from torch import autograd
 
+from thesis.data.toy import ToyDataSourceK, ToyDataMixes
+from thesis.io import load_model
 from thesis.train import train
 from thesis.utils import optional
-from thesis.data.toy import ToyDataSourceK
-from thesis.io import load_model
 
 signals = ["sin", "square", "saw", "triangle"]
 
@@ -49,8 +49,8 @@ def train_umix(path: str):
     model = UMixer()
     model.p_s = priors
 
-    train_set = ToyDataSourceK(path=path % "train", k=0, mel=True)
-    test_set = ToyDataSourceK(path=path % "test", k=0, mel=True)
+    train_set = ToyDataMixes(path=path % "train", mel=True)
+    test_set = ToyDataMixes(path=path % "test", mel=True)
     return model, train_set, test_set
 
 

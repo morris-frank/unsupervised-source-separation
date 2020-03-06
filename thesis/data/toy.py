@@ -1,12 +1,12 @@
 import random
-from typing import Tuple, Optional
+from glob import glob
+from typing import Optional
 
 import numpy as np
 import torch
 
 from ..data import Dataset
 from ..functional import encode_μ_law
-from glob import glob
 
 
 def μ_enc(
@@ -68,3 +68,18 @@ class ToyDataSourceK(ToyData):
             return source, mel
         else:
             return source
+
+
+class ToyDataMixes(ToyData):
+    def __init__(self, mel: bool = False, *args, **kwargs):
+        super(ToyDataMixes, self).__init__(*args, **kwargs)
+        self.mel = mel
+
+    def __getinitargs__(self, idx: int):
+        datum = self.get(idx)
+        mix = datum["mix"].contiguous()
+        mel = datum["mel_mix"].contiguous()
+        if self.mel:
+            return mix, mel
+        else:
+            return mix
