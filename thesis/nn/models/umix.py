@@ -55,8 +55,8 @@ class q_sǀm(nn.Module):
         f_m = self.f(m, m_mel) if self.with_head else m
         for k in range(len(self.f_k)):
             f_k = self.f_k[k](f_m, m_mel)
-            α.append(self.f_k_μ[k](f_k) + 1e-7)
-            β.append(self.f_k_σ[k](f_k) + 1e-7)
+            α.append(self.f_k_α[k](f_k) + 1e-7)
+            β.append(self.f_k_β[k](f_k) + 1e-7)
         return torch.cat(α, dim=1), torch.cat(β, dim=1)
 
 
