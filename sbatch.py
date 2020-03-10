@@ -42,7 +42,7 @@ def main(args):
     if args.short:
         f += " --batch_size=2 -debug"
     else:
-        f += " -wandb"
+        f += f" --batch_size={args.batch_size} -wandb"
 
     fn = "_temp.job"
     with open(fn, "w") as fp:
@@ -60,4 +60,5 @@ if __name__ == "__main__":
     parser.add_argument("experiment", type=str)
     parser.add_argument("--short", action="store_true")
     parser.add_argument("-t", type=int, default=5, dest="hours")
+    parser.add_argument("--batch_size", type=int)
     main(parser.parse_args())
