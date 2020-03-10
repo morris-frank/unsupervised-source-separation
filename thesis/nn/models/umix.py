@@ -1,13 +1,13 @@
 from typing import Tuple
 
-from torchaudio.transforms import MelSpectrogram
-from torch import nn
 import torch
+from torch import distributions as dist
+from torch import nn
 from torch.nn import functional as F
+from torchaudio.transforms import MelSpectrogram
 
 from . import BaseModel
 from ..wavenet import Wavenet
-from ...functional import rsample_truncated_normal
 from ...utils import clean_init_args
 
 
@@ -31,8 +31,8 @@ class q_sǀm(nn.Module):
             )
 
         self.f_k = nn.ModuleList()
-        self.f_k_μ = nn.ModuleList()
-        self.f_k_σ = nn.ModuleList()
+        self.f_k_α = nn.ModuleList()
+        self.f_k_β = nn.ModuleList()
         for k in range(n_classes):
             self.f_k.append(
                 Wavenet(
@@ -46,18 +46,18 @@ class q_sǀm(nn.Module):
                     cin_channels=mel_channels,
                 )
             )
-            self.f_k_μ.append(nn.Conv1d(arm_dim, 1, 1))
-            self.f_k_σ.append(nn.Sequential(nn.Conv1d(arm_dim, 1, 1), nn.Softplus()))
+            self.f_k_α.append(nn.Sequential(nn.Conv1d(arm_dim, 1, 1), nn.Softplus()))
+            self.f_k_β.append(nn.Sequential(nn.Conv1d(arm_dim, 1, 1), nn.Softplus()))
 
     def forward(self, m: torch.Tensor, m_mel: torch.Tensor):
-        μ, σ = [], []
+        α, β = [], []
 
         f_m = self.f(m, m_mel) if self.with_head else m
         for k in range(len(self.f_k)):
             f_k = self.f_k[k](f_m, m_mel)
-            μ.append(self.f_k_μ[k](f_k))
-            σ.append(self.f_k_σ[k](f_k) + 1e-7)
-        return torch.cat(μ, dim=1), torch.cat(σ, dim=1)
+            α.append(self.f_k_μ[k](f_k) + 1e-7)
+            β.append(self.f_k_σ[k](f_k) + 1e-7)
+        return torch.cat(α, dim=1), torch.cat(β, dim=1)
 
 
 class UMixer(BaseModel):
@@ -111,9 +111,11 @@ class UMixer(BaseModel):
         m_mel = self.upsample(m_mel)
         m_mel = m_mel[:, :, : m.shape[-1]]
 
-        μ, σ = self.q_sǀm(m, m_mel)
+        α, β = self.q_sǀm(m, m_mel)
 
-        ŝ, log_q_ŝ = rsample_truncated_normal(μ, σ, ll=True)
+        q_s = dist.Beta(α, β)
+        ŝ = q_s.rsample()
+        log_q_ŝ = q_s.log_prob(ŝ)
 
         for k in range(self.n_classes):
             # Get Log likelihood under prior
