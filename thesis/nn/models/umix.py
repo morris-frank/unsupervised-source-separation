@@ -15,18 +15,18 @@ class q_sǀm(nn.Module):
     def __init__(self, n_classes, mel_channels):
         super(q_sǀm, self).__init__()
         head_dim = 128
-        arm_dim = 32
+        arm_dim = 64
 
-        self.f = Wavenet(
-            in_channels=1,
-            out_channels=head_dim,
-            n_blocks=1,
-            n_layers=11,
-            residual_channels=head_dim,
-            gate_channels=head_dim,
-            skip_channels=head_dim,
-            cin_channels=mel_channels,
-        )
+        # self.f = Wavenet(
+        #     in_channels=1,
+        #     out_channels=head_dim,
+        #     n_blocks=1,
+        #     n_layers=11,
+        #     residual_channels=head_dim,
+        #     gate_channels=head_dim,
+        #     skip_channels=head_dim,
+        #     cin_channels=mel_channels,
+        # )
 
         self.f_k = nn.ModuleList()
         self.f_k_μ = nn.ModuleList()
@@ -34,9 +34,9 @@ class q_sǀm(nn.Module):
         for k in range(n_classes):
             self.f_k.append(
                 Wavenet(
-                    in_channels=head_dim,
+                    in_channels=1,
                     out_channels=arm_dim,
-                    n_blocks=2,
+                    n_blocks=3,
                     n_layers=11,
                     residual_channels=arm_dim,
                     gate_channels=arm_dim,
@@ -50,9 +50,9 @@ class q_sǀm(nn.Module):
     def forward(self, m: torch.Tensor, m_mel: torch.Tensor):
         μ, σ = [], []
 
-        f_m = self.f(m, m_mel)
+        # f_m = self.f(m, m_mel)
         for k in range(len(self.f_k)):
-            f_k = self.f_k[k](f_m, m_mel)
+            f_k = self.f_k[k](m, m_mel)
             μ.append(self.f_k_μ[k](f_k))
             σ.append(self.f_k_σ[k](f_k) + 1e-7)
         return torch.cat(μ, dim=1), torch.cat(σ, dim=1)
