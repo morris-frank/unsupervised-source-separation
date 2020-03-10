@@ -102,6 +102,6 @@ if __name__ == "__main__":
     )
     parser.add_argument("-wandb", action="store_true", help="Logs to WandB.")
     parser.add_argument("--iterations", default=50000, type=int)
-    parser.add_argument("--batch_size", type=int, default=None)
+    parser.add_argument("--batch_size", type=int, default=8)
     parser.add_argument("-debug", action="store_true")
     main(parser.parse_args())
