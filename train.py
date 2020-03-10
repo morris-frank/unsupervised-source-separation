@@ -49,8 +49,8 @@ def train_umix(path: str):
     model = UMixer()
     model.p_s = priors
 
-    train_set = ToyDataMixes(path=path % "train", mel=True)
-    test_set = ToyDataMixes(path=path % "test", mel=True)
+    train_set = ToyDataMixes(path=path % "train", mel=True, sources=True)
+    test_set = ToyDataMixes(path=path % "test", mel=True, sources=True)
     return model, train_set, test_set
 
 

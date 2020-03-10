@@ -133,14 +133,19 @@ class UMixer(BaseModel):
 
         return ŝ, m_
 
-    def test(self, m: torch.Tensor, m_mel: torch.Tensor) -> torch.Tensor:
+    def test(
+        self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor
+    ) -> torch.Tensor:
+        m, m_mel = x
         β = 1.1
-        _ = self.forward(m, m_mel)
+        ŝ, _ = self.forward(m, m_mel)
+
+        # self.ℒ.supervised_l1_recon = F.l1_loss(ŝ, s)
 
         ℒ = self.ℒ.l1_recon
 
-        for k in range(self.n_classes):
-            ℒ += β * getattr(self.ℒ, f"KL_{k}")
+        # for k in range(self.n_classes):
+        #     ℒ += β * getattr(self.ℒ, f"KL_{k}")
 
         return ℒ
 

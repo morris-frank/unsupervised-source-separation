@@ -71,15 +71,24 @@ class ToyDataSourceK(ToyData):
 
 
 class ToyDataMixes(ToyData):
-    def __init__(self, mel: bool = False, *args, **kwargs):
+    def __init__(self, mel: bool = False, sources: bool = False, *args, **kwargs):
         super(ToyDataMixes, self).__init__(*args, **kwargs)
         self.mel = mel
+        self.sources = sources
 
     def __getitem__(self, idx: int):
         datum = self.get(idx)
         mix = datum["mix"].contiguous()
         mel = datum["mel_mix"].contiguous()
-        if self.mel:
-            return mix, mel
+        sources = datum["sources"].contiguous()
+
+        if self.sources:
+            if self.mel:
+                return (mix, mel), sources
+            else:
+                return mix, sources
         else:
-            return mix
+            if self.mel:
+                return mix, mel
+            else:
+                return mix
