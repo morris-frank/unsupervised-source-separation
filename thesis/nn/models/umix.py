@@ -142,10 +142,10 @@ class UMixer(BaseModel):
 
         self.ℒ.supervised_l1_recon = F.l1_loss(ŝ, s)
 
-        ℒ = self.ℒ.l1_recon# + self.ℒ.supervised_l1_recon
+        ℒ = self.ℒ.l1_recon + self.ℒ.supervised_l1_recon
 
-        # for k in range(self.n_classes):
-        #     ℒ += β * getattr(self.ℒ, f"KL_{k}")
+        for k in range(self.n_classes):
+            ℒ += β * getattr(self.ℒ, f"KL_{k}")
 
         return ℒ
 
