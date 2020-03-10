@@ -13,7 +13,7 @@ def main(args):
     if args.experiment not in EXPERIMENTS:
         raise ValueError("Invalid experiment given.")
 
-    p = "gpu_short" if args.short else "gpu"
+    p = "gpu_short" if args.short else "gpu_shared"
     t = "0:05:00" if args.short else f"{args.hours}:00:00"
 
     c = {
