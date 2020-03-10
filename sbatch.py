@@ -18,9 +18,7 @@ def main(args):
 
     c = {
         "job-name": args.experiment,
-        "ntasks": 1,
         "cpus-per-task": 2,
-        "ntasks-per-node": 1,
         "time": t,
         "mem": "10000M",
         "partition": p,
