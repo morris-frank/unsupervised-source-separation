@@ -3,6 +3,7 @@ from . import BaseModel
 from math import log, pi
 
 import torch
+from torch.nn import functional as F
 from torch import nn
 from ..wavenet import Wavenet
 
@@ -210,8 +211,8 @@ class Block(nn.Module):
             out, z = out.chunk(2, 1)
             # WaveNet prior
             mean, log_sd = self.prior(out, c).chunk(2, 1)
-            # Sum over everything except Batch dim:
-            log_p = gaussian_log_p(z, mean, log_sd).sum((1, 2))
+            # Sum over channels, keep batch and time intact:
+            log_p = gaussian_log_p(z, mean, log_sd).sum(1)
         return out, c, logdet, log_p
 
     def reverse(self, output, c, eps=None):
@@ -285,7 +286,7 @@ class Flowavenet(BaseModel):
             self.upsample_conv.append(convt)
             self.upsample_conv.append(nn.LeakyReLU(0.4))
 
-    def forward(self, x, c):
+    def forward(self, x, c, sum_log_p=True):
         B, _, T = x.size()
         logdet, log_p_sum = 0, 0
         out = x
@@ -294,9 +295,19 @@ class Flowavenet(BaseModel):
         for k, block in enumerate(self.blocks):
             out, c, logdet_new, logp_new = block(out, c)
             logdet = logdet + logdet_new
-            log_p_sum = logp_new + log_p_sum
-        log_p_sum += 0.5 * (-log(2.0 * pi) - out.pow(2)).sum((1, 2))
-        log_p_sum = log_p_sum / T
+            if sum_log_p:
+                log_p_sum = logp_new.sum(1) + log_p_sum
+            else:
+                if isinstance(logp_new, torch.Tensor):
+                    logp_new = logp_new.unsqueeze(1)
+                    logp_new = F.interpolate(logp_new, size=T, mode='linear')
+                log_p_sum = logp_new + log_p_sum
+        if sum_log_p:
+            log_p_sum += 0.5 * (-log(2.0 * pi) - out.pow(2)).sum((1, 2))
+            log_p_sum = log_p_sum / T
+        else:
+            out = F.interpolate(out, size=T, mode='linear')
+            log_p_sum += 0.5 * (-log(2. * pi) - out.pow(2)).sum(1).unsqueeze(1)
         # log_p_sum is sized (B) batch size!
         logdet = logdet / (B * T)
         return log_p_sum, logdet
