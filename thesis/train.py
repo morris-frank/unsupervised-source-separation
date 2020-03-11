@@ -12,10 +12,27 @@ from torch import optim
 from torch.nn.utils import clip_grad_norm_
 from torch.utils import data
 
-from .utils import remove_glob
 from .nn.models import BaseModel
+from .utils import remove_glob
 
 LAST_LOG = defaultdict(float)
+
+
+def run_test_with_batch(model, batch, device):
+    if isinstance(batch, list):
+        if isinstance(batch[0], list) or isinstance(batch[0], tuple):
+            (x1, x2), y = (
+                (batch[0][0].to(device), batch[0][1].to(device)),
+                batch[1].to(device),
+            )
+            ℒ = model.test((x1, x2), y)
+        else:
+            x, y = batch[0].to(device), batch[1].to(device)
+            ℒ = model.test(x, y)
+    else:
+        x = batch.to(device)
+        ℒ = model.test(x)
+    return ℒ
 
 
 def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = None):
@@ -48,9 +65,8 @@ def test(model: BaseModel, test_loader: data.DataLoader, device: str):
     test_time, test_losses = time.time(), []
     model.eval()
     with torch.no_grad():
-        for x, y in test_loader:
-            x, y = x.to(device), y.to(device)
-            ℒ = model.test(x, y)
+        for batch in test_loader:
+            ℒ = run_test_with_batch(model, batch, device)
             test_losses.append(ℒ.detach().item())
 
     log = {"Loss/test": mean(test_losses), "Time/test": time.time() - test_time}
@@ -113,19 +129,10 @@ def train(
             train_iterator = iter(train_loader)
             batch = next(train_iterator)
 
+        ℒ = run_test_with_batch(model, batch, device)
+
         model.train()
         model.zero_grad()
-
-        if isinstance(batch, list):
-            if isinstance(batch[0], list) or isinstance(batch[0], tuple):
-                (x1, x2), y = (batch[0][0].to(device), batch[0][1].to(device)), batch[1].to(device)
-                ℒ = model.test((x1, x2), y)
-            else:
-                x, y = batch[0].to(device), batch[1].to(device)
-                ℒ = model.test(x, y)
-        else:
-            x = batch.to(device)
-            ℒ = model.test(x)
 
         if torch.isnan(ℒ):
             print(Fore.RED + "nan loss. skip optim!" + Fore.RESET)
