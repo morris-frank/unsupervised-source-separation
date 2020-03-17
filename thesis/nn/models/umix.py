@@ -64,7 +64,7 @@ class UMixer(BaseModel):
     def __init__(self, mel_channels: int = 80):
         super(UMixer, self).__init__()
         self.params = clean_init_args(locals().copy())
-        self.name = 'supervised'
+        self.name = "supervised"
 
         self.n_classes = 4
 
@@ -133,6 +133,13 @@ class UMixer(BaseModel):
         self.ℒ.l1_recon = F.l1_loss(m_, m)
 
         return ŝ, m_
+
+    def umix(self, m: torch.Tensor, m_mel: torch.Tensor):
+        m_mel = self.upsample(m_mel)
+        m_mel = m_mel[:, :, : m.shape[-1]]
+        α, β = self.q_sǀm(m, m_mel)
+        μ_ŝ = α / (α + β)
+        return μ_ŝ
 
     def test(
         self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor

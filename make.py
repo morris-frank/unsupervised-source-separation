@@ -8,8 +8,14 @@ import torch
 from colorama import Fore
 from tqdm import tqdm, trange
 
-from thesis.data.toy import ToyDataSourceK
+from thesis.data.toy import ToyDataSourceK, ToyDataMixes
 from thesis.utils import get_newest_file
+from thesis.io import load_model
+from thesis.plot import toy
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+
+mpl.use('agg')
 
 
 def make_cross_likelihood_plot(data):
@@ -38,6 +44,20 @@ def make_cross_likelihood_plot(data):
             np.save(fp, results)
 
 
+def make_separation_examples(data):
+    weights = "Mar11-1028_UMixer_supervised_010120.pt"
+    makedirs(f"./figures/{weights}/", exist_ok=True)
+    model = load_model(f"./checkpoints/{weights}", "cuda").to("cuda")
+    dset = ToyDataMixes(path=f"{data}/test/", mel=True, sources=True)
+    for i, ((mix, mel), sources) in enumerate(tqdm(dset)):
+        mix = mix.unsqueeze(0).to("cuda")
+        mel = mel.unsqueeze(0).to("cuda")
+        ŝ = model.umix(mix, mel)[0]
+        fig = toy.plot_reconstruction(sources, ŝ, mix)
+        plt.savefig(f"./figures/{weights}/separate_{i}.png", dpi=200)
+        plt.close()
+
+
 def main(args):
     if args.weights is None:
         args.weights = get_newest_file("./checkpoints")
@@ -49,6 +69,8 @@ def main(args):
 
     if args.command == "cross-likelihood":
         make_cross_likelihood_plot(args.data)
+    elif args.command == "separate":
+        make_separation_examples(args.data)
     else:
         raise ValueError("Invalid Command given")
 
