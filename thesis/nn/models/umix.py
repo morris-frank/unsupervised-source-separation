@@ -12,52 +12,29 @@ from ...utils import clean_init_args
 
 
 class q_sǀm(nn.Module):
-    def __init__(self, n_classes, mel_channels, with_head=True):
+    def __init__(self, mel_channels):
         super(q_sǀm, self).__init__()
-        head_dim = 128
-        arm_dim = 32 if with_head else 64
-        self.with_head = with_head
+        dim = 32
 
-        if with_head:
-            self.f = Wavenet(
-                in_channels=1,
-                out_channels=head_dim,
-                n_blocks=1,
-                n_layers=11,
-                residual_channels=head_dim,
-                gate_channels=head_dim,
-                skip_channels=head_dim,
-                cin_channels=mel_channels,
-            )
+        self.f = Wavenet(
+            in_channels=1,
+            out_channels=dim,
+            n_blocks=3,
+            n_layers=11,
+            residual_channels=dim,
+            gate_channels=dim,
+            skip_channels=dim,
+            cin_channels=mel_channels,
+        )
 
-        self.f_k = nn.ModuleList()
-        self.f_k_α = nn.ModuleList()
-        self.f_k_β = nn.ModuleList()
-        for k in range(n_classes):
-            self.f_k.append(
-                Wavenet(
-                    in_channels=head_dim if with_head else 1,
-                    out_channels=arm_dim,
-                    n_blocks=2,
-                    n_layers=11,
-                    residual_channels=arm_dim,
-                    gate_channels=arm_dim,
-                    skip_channels=arm_dim,
-                    cin_channels=mel_channels,
-                )
-            )
-            self.f_k_α.append(nn.Sequential(nn.Conv1d(arm_dim, 1, 1), nn.Softplus()))
-            self.f_k_β.append(nn.Sequential(nn.Conv1d(arm_dim, 1, 1), nn.Softplus()))
+        self.f_α = nn.Sequential(nn.Conv1d(dim, 1, 1), nn.Softplus())
+        self.f_β = nn.Sequential(nn.Conv1d(dim, 1, 1), nn.Softplus())
 
     def forward(self, m: torch.Tensor, m_mel: torch.Tensor):
-        α, β = [], []
-
-        f_m = self.f(m, m_mel) if self.with_head else m
-        for k in range(len(self.f_k)):
-            f_k = self.f_k[k](f_m, m_mel)
-            α.append(self.f_k_α[k](f_k) + 1e-7)
-            β.append(self.f_k_β[k](f_k) + 1e-7)
-        return torch.cat(α, dim=1), torch.cat(β, dim=1)
+        f = self.f(m, m_mel)
+        α = self.f_α(f) + 1e-10
+        β = self.f_β(f) + 1e-10
+        return α, β
 
 
 class UMixer(BaseModel):
@@ -68,10 +45,15 @@ class UMixer(BaseModel):
 
         self.n_classes = 4
 
-        self.q_sǀm = q_sǀm(self.n_classes, mel_channels)
+        # The encoders
+        self.q_sǀm = nn.ModuleList()
+        for k in range(self.n_classes):
+            self.q_sǀm.append(q_sǀm(mel_channels))
 
+        # The placeholder for the prior networks
         self.p_s = None
 
+        # the decoder
         self.p_mǀs = Wavenet(
             in_channels=self.n_classes,
             out_channels=1,
@@ -112,7 +94,8 @@ class UMixer(BaseModel):
         m_mel = self.upsample(m_mel)
         m_mel = m_mel[:, :, : m.shape[-1]]
 
-        α, β = self.q_sǀm(m, m_mel)
+        α, β = zip(*[q_sǀm(m, m_mel) for q_sǀm in self.q_sǀm])
+        α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
 
         q_s = dist.Beta(α, β)
         ŝ = q_s.rsample()
@@ -137,7 +120,11 @@ class UMixer(BaseModel):
     def umix(self, m: torch.Tensor, m_mel: torch.Tensor):
         m_mel = self.upsample(m_mel)
         m_mel = m_mel[:, :, : m.shape[-1]]
-        α, β = self.q_sǀm(m, m_mel)
+
+        α, β = zip(*[q_sǀm(m, m_mel) for q_sǀm in self.q_sǀm])
+        α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
+
+        # Get the mean of the beta distribution
         μ_ŝ = α / (α + β)
         return μ_ŝ
 
