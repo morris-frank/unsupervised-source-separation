@@ -15,7 +15,7 @@ from thesis.plot import toy
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-mpl.use('agg')
+mpl.use("agg")
 
 
 def make_cross_likelihood_plot(data):
@@ -31,7 +31,7 @@ def make_cross_likelihood_plot(data):
 
     results = None
     for n in trange(len(weights)):
-        model = torch.load(f"./checkpoints/{weights[n]}")["model"].to("cuda")
+        model = load_model(f"./checkpoints/{weights[n]}", "cuda").to("cuda")
         model.eval()
         for k in trange(K, leave=False):
             test_set = ToyDataSourceK(path=f"{data}/test/", k=k, mel=True)
@@ -53,7 +53,7 @@ def make_separation_examples(data):
         mix = mix.unsqueeze(0).to("cuda")
         mel = mel.unsqueeze(0).to("cuda")
         ŝ = model.umix(mix, mel)[0]
-        fig = toy.plot_reconstruction(sources, ŝ, mix)
+        _ = toy.plot_reconstruction(sources, ŝ, mix)
         plt.savefig(f"./figures/{weights}/separate_{i}.png", dpi=200)
         plt.close()
 

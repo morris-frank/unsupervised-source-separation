@@ -4,7 +4,7 @@ patch.edgecolor: 282828
 
 text.color: 282828
 
-axes.facecolor: fbf1c7
+axes.facecolor: f9f5d7
 axes.edgecolor: 282828
 axes.labelcolor: 282828
 axes.prop_cycle: cycler('color', ['689D6A', '8dd3c7', 'feffb3', 'bfbbd9', 'fa8174', '81b1d2', 'fdb462', 'b3de69', 'bc82bd', 'ccebc4', 'ffed6f'])
@@ -14,11 +14,11 @@ ytick.color: 282828
 
 grid.color: 888888
 
-figure.facecolor: fbf1c7
-figure.edgecolor: fbf1c7
+figure.facecolor: f9f5d7
+figure.edgecolor: f9f5d7
 
-savefig.facecolor: fbf1c7
-savefig.edgecolor: fbf1c7
+savefig.facecolor: f9f5d7
+savefig.edgecolor: f9f5d7
 
 font.family: Fira Sans
 font.weight: regular

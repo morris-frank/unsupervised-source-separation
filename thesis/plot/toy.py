@@ -61,31 +61,32 @@ def fig_summary(fname: str):
     return fig
 
 
+def squeeze(tensor):
+    tensor = tensor.detach().cpu().squeeze()
+    if tensor.dim() == 1:
+        tensor = tensor.unsqueeze(0)
+    return tensor[:, 100:PRINT_LENGTH].numpy()
+
+
 def plot_reconstruction(
-        S: torch.Tensor, ŝ: torch.Tensor, m: torch.Tensor = None
+        s: torch.Tensor, ŝ: torch.Tensor, m: torch.Tensor = None
 ) -> plt.Figure:
-    S = S.detach().cpu()
-    ŝ = ŝ.detach().cpu()
-    m = m.squeeze().detach().cpu()
-    if S.dim() == 1:
-        S = S.unsqueeze(0)
-        ŝ = ŝ.unsqueeze(0)
-    n = S.shape[0]
-    cols = n + 1 if m is not None else n
-    fig, axs = plt.subplots(cols, 2, sharex="all")
+    hasM = m is not None
+
+    s, ŝ = squeeze(s), squeeze(ŝ)
+    if hasM:
+        m = squeeze(m)
+
+    N = s.shape[0]
+    fig, axs = plt.subplots(N+1 if hasM else N, 2, sharex="all")
     if axs.ndim == 1:
         axs = axs[None, ...]
-    if ŝ.dim() == 2:
-        for i in range(n):
-            axs[i, 0].plot(S[i, 100:PRINT_LENGTH].numpy(), c="r")
-            axs[i, 1].plot(ŝ[i, 100:PRINT_LENGTH].numpy(), c="b")
-            if m is not None:
-                axs[-1, 0].plot(m[100:PRINT_LENGTH].numpy(), c="g")
-    else:
-        for i in range(n):
-            axs[i, 0].imshow(S[i])
-            axs[i, 1].imshow(ŝ[i])
-            axs[-1, 0].imshow(m[0])
+
+    for i in range(N):
+        axs[i, 0].plot(s[i, :], c="b")
+        axs[i, 1].plot(ŝ[i, :], c="y")
+        if m is not None:
+            axs[-1, 0].plot(m[0, :], c="k")
     return fig
 
 
