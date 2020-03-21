@@ -24,6 +24,7 @@ def train_prior(path: str, k: int):
         n_flow=6,
         n_layer=2,
         block_per_split=2,
+        width=48,
         name=signals[k],
     )
     train_set = ToyDataSourceK(path=path % "train", k=k, mel=True)
