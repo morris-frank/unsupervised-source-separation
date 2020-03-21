@@ -1,6 +1,6 @@
-from math import pi as π
-import math
 import random
+from math import log, sqrt
+from math import pi as π
 from typing import Tuple
 
 import torch
@@ -81,7 +81,7 @@ def encode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
     assert μ & 1
     assert x.max() <= 1.0 and x.min() >= -1.0
     μ = μ - 1
-    out = torch.sign(x) * torch.log(1 + μ * torch.abs(x)) / math.log(μ)
+    out = torch.sign(x) * torch.log(1 + μ * torch.abs(x)) / log(μ)
     out = torch.round(out * (μ // 2))
     return out
 
@@ -177,6 +177,18 @@ def interleave(left: torch.Tensor, right: torch.Tensor) -> torch.Tensor:
     return torch.stack((left, right), dim=3).view(bs, c, 2 * l)
 
 
+def split_LtoC(x: torch.Tensor) -> torch.Tensor:
+    N, C, L = x.shape
+    squeezed = x.view(N, C, L // 2, 2).permute(0, 1, 3, 2)
+    out = squeezed.contiguous().view(N, C * 2, L // 2)
+    return out
+
+
+def flip_channels(x: torch.Tensor) -> torch.Tensor:
+    x_a, x_b = x.chunk(2, 1)
+    return torch.cat([x_b, x_a], 1)
+
+
 def norm_cdf(x: torch.Tensor):
     """
     Element-wise cumulative value for tensor x under a normal distribution.
@@ -187,7 +199,7 @@ def norm_cdf(x: torch.Tensor):
     Returns:
         the norm cdfs
     """
-    return (1.0 + torch.erf(x / math.sqrt(2.0))) / 2.0
+    return (1.0 + torch.erf(x / sqrt(2.0))) / 2.0
 
 
 def rsample_truncated_normal(
@@ -216,7 +228,7 @@ def rsample_truncated_normal(
     tensor = udist.rsample()
 
     tensor.erfinv_()
-    tensor.mul_(σ * math.sqrt(2.0))
+    tensor.mul_(σ * sqrt(2.0))
     tensor.add_(μ)
 
     tensor.clamp_(a, b)
@@ -224,7 +236,7 @@ def rsample_truncated_normal(
     if ll:
         denom = torch.log(u - l)
         ξ = (tensor - μ) / σ
-        num = -0.5 * ξ * ξ - 0.5 * math.log(2 * π)
+        num = -0.5 * ξ * ξ - 0.5 * log(2 * π)
         log_l = -torch.log(σ) + num - denom
         return tensor, log_l
     else:
@@ -240,8 +252,12 @@ def likelihood_truncated_normal(
     u = norm_cdf((-μ + b) / σ)
 
     ξ = (x - μ) / σ
-    φ_ξ = 1 / math.sqrt(2 * π) * torch.exp(-0.5 * ξ * ξ)
+    φ_ξ = 1 / sqrt(2 * π) * torch.exp(-0.5 * ξ * ξ)
 
     f_x = φ_ξ / (u - l) / σ
 
     return f_x
+
+
+def likelihood_normal(x, μ, log_σ):
+    return -0.5 * log(2. * π) - log_σ - 0.5 * (x - μ) ** 2 / torch.exp(2. * log_σ)

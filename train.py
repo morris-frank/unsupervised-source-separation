@@ -20,11 +20,10 @@ def train_prior(path: str, k: int):
     model = Flowavenet(
         in_channel=1,
         cin_channel=mel_channels,
-        n_block=6,
-        n_flow=4,
+        n_block=4,
+        n_flow=6,
         n_layer=2,
-        affine=True,
-        block_per_split=3,
+        block_per_split=2,
         name=signals[k],
     )
     train_set = ToyDataSourceK(path=path % "train", k=k, mel=True)
