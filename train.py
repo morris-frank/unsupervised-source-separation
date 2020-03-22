@@ -50,6 +50,16 @@ def train_umix(path: str):
     return model, train_set, test_set
 
 
+def train_numix(path: str):
+    from thesis.nn.models.numix import NUMixer
+
+    model = NUMixer(width=128)
+
+    train_set = ToyDataMixes(path=path % "train", mel=True, sources=True)
+    test_set = ToyDataMixes(path=path % "test", mel=True, sources=True)
+    return model, train_set, test_set
+
+
 def main(args):
     if args.experiment not in EXPERIMENTS:
         raise ValueError("Invalid experiment given.")
@@ -78,6 +88,7 @@ EXPERIMENTS = {
     "prior-2": partial(train_prior, k=2),
     "prior-3": partial(train_prior, k=3),
     "umix": train_umix,
+    "numix": train_numix,
 }
 
 if __name__ == "__main__":
