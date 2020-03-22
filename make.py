@@ -1,47 +1,47 @@
 #!/usr/bin/env python
+import asyncio
 from argparse import ArgumentParser
 from os import makedirs
 from os.path import abspath
 
-import numpy as np
-import torch
-from colorama import Fore
-from tqdm import tqdm, trange
-
-from thesis.data.toy import ToyDataSourceK, ToyDataMixes
-from thesis.utils import get_newest_file
-from thesis.io import load_model
-from thesis.plot import toy
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
+from colorama import Fore
+from tqdm import tqdm
+
+from thesis.data.toy import ToyDataMixes, ToyDataSources
+from thesis.io import load_model
+from thesis.plot import toy
+from thesis.utils import get_newest_file
 
 mpl.use("agg")
 
 
-def make_cross_likelihood_plot(data):
+async def make_cross_likelihood_plot(data):
     fp = "./figures/cross_likelihood.npy"
     K = 4
 
     weights = [
-        "Mar03-2158_Flowavenet_sin_049999.pt",
-        "Mar04-2242_Flowavenet_square_049999.pt",
-        "Mar03-2158_Flowavenet_saw_049999.pt",
-        "Mar03-2158_Flowavenet_triangle_049999.pt",
+        "Mar22-0051_Flowavenet_sin_049999.pt",
+        "Mar22-0051_Flowavenet_square_049999.pt",
+        "Mar22-0051_Flowavenet_saw_049999.pt",
+        "Mar22-0051_Flowavenet_triangle_049999.pt",
     ]
 
-    results = None
-    for n in trange(len(weights)):
-        model = load_model(f"./checkpoints/{weights[n]}", "cuda").to("cuda")
-        model.eval()
-        for k in trange(K, leave=False):
-            test_set = ToyDataSourceK(path=f"{data}/test/", k=k, mel=True)
-            if results is None:
-                results = np.zeros((K, K, len(test_set), 2))
-            for i, (sig, mel) in enumerate(tqdm(test_set, leave=False)):
-                sig = sig.unsqueeze(0).to("cuda")
-                mel = mel.unsqueeze(0).to("cuda")
-                results[n, k, i, :] = model.forward(sig, mel)
-            np.save(fp, results)
+    models = [load_model(f"./checkpoints/{w}", "cuda").to("cuda") for w in weights]
+
+    test_set = ToyDataSources(path=f"{data}/test/", mel=True)
+    results = np.zeros((K, K, len(test_set), 2))
+
+    async def infer(k, idx, sign, mel):
+        results[k, :, idx, :] = models[k](sign, mel)
+
+    for i, (s, m) in enumerate(tqdm(test_set)):
+        s, m = s.to("cuda"), m.to("cuda")
+        await asyncio.gather(*(infer(k, i, s, m) for k in range(K)))
+
+    np.save(fp, results)
 
 
 def make_separation_examples(data):
@@ -70,7 +70,7 @@ def main(args):
     if args.command == "cross-likelihood":
         make_cross_likelihood_plot(args.data)
     elif args.command == "separate":
-        make_separation_examples(args.data)
+        asyncio.run(make_separation_examples(args.data))
     else:
         raise ValueError("Invalid Command given")
 

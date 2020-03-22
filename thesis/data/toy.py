@@ -70,6 +70,22 @@ class ToyDataSourceK(ToyData):
             return source
 
 
+class ToyDataSources(ToyData):
+    def __init__(self, mel: bool = False, *args, **kwargs):
+        super(ToyDataSources, self).__init__(*args, **kwargs)
+        self.mel = mel
+
+    def __getitem__(self, idx: int):
+        datum = self.get(idx)
+        sources = datum["sources"].unsqueeze(1)  # Add an empty channel dim
+
+        if self.mel:
+            mel = datum["mel_sources"]
+            return sources, mel
+        else:
+            return sources
+
+
 class ToyDataMixes(ToyData):
     def __init__(self, mel: bool = False, sources: bool = False, *args, **kwargs):
         super(ToyDataMixes, self).__init__(*args, **kwargs)

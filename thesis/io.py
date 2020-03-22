@@ -72,6 +72,7 @@ def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
         model = save_point["model"]
 
     if not train:
+        model.eval()
         return model
 
     # TODO implement continue training load
