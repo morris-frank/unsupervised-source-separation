@@ -9,6 +9,7 @@ from torchaudio.transforms import MelSpectrogram
 from . import BaseModel
 from ..wavenet import Wavenet
 from ...utils import clean_init_args
+from ...functional import rsample_truncated_normal
 
 
 class q_sǀm(nn.Module):
@@ -25,12 +26,12 @@ class q_sǀm(nn.Module):
             cin_channels=mel_channels,
         )
 
-        self.f_α = nn.Sequential(nn.Conv1d(dim, 1, 1), nn.Softplus())
+        self.f_α = nn.Sequential(nn.Conv1d(dim, 1, 1))
         self.f_β = nn.Sequential(nn.Conv1d(dim, 1, 1), nn.Softplus())
 
     def forward(self, m: torch.Tensor, m_mel: torch.Tensor):
         f = self.f(m, m_mel)
-        α = self.f_α(f) + 1e-10
+        α = self.f_α(f)  # + 1e-10
         β = self.f_β(f) + 1e-10
         return α, β
 
@@ -39,7 +40,7 @@ class UMixer(BaseModel):
     def __init__(self, mel_channels: int = 80, width: int = 64):
         super(UMixer, self).__init__()
         self.params = clean_init_args(locals().copy())
-        self.name = "only_supervised"
+        self.name = "only_supervised_normal"
 
         self.n_classes = 4
 
@@ -85,19 +86,25 @@ class UMixer(BaseModel):
             f_max=7600,
         )
 
-    def forward(
-        self, m: torch.Tensor, m_mel: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-
+    def q_s(self, m, m_mel):
         m_mel = self.upsample(m_mel)
         m_mel = m_mel[:, :, : m.shape[-1]]
 
-        α, β = zip(*[q_sǀm(m, m_mel) for q_sǀm in self.q_sǀm])
+        α, β = zip(*[q(m, m_mel) for q in self.q_sǀm])
         α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
+        return α, β
+        # q_s = dist.Beta(α, β)
+        # return q_s
 
-        q_s = dist.Beta(α, β)
-        ŝ = q_s.rsample()
-        log_q_ŝ = q_s.log_prob(ŝ)
+    def forward(
+        self, m: torch.Tensor, m_mel: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        # q_s = self.q_s(m, m_mel)
+        # ŝ = q_s.rsample()
+        # log_q_ŝ = q_s.log_prob(ŝ)
+
+        μ, σ = self.q_s(m, m_mel)
+        ŝ, log_q_ŝ = rsample_truncated_normal(μ, σ, ll=True)
 
         for k in range(self.n_classes):
             # Get Log likelihood under prior
@@ -115,17 +122,6 @@ class UMixer(BaseModel):
 
         return ŝ, m_
 
-    def umix(self, m: torch.Tensor, m_mel: torch.Tensor):
-        m_mel = self.upsample(m_mel)
-        m_mel = m_mel[:, :, : m.shape[-1]]
-
-        α, β = zip(*[q_sǀm(m, m_mel) for q_sǀm in self.q_sǀm])
-        α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
-
-        # Get the mean of the beta distribution
-        μ_ŝ = α / (α + β)
-        return μ_ŝ
-
     def test(
         self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor
     ) -> torch.Tensor:
@@ -137,7 +133,7 @@ class UMixer(BaseModel):
 
         # ℒ = self.ℒ.l1_recon + self.ℒ.supervised_l1_recon
 
-        #for k in range(self.n_classes):
+        # for k in range(self.n_classes):
         #    ℒ += β * getattr(self.ℒ, f"KL_{k}")
 
         ℒ = self.ℒ.supervised_l1_recon

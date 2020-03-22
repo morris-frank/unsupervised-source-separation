@@ -19,7 +19,8 @@ def show_sample(data, weights):
     dset = ToyDataMixes(path=f"{data}/test/", mel=True, sources=True)
 
     for (m, mel), s in dset:
-        μ_ŝ = model.umix(m.unsqueeze(0), mel.unsqueeze(0))
+        #μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean
+        μ_ŝ, _ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0))
         _ = plot.toy.reconstruction(s, μ_ŝ, m)
         plt.show()
         input("?")
