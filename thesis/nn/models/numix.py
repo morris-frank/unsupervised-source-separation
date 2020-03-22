@@ -68,7 +68,6 @@ class NUMixer(BaseModel):
     def forward(
         self, m: torch.Tensor, m_mel: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        q_s = self.q_s(m, m_mel)
         μ, σ = self.q_s(m, m_mel)
         ŝ, log_q_ŝ = rsample_truncated_normal(μ, σ, ll=True)
 
