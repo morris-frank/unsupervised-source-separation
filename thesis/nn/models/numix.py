@@ -29,7 +29,7 @@ class q_sǀm(nn.Module):
 
     def forward(self, m: torch.Tensor, m_mel: torch.Tensor):
         f = self.f(m, m_mel)
-        α = self.f_α(f)
+        α = self.f_α(f) * (1-1e-6)
         β = self.f_β(f) + 1e-10
         return α, β
 

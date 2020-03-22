@@ -228,7 +228,7 @@ def rsample_truncated_normal(
     tensor = udist.rsample()
 
     tensor.erfinv_()
-    tensor.mul_(σ * sqrt(2.0))
+    tensor.mul_(σ * sqrt(2.))
     tensor.add_(μ)
 
     tensor.clamp_(a, b)
@@ -236,7 +236,7 @@ def rsample_truncated_normal(
     if ll:
         denom = torch.log(u - l)
         ξ = (tensor - μ) / σ
-        num = -0.5 * ξ * ξ - 0.5 * log(2 * π)
+        num = -.5 * ξ * ξ - .5 * log(2. * π)
         log_l = -torch.log(σ) + num - denom
         return tensor, log_l
     else:

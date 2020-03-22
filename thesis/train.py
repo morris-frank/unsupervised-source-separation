@@ -120,6 +120,7 @@ def train(
     losses, it_times = [], []
     train_iterator = iter(train_loader)
     it_timer = time.time()
+    model.train()
     for it in range(iterations):
         it_start_time = time.time()
         # Load next random batch
@@ -130,13 +131,11 @@ def train(
             batch = next(train_iterator)
 
         ℒ = run_test_with_batch(model, batch, device)
-
-        model.train()
         model.zero_grad()
 
         if torch.isnan(ℒ):
             print(Fore.RED + "nan loss. skip optim!" + Fore.RESET)
-            import ipdb; ipdb.set_trace()
+            continue
         else:
             ℒ.backward()
             clip_grad_norm_(model.parameters(), 10)
@@ -172,3 +171,4 @@ def train(
             torch.save(save_point, f"checkpoints/{model_id}_{it:06}.pt")
             test(model, test_loader, device)
             it_timer = time.time()
+            model.train()
