@@ -6,7 +6,6 @@ import numpy as np
 import torch
 from colorama import Fore
 from matplotlib import pyplot as plt
-from tqdm import tqdm
 
 from thesis import plot
 from thesis.data.toy import ToyDataSourceK
@@ -30,22 +29,22 @@ def show_cross_likelihood():
 
 
 def show_log_p_z_test(data):
-    weights = "Mar03-2158_Flowavenet_sin_049999.pt"
+    weights = "Mar22-0051_Flowavenet_sin_009425.pt"
     model = load_model(f"./checkpoints/{weights}", "cpu")
-    dset = ToyDataSourceK(path=f"{data}/test/", k=2, mel=True)
+    dset = ToyDataSourceK(path=f"{data}/test/", k=0, mel=True)
+    dset_alt = ToyDataSourceK(path=f"{data}/test/", k=1, mel=True)
     model.eval()
-    for i, (sig, mel) in enumerate(tqdm(dset)):
-        sig = sig.unsqueeze(0)
-        mel = mel.unsqueeze(0)
-        log_p_sum, log_det = model(sig, mel)
-        log_p, _ = model(sig, mel, sum_log_p=False)
+    for i, ((s, m), (sz, mz)) in enumerate(zip(dset, dset_alt)):
+        s[:, 1100:] = sz[:, 1100:]
+        m[:, 5:] = mz[:, 5:]
+        s, m = s.unsqueeze(0), m.unsqueeze(0)
+        log_p, logdet = model(s, m)
 
-        sig_ = sig * torch.rand_like(sig)
-        log_p_sum_, log_det_ = model(sig, mel)
-        log_p_, _ = model(sig_, mel, sum_log_p=False)
+        s_ = s * torch.rand_like(s)
+        log_p_, logdet_ = model(s_, m)
 
-        print(f'log_p|log_det: {log_p_sum.detach().item()}|{log_det.detach().item()}\tlog_p_|log_det_: {log_p_sum_.detach().item()}|{log_det_.detach().item()}')
-        _ = plot.toy.plot_reconstruction(torch.cat([sig, sig_], 1), torch.cat([log_p, log_p_], 1))
+        print(f'log_p|log_det: {log_p.detach().mean().item()}|{logdet.detach().item()}\tlog_p_|log_det_: {log_p_.detach().mean().item()}|{logdet_.detach().item()}')
+        _ = plot.toy.plot_reconstruction(torch.cat([s, s_], 1), torch.cat([log_p, log_p_], 1))
         plt.show()
         input()
 

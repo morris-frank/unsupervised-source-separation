@@ -168,7 +168,7 @@ class Flowavenet(BaseModel):
             self.upsample_conv.append(convt)
             self.upsample_conv.append(nn.LeakyReLU(0.4))
 
-    def forward(self, x, c, sum_log_p=True):
+    def forward(self, x, c):
         B, _, T = x.size()
         logdet, log_p_sum = 0, 0
         out = x
