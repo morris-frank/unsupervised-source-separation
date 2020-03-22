@@ -39,7 +39,7 @@ class UMixer(BaseModel):
     def __init__(self, mel_channels: int = 80, width: int = 64):
         super(UMixer, self).__init__()
         self.params = clean_init_args(locals().copy())
-        self.name = "supervised"
+        self.name = "only_supervised"
 
         self.n_classes = 4
 
@@ -135,10 +135,12 @@ class UMixer(BaseModel):
 
         self.ℒ.supervised_l1_recon = F.l1_loss(ŝ, s)
 
-        ℒ = self.ℒ.l1_recon + self.ℒ.supervised_l1_recon
+        # ℒ = self.ℒ.l1_recon + self.ℒ.supervised_l1_recon
 
-        for k in range(self.n_classes):
-            ℒ += β * getattr(self.ℒ, f"KL_{k}")
+        #for k in range(self.n_classes):
+        #    ℒ += β * getattr(self.ℒ, f"KL_{k}")
+
+        ℒ = self.ℒ.supervised_l1_recon
 
         return ℒ
 
