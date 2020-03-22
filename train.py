@@ -42,7 +42,7 @@ def train_umix(path: str):
         print(f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using {Fore.GREEN}{weight}{Fore.RESET}")
         priors.append(load_model(weight, "cuda").to("cuda"))
 
-    model = UMixer(width=64)
+    model = UMixer(width=128)
     model.p_s = priors
 
     train_set = ToyDataMixes(path=path % "train", mel=True, sources=True)
