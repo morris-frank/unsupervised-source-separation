@@ -65,8 +65,8 @@ class _LossLogger(object):
             self.log[key].append(value)
 
 
-def get_newest_file(folder: str):
-    return sorted(glob(f"{folder}/*pt"), key=lambda x: getmtime(x))[-1]
+def get_newest_file(folder: str, match: str = "*pt"):
+    return sorted(glob(f"{folder}/{match}"), key=lambda x: getmtime(x))[-1]
 
 
 def remove_glob(path: str):

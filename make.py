@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-import asyncio
 from argparse import ArgumentParser
+import torch
 from os import makedirs
-from os.path import abspath
+from os.path import abspath, exists
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -18,30 +18,31 @@ from thesis.utils import get_newest_file
 mpl.use("agg")
 
 
-async def make_cross_likelihood_plot(data):
+TOY_SOURCES = ["sin", "square", "saw", "triangle"]
+
+
+def make_cross_likelihood_plot(data, _k, weight):
     fp = "./figures/cross_likelihood.npy"
-    K = 4
+    K = len(TOY_SOURCES)
+    k = TOY_SOURCES.index(_k)
 
-    weights = [
-        "Mar22-0051_Flowavenet_sin_049999.pt",
-        "Mar22-0051_Flowavenet_square_049999.pt",
-        "Mar22-0051_Flowavenet_saw_049999.pt",
-        "Mar22-0051_Flowavenet_triangle_049999.pt",
-    ]
-
-    models = [load_model(f"./checkpoints/{w}", "cuda").to("cuda") for w in weights]
+    model = load_model(f"{weight}", "cuda").to("cuda")
 
     test_set = ToyDataSources(path=f"{data}/test/", mel=True)
-    results = np.zeros((K, K, len(test_set), 2))
-
-    async def infer(k, idx, sign, mel):
-        results[k, :, idx, :] = models[k](sign, mel)
+    results = np.zeros((K, K, len(test_set)))
 
     for i, (s, m) in enumerate(tqdm(test_set)):
         s, m = s.to("cuda"), m.to("cuda")
-        await asyncio.gather(*(infer(k, i, s, m) for k in range(K)))
+        logp, _ = model(s, m)
+        results[k, :, i] = logp.mean(-1).squeeze().cpu().numpy()
+
+    if exists(fp):
+        patch = results
+        results = np.load(fp)
+        results[k, ...] = patch[k, ...]
 
     np.save(fp, results)
+    print(f"{Fore.YELLOW}Saved {Fore.GREEN}{fp}{Fore.RESET}")
 
 
 def make_separation_examples(data):
@@ -60,17 +61,22 @@ def make_separation_examples(data):
 
 def main(args):
     if args.weights is None:
-        args.weights = get_newest_file("./checkpoints")
+        match = "*pt" if args.k is None else f"*{args.k}*pt"
+        args.weights = get_newest_file("./checkpoints", match)
         print(
             f"{Fore.YELLOW}Weights not given. Using instead: {Fore.GREEN}{args.weights}{Fore.RESET}"
         )
 
+    if not exists(args.data):
+        raise FileNotFoundError(f"This data directory does not exits, you  stupid fuck\n{args.data}")
+
     makedirs("./figures", exist_ok=True)
 
     if args.command == "cross-likelihood":
-        make_cross_likelihood_plot(args.data)
+        with torch.no_grad():
+            make_cross_likelihood_plot(args.data, args.k, args.weights)
     elif args.command == "separate":
-        asyncio.run(make_separation_examples(args.data))
+        make_separation_examples(args.data)
     else:
         raise ValueError("Invalid Command given")
 
@@ -79,6 +85,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("command", type=str, help="show ∨ something")
     parser.add_argument("--weights", type=abspath)
+    parser.add_argument("-k", type=str)
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--data", type=abspath, default="/home/morris/var/data/toy")
     main(parser.parse_args())

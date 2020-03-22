@@ -14,8 +14,7 @@ from thesis.utils import get_newest_file
 
 
 def show_cross_likelihood():
-    data = np.load("./figures/cross_likelihood.npy")
-    log_p = data[..., 0]
+    log_p = np.load("./figures/cross_likelihood.npy")
 
     fig = plot.toy.plot_signal_heatmap((log_p.mean(-1)), ["sin", "sq", "saw", "tri"])
     fig.suptitle(r"mean of likelihood log p(s)")
