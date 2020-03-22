@@ -106,19 +106,20 @@ class UMixer(BaseModel):
         μ, σ = self.q_s(m, m_mel)
         ŝ, log_q_ŝ = rsample_truncated_normal(μ, σ, ll=True)
 
-        for k in range(self.n_classes):
-            # Get Log likelihood under prior
-            ŝ_mel = self.upsample(self.mel(ŝ[:, k, :]))
-            with torch.no_grad():
-                log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
-                log_p_ŝ = log_p_ŝ.detach()[:, None]
-
-            # Kullback Leibler for this k'th source
-            KL_k = -torch.mean(log_p_ŝ - log_q_ŝ[:, k, :])
-            setattr(self.ℒ, f"KL_{k}", KL_k)
-
-        m_ = self.p_mǀs(ŝ)
-        self.ℒ.l1_recon = F.l1_loss(m_, m)
+        m_ = None
+        # for k in range(self.n_classes):
+        #     # Get Log likelihood under prior
+        #     ŝ_mel = self.upsample(self.mel(ŝ[:, k, :]))
+        #     with torch.no_grad():
+        #         log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
+        #         log_p_ŝ = log_p_ŝ.detach()[:, None]
+        #
+        #     # Kullback Leibler for this k'th source
+        #     KL_k = -torch.mean(log_p_ŝ - log_q_ŝ[:, k, :])
+        #     setattr(self.ℒ, f"KL_{k}", KL_k)
+        #
+        # m_ = self.p_mǀs(ŝ)
+        # self.ℒ.l1_recon = F.l1_loss(m_, m)
 
         return ŝ, m_
 
