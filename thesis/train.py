@@ -136,6 +136,7 @@ def train(
 
         if torch.isnan(ℒ):
             print(Fore.RED + "nan loss. skip optim!" + Fore.RESET)
+            import ipdb; ipdb.set_trace()
         else:
             ℒ.backward()
             clip_grad_norm_(model.parameters(), 10)
