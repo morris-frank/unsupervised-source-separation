@@ -40,7 +40,7 @@ class UMixer(BaseModel):
     def __init__(self, mel_channels: int = 80, width: int = 64):
         super(UMixer, self).__init__()
         self.params = clean_init_args(locals().copy())
-        self.name = "only_supervised_normal"
+        self.name = "only_supervised"
 
         self.n_classes = 4
 
@@ -92,19 +92,19 @@ class UMixer(BaseModel):
 
         α, β = zip(*[q(m, m_mel) for q in self.q_sǀm])
         α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
-        return α, β
-        # q_s = dist.Beta(α, β)
-        # return q_s
+        # return α, β
+        q_s = dist.Beta(α, β)
+        return q_s
 
     def forward(
         self, m: torch.Tensor, m_mel: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
-        # q_s = self.q_s(m, m_mel)
-        # ŝ = q_s.rsample()
-        # log_q_ŝ = q_s.log_prob(ŝ)
+        q_s = self.q_s(m, m_mel)
+        ŝ = q_s.rsample()
+        log_q_ŝ = q_s.log_prob(ŝ)
 
-        μ, σ = self.q_s(m, m_mel)
-        ŝ, log_q_ŝ = rsample_truncated_normal(μ, σ, ll=True)
+        # μ, σ = self.q_s(m, m_mel)
+        # ŝ, log_q_ŝ = rsample_truncated_normal(μ, σ, ll=True)
 
         m_ = None
         # for k in range(self.n_classes):
