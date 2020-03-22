@@ -103,7 +103,7 @@ class UMixer(BaseModel):
             # Get Log likelihood under prior
             ŝ_mel = self.upsample(self.mel(ŝ[:, k, :]))
             with torch.no_grad():
-                log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel, sum_log_p=False)
+                log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
                 log_p_ŝ = log_p_ŝ.detach()[:, None]
 
             # Kullback Leibler for this k'th source
