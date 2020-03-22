@@ -12,10 +12,8 @@ from ...utils import clean_init_args
 
 
 class q_sǀm(nn.Module):
-    def __init__(self, mel_channels):
+    def __init__(self, mel_channels, dim):
         super(q_sǀm, self).__init__()
-        dim = 32
-
         self.f = Wavenet(
             in_channels=1,
             out_channels=dim,
@@ -38,7 +36,7 @@ class q_sǀm(nn.Module):
 
 
 class UMixer(BaseModel):
-    def __init__(self, mel_channels: int = 80):
+    def __init__(self, mel_channels: int = 80, width: int = 64):
         super(UMixer, self).__init__()
         self.params = clean_init_args(locals().copy())
         self.name = "supervised"
@@ -48,7 +46,7 @@ class UMixer(BaseModel):
         # The encoders
         self.q_sǀm = nn.ModuleList()
         for k in range(self.n_classes):
-            self.q_sǀm.append(q_sǀm(mel_channels))
+            self.q_sǀm.append(q_sǀm(mel_channels, width))
 
         # The placeholder for the prior networks
         self.p_s = None

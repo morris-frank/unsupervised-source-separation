@@ -8,7 +8,8 @@ from torch import autograd
 from thesis.data.toy import ToyDataSourceK, ToyDataMixes
 from thesis.io import load_model
 from thesis.train import train
-from thesis.utils import optional
+from thesis.utils import optional, get_newest_file
+from colorama import Fore
 
 signals = ["sin", "square", "saw", "triangle"]
 
@@ -35,18 +36,13 @@ def train_prior(path: str, k: int):
 def train_umix(path: str):
     from thesis.nn.models.umix import UMixer
 
-    weights = [
-        "Mar03-2158_Flowavenet_sin_049999.pt",
-        "Mar04-2242_Flowavenet_square_049999.pt",
-        "Mar03-2158_Flowavenet_saw_049999.pt",
-        "Mar03-2158_Flowavenet_triangle_049999.pt",
-    ]
-
     priors = []
-    for weight in weights:
-        priors.append(load_model(f"./checkpoints/{weight}", "cuda").to("cuda"))
+    for source in ['sin', 'square', 'saw', 'triangle']:
+        weight = get_newest_file("./checkpoints", f"*{source}*pt")
+        print(f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using {Fore.GREEN}{weight}{Fore.RESET}")
+        priors.append(load_model(weight, "cuda").to("cuda"))
 
-    model = UMixer()
+    model = UMixer(width=64)
     model.p_s = priors
 
     train_set = ToyDataMixes(path=path % "train", mel=True, sources=True)
