@@ -1,5 +1,4 @@
 from math import tau as τ
-from typing import Generator
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -13,7 +12,6 @@ from torch import nn
 from torch.nn import functional as F
 from tqdm import trange
 
-from ..data import Dataset
 from ..data.toy import ToyData
 
 PRINT_LENGTH = 2000
@@ -68,7 +66,7 @@ def squeeze(tensor):
     return tensor[:, 100:PRINT_LENGTH].numpy()
 
 
-def plot_reconstruction(
+def reconstruction(
         s: torch.Tensor, ŝ: torch.Tensor, m: torch.Tensor = None
 ) -> plt.Figure:
     hasM = m is not None
@@ -88,48 +86,6 @@ def plot_reconstruction(
         if m is not None:
             axs[-1, 0].plot(m[0, :], c="k")
     return fig
-
-
-def plot_one_singal(s: torch.Tensor) -> plt.Figure:
-    fig = plt.figure()
-    plt.plot(s.squeeze()[100:PRINT_LENGTH])
-    return fig
-
-
-def _tuple_unsequeeze(x):
-    if isinstance(x, tuple):
-        m = x[0]
-        x = (x[0].unsqueeze(0), torch.tensor([x[1]]))
-    else:
-        m = x
-        x = x.unsqueeze(0)
-    return m, x
-
-
-def example_reconstruction(
-        model: nn.Module, data: Dataset
-) -> Generator[plt.Figure, None, None]:
-    for i, (s, _) in enumerate(data):
-        s_tilde = model.infer(s.unsqueeze(0)).squeeze()
-        s_tilde = s_tilde.argmax(0)
-        fig = plot_reconstruction(s, s_tilde)
-        yield fig
-
-
-def z_example_reconstruction(
-        model: nn.Module, data: Dataset
-) -> Generator[plt.Figure, None, None]:
-    for i, (x, y) in enumerate(data):
-        x = x.unsqueeze(0)
-        if isinstance(y, torch.Tensor):
-            y.unsqueeze_(0)
-        z = model(x, y)
-        print(f"log_p: {z[0]}, log_det: {z[1]}")
-        input()
-        continue
-        yield plot_one_singal(z)
-        x_tilde = model.infer(z)
-        yield plot_reconstruction(x, x_tilde)
 
 
 def prepare_plot_freq_loss(

@@ -54,7 +54,7 @@ def make_separation_examples(data):
         mix = mix.unsqueeze(0).to("cuda")
         mel = mel.unsqueeze(0).to("cuda")
         ŝ = model.umix(mix, mel)[0]
-        _ = toy.plot_reconstruction(sources, ŝ, mix)
+        _ = toy.reconstruction(sources, ŝ, mix)
         plt.savefig(f"./figures/{weights}/separate_{i}.png", dpi=200)
         plt.close()
 
