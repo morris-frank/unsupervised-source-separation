@@ -96,9 +96,9 @@ class CUMixer(BaseModel):
         self, m: torch.Tensor, m_mel: torch.Tensor
     ) -> dist.Categorical:
         q_s = self.q_s(m, m_mel)
-        ŝ = q_s.sample()
+        # ŝ = q_s.sample()
         # log_q_ŝ = q_s.log_prob(ŝ)
-        ŝ = decode_μ_law(ŝ, self.μ)
+        # ŝ = decode_μ_law(ŝ, self.μ)
 
         # for k in range(self.n_classes):
         #     # Get Log likelihood under prior
@@ -111,9 +111,9 @@ class CUMixer(BaseModel):
         #     KL_k = -torch.mean(log_p_ŝ - log_q_ŝ[:, k, :])
         #     setattr(self.ℒ, f"KL_{k}", KL_k)
 
-        m_ = self.p_mǀs(ŝ)
-        m_target = encode_μ_law(m, self.μ).squeeze().long()
-        self.ℒ.ce_mix = F.cross_entropy(m_, m_target)
+        # m_ = self.p_mǀs(ŝ)
+        # m_target = encode_μ_law(m, self.μ).squeeze().long()
+        # self.ℒ.ce_mix = F.cross_entropy(m_, m_target)
 
         return q_s
 
@@ -125,7 +125,8 @@ class CUMixer(BaseModel):
         β = 1.1
         q_s = self.forward(m, m_mel)
 
-        ℒ = self.ℒ.ce_mix
+        # ℒ = self.ℒ.ce_mix
+        ℒ = 0
 
         is_supervised = random() < 1.
         for k in range(self.n_classes):
