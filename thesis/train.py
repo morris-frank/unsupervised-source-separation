@@ -48,7 +48,7 @@ def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = N
 
     # Print to console
     _step = step if step is not None else "---"
-    print(f"step {_step:>9} {Fore.YELLOW}{cat}", end="\t")
+    print(f"step {_step:>9} {Fore.YELLOW}[{cat}]", end=" ")
     for k, v in log.items():
         col = (
             Fore.CYAN
