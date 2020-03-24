@@ -88,7 +88,7 @@ class CUMixer(BaseModel):
         m_mel = m_mel[:, :, : m.shape[-1]]
 
         logits = [q(m, m_mel) for q in self.q_sǀm]
-        logits = torch.stack(logits, dim=-1)
+        logits = torch.stack(logits, dim=1).transpose(2, 3)
         q_s = dist.Categorical(logits=logits)
         return q_s
 
