@@ -112,7 +112,8 @@ class CUMixer(BaseModel):
             setattr(self.ℒ, f"KL_{k}", KL_k)
 
         m_ = self.p_mǀs(ŝ)
-        self.ℒ.ce_mix = F.cross_entropy(m_, encode_μ_law(m, self.μ).squeeze())
+        m_target = encode_μ_law(m, self.μ).squeeze().long()
+        self.ℒ.ce_mix = F.cross_entropy(m_, m_target)
 
         return q_s
 
@@ -120,7 +121,7 @@ class CUMixer(BaseModel):
         self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor
     ) -> torch.Tensor:
         m, m_mel = x
-        s = encode_μ_law(s, self.μ)
+        s = encode_μ_law(s, self.μ).long()
         β = 1.1
         q_s = self.forward(m, m_mel)
 
