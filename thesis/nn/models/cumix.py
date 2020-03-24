@@ -44,7 +44,7 @@ class CUMixer(BaseModel):
         # The encoders
         self.q_sǀm = nn.ModuleList()
         for k in range(self.n_classes):
-            self.q_sǀm.append(q_sǀm(μ, mel_channels, width))
+            self.q_sǀm.append(q_sǀm(self.μ, mel_channels, width))
 
         # The placeholder for the prior networks
         self.p_s = None
