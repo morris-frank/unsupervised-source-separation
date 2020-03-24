@@ -40,7 +40,7 @@ def train_umix(path: str):
     for source in ["sin", "square", "saw", "triangle"]:
         weight = get_newest_file("./checkpoints", f"*{source}*pt")
         print(
-            f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using {Fore.GREEN}{weight}{Fore.RESET}"
+            f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using\t{Fore.GREEN}{weight}{Fore.RESET}"
         )
         priors.append(load_model(weight, "cuda").to("cuda"))
 
@@ -59,7 +59,7 @@ def train_cumix(path: str):
     for source in ["sin", "square", "saw", "triangle"]:
         weight = get_newest_file("./checkpoints", f"*{source}*pt")
         print(
-            f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using {Fore.GREEN}{weight}{Fore.RESET}"
+            f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using\t{Fore.GREEN}{weight}{Fore.RESET}"
         )
         priors.append(load_model(weight, "cuda").to("cuda"))
 

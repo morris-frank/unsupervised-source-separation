@@ -48,14 +48,14 @@ def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = N
 
     # Print to console
     _step = step if step is not None else "---"
-    print(f"step {_step:>9}", end="\t")
+    print(f"step {_step:>9} {Fore.YELLOW}{cat}", end="\t")
     for k, v in log.items():
         col = (
             Fore.CYAN
             if v == LAST_LOG[k] or LAST_LOG["start"]
             else (Fore.GREEN if v < LAST_LOG[k] else Fore.RED)
         )
-        print(f"{Fore.RESET}{k}={col}{v:.3e}{Fore.RESET}, ", end="")
+        print(f"{Fore.RESET}{k.split('/')[0]}={col}{v:.3e}{Fore.RESET}, ", end="")
         LAST_LOG[k] = v
     print()
     LAST_LOG["start"] = False
@@ -124,7 +124,7 @@ def train(
     train_iterator = iter(train_loader)
     it_timer = time.time()
     model.train()
-    print(f"\n{Fore.YELLOW}{'-'*20}{Fore.GREEN} Start training {Fore.YELLOW}{'-'*20}")
+    print(f"\n{Fore.YELLOW}{'-'*20}{Fore.GREEN} Start training {Fore.YELLOW}{'-'*20}{Fore.RESET}")
     for it in range(iterations):
         it_start_time = time.time()
         # Load next random batch
