@@ -52,7 +52,7 @@ class CUMixer(BaseModel):
         # the decoder
         self.p_mǀs = Wavenet(
             in_channels=self.n_classes,
-            out_channels=μ,
+            out_channels=self.μ,
             n_blocks=1,
             n_layers=8,
             residual_channels=32,
