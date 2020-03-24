@@ -37,9 +37,11 @@ def train_umix(path: str):
     from thesis.nn.models.umix import UMixer
 
     priors = []
-    for source in ['sin', 'square', 'saw', 'triangle']:
+    for source in ["sin", "square", "saw", "triangle"]:
         weight = get_newest_file("./checkpoints", f"*{source}*pt")
-        print(f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using {Fore.GREEN}{weight}{Fore.RESET}")
+        print(
+            f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using {Fore.GREEN}{weight}{Fore.RESET}"
+        )
         priors.append(load_model(weight, "cuda").to("cuda"))
 
     model = UMixer(width=128)
@@ -54,9 +56,11 @@ def train_cumix(path: str):
     from thesis.nn.models.cumix import CUMixer
 
     priors = []
-    for source in ['sin', 'square', 'saw', 'triangle']:
+    for source in ["sin", "square", "saw", "triangle"]:
         weight = get_newest_file("./checkpoints", f"*{source}*pt")
-        print(f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using {Fore.GREEN}{weight}{Fore.RESET}")
+        print(
+            f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using {Fore.GREEN}{weight}{Fore.RESET}"
+        )
         priors.append(load_model(weight, "cuda").to("cuda"))
 
     model = CUMixer(μ=101, width=128)

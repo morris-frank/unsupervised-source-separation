@@ -1,3 +1,4 @@
+import warnings
 from collections import OrderedDict
 from os.path import abspath, exists
 from typing import Any
@@ -5,8 +6,11 @@ from typing import Any
 import librosa
 import torch
 from torch import nn
+from torch.serialization import SourceChangeWarning
 
 from .functional import encode_μ_law
+
+warnings.simplefilter("ignore", SourceChangeWarning)
 
 
 def save_append(fp: str, obj: Any):

@@ -16,6 +16,7 @@ from .nn.models import BaseModel
 from .utils import remove_glob
 
 LAST_LOG = defaultdict(float)
+LAST_LOG["start"] = True
 
 
 def run_test_with_batch(model, batch, device):
@@ -51,12 +52,13 @@ def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = N
     for k, v in log.items():
         col = (
             Fore.CYAN
-            if v == LAST_LOG[k]
+            if v == LAST_LOG[k] or LAST_LOG["start"]
             else (Fore.GREEN if v < LAST_LOG[k] else Fore.RED)
         )
         print(f"{Fore.RESET}{k}={col}{v:.3e}{Fore.RESET}, ", end="")
         LAST_LOG[k] = v
     print()
+    LAST_LOG["start"] = False
 
     if _wandb.run is not None:
         _wandb.log(log, step=step)
@@ -122,6 +124,7 @@ def train(
     train_iterator = iter(train_loader)
     it_timer = time.time()
     model.train()
+    print(f"\n{Fore.YELLOW}{'-'*20}{Fore.GREEN} Start training {Fore.YELLOW}{'-'*20}")
     for it in range(iterations):
         it_start_time = time.time()
         # Load next random batch
