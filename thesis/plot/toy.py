@@ -14,7 +14,7 @@ from tqdm import trange
 
 from ..data.toy import ToyData
 
-PRINT_LENGTH = 2000
+PRINT_LENGTH = 500
 
 
 def fig_summary(fname: str):

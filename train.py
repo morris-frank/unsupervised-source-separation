@@ -36,14 +36,31 @@ def train_prior(path: str, k: int):
 def train_umix(path: str):
     from thesis.nn.models.umix import UMixer
 
-    # priors = []
-    # for source in ['sin', 'square', 'saw', 'triangle']:
-    #     weight = get_newest_file("./checkpoints", f"*{source}*pt")
-    #     print(f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using {Fore.GREEN}{weight}{Fore.RESET}")
-    #     priors.append(load_model(weight, "cuda").to("cuda"))
+    priors = []
+    for source in ['sin', 'square', 'saw', 'triangle']:
+        weight = get_newest_file("./checkpoints", f"*{source}*pt")
+        print(f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using {Fore.GREEN}{weight}{Fore.RESET}")
+        priors.append(load_model(weight, "cuda").to("cuda"))
 
     model = UMixer(width=128)
-    # model.p_s = priors
+    model.p_s = priors
+
+    train_set = ToyDataMixes(path=path % "train", mel=True, sources=True)
+    test_set = ToyDataMixes(path=path % "test", mel=True, sources=True)
+    return model, train_set, test_set
+
+
+def train_cumix(path: str):
+    from thesis.nn.models.cumix import CUMixer
+
+    priors = []
+    for source in ['sin', 'square', 'saw', 'triangle']:
+        weight = get_newest_file("./checkpoints", f"*{source}*pt")
+        print(f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using {Fore.GREEN}{weight}{Fore.RESET}")
+        priors.append(load_model(weight, "cuda").to("cuda"))
+
+    model = CUMixer(μ=101, width=128)
+    model.p_s = priors
 
     train_set = ToyDataMixes(path=path % "train", mel=True, sources=True)
     test_set = ToyDataMixes(path=path % "test", mel=True, sources=True)

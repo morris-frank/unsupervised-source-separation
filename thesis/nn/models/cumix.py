@@ -1,5 +1,7 @@
 from typing import Tuple
 
+from random import random
+
 import torch
 from torch import distributions as dist
 from torch import nn
@@ -9,14 +11,15 @@ from torchaudio.transforms import MelSpectrogram
 from . import BaseModel
 from ..wavenet import Wavenet
 from ...utils import clean_init_args
+from ...functional import encode_μ_law, decode_μ_law
 
 
 class q_sǀm(nn.Module):
-    def __init__(self, mel_channels, dim):
+    def __init__(self, out_channels, mel_channels, dim):
         super(q_sǀm, self).__init__()
         self.f = Wavenet(
             in_channels=1,
-            out_channels=dim,
+            out_channels=out_channels,
             n_blocks=3,
             n_layers=11,
             residual_channels=dim,
@@ -25,28 +28,23 @@ class q_sǀm(nn.Module):
             cin_channels=mel_channels,
         )
 
-        self.f_α = nn.Sequential(nn.Conv1d(dim, 1, 1), nn.Softplus())
-        self.f_β = nn.Sequential(nn.Conv1d(dim, 1, 1), nn.Softplus())
-
     def forward(self, m: torch.Tensor, m_mel: torch.Tensor):
-        f = self.f(m, m_mel)
-        α = self.f_α(f) + 1e-10
-        β = self.f_β(f) + 1e-10
-        return α, β
+        return F.log_softmax(self.f(m, m_mel), dim=1)
 
 
-class UMixer(BaseModel):
-    def __init__(self, mel_channels: int = 80, width: int = 64):
-        super(UMixer, self).__init__()
+class CUMixer(BaseModel):
+    def __init__(self, μ: int, mel_channels: int = 80, width: int = 64):
+        super(CUMixer, self).__init__()
         self.params = clean_init_args(locals().copy())
-        self.name = "only_supervised"
+        self.name = "cat_supervised"
+        self.μ = μ
 
         self.n_classes = 4
 
         # The encoders
         self.q_sǀm = nn.ModuleList()
         for k in range(self.n_classes):
-            self.q_sǀm.append(q_sǀm(mel_channels, width))
+            self.q_sǀm.append(q_sǀm(μ, mel_channels, width))
 
         # The placeholder for the prior networks
         self.p_s = None
@@ -54,7 +52,7 @@ class UMixer(BaseModel):
         # the decoder
         self.p_mǀs = Wavenet(
             in_channels=self.n_classes,
-            out_channels=1,
+            out_channels=μ,
             n_blocks=1,
             n_layers=8,
             residual_channels=32,
@@ -89,18 +87,18 @@ class UMixer(BaseModel):
         m_mel = self.upsample(m_mel)
         m_mel = m_mel[:, :, : m.shape[-1]]
 
-        α, β = zip(*[q(m, m_mel) for q in self.q_sǀm])
-        α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
-        # return α, β
-        q_s = dist.Beta(α, β)
+        logits = [q(m, m_mel) for q in self.q_sǀm]
+        logits = torch.stack(logits, dim=-1)
+        q_s = dist.Categorical(logits=logits)
         return q_s
 
     def forward(
         self, m: torch.Tensor, m_mel: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    ) -> dist.Categorical:
         q_s = self.q_s(m, m_mel)
-        ŝ = q_s.rsample()
+        ŝ = q_s.sample()
         log_q_ŝ = q_s.log_prob(ŝ)
+        decode_μ_law(ŝ, self.μ)
 
         for k in range(self.n_classes):
             # Get Log likelihood under prior
@@ -114,23 +112,27 @@ class UMixer(BaseModel):
             setattr(self.ℒ, f"KL_{k}", KL_k)
 
         m_ = self.p_mǀs(ŝ)
-        self.ℒ.l1_recon = F.l1_loss(m_, m)
+        self.ℒ.ce_mix = F.cross_entropy(m_, encode_μ_law(m, self.μ))
 
-        return ŝ, m_
+        return q_s
 
     def test(
         self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor
     ) -> torch.Tensor:
         m, m_mel = x
+        s = encode_μ_law(s, self.μ)
         β = 1.1
-        ŝ, _ = self.forward(m, m_mel)
+        q_s = self.forward(m, m_mel)
 
-        self.ℒ.supervised_l1_recon = F.l1_loss(ŝ, s)
-
-        ℒ = self.ℒ.l1_recon + self.ℒ.supervised_l1_recon
+        ℒ = self.ℒ.ce_mix
 
         for k in range(self.n_classes):
-           ℒ += β * getattr(self.ℒ, f"KL_{k}")
+            if random() < 0.1:
+                logits = q_s.logits[:, k, ...].transpose(1, 2)
+                setattr(self.ℒ, f"nll_{k}", F.nll_loss(logits, s[:, k, ...]))
+                ℒ += getattr(self.ℒ, f"nll_{k}")
+
+            ℒ += β * getattr(self.ℒ, f"KL_{k}")
 
         return ℒ
 

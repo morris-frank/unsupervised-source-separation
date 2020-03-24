@@ -81,8 +81,9 @@ def encode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
     assert μ & 1
     assert x.max() <= 1.0 and x.min() >= -1.0
     μ = μ - 1
+    hμ = μ // 2
     out = torch.sign(x) * torch.log(1 + μ * torch.abs(x)) / log(μ)
-    out = torch.round(out * (μ // 2))
+    out = torch.round(out * hμ) + hμ
     return out
 
 
@@ -98,10 +99,9 @@ def decode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
         the decoded tensor
     """
     assert μ & 1
-    x = x.type(torch.float32)
-    # out = (tensor + 0.5) * 2. / (μ + 1)
     μ = μ - 1
-    out = x / (μ // 2)
+    hμ = μ // 2
+    out = (x.type(torch.float32) - hμ) / hμ
     out = torch.sign(out) / μ * (torch.pow(μ, torch.abs(out)) - 1)
     return out
 
@@ -127,26 +127,6 @@ def destroy_along_channels(x: torch.Tensor, amount: float) -> torch.Tensor:
         else:
             x[:, i] = 0.0
     return x
-
-
-def multi_argmax(x: torch.Tensor, n: int, μ: int = 101) -> torch.Tensor:
-    """
-    Takes argmax from SoftMax-output over the concatenated channels.
-
-    Args:
-        x: Output of network pred
-        n: Number of sources
-        μ: Number of classes for μ-law encoding
-
-    Returns:
-        Argmaxed y_tilde with only ns channels
-    """
-    assert x.shape[1] == n * μ
-    signals = []
-    for i in range(n):
-        j = i * μ
-        signals.append(x[:, j : j + μ, :].argmax(dim=1))
-    return torch.cat(signals)
 
 
 def orthonormal(*dim: int) -> torch.Tensor:
