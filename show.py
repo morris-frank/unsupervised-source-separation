@@ -26,7 +26,6 @@ def show_sample(data, weights):
         μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).logits.argmax(
             dim=-1
         )  # For categorical
-        μ_ŝ = decode_μ_law(μ_ŝ, model.μ)
         _ = plot.toy.reconstruction(s, μ_ŝ, m)
         plt.show()
         input("?")

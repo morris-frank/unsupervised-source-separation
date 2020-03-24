@@ -97,7 +97,7 @@ class CUMixer(BaseModel):
     ) -> dist.Categorical:
         q_s = self.q_s(m, m_mel)
         ŝ = q_s.sample()
-        log_q_ŝ = q_s.log_prob(ŝ)
+        # log_q_ŝ = q_s.log_prob(ŝ)
         ŝ = decode_μ_law(ŝ, self.μ)
 
         # for k in range(self.n_classes):
@@ -127,7 +127,7 @@ class CUMixer(BaseModel):
 
         ℒ = self.ℒ.ce_mix
 
-        is_supervised = random() < 0.1
+        is_supervised = random() < 1.
         for k in range(self.n_classes):
             if is_supervised:
                 logits = q_s.logits[:, k, ...].transpose(1, 2)
