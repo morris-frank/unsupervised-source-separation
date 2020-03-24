@@ -106,6 +106,7 @@ EXPERIMENTS = {
     "prior-3": partial(train_prior, k=3),
     "umix": train_umix,
     "numix": train_numix,
+    "cumix": train_cumix,
 }
 
 if __name__ == "__main__":
