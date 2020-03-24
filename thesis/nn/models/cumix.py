@@ -112,7 +112,7 @@ class CUMixer(BaseModel):
             setattr(self.ℒ, f"KL_{k}", KL_k)
 
         m_ = self.p_mǀs(ŝ)
-        self.ℒ.ce_mix = F.cross_entropy(m_, encode_μ_law(m, self.μ))
+        self.ℒ.ce_mix = F.cross_entropy(m_, encode_μ_law(m, self.μ).squeeze())
 
         return q_s
 
