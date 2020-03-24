@@ -63,7 +63,7 @@ def train_cumix(path: str):
         )
         priors.append(load_model(weight, "cuda").to("cuda"))
 
-    model = CUMixer(μ=101, width=128)
+    model = CUMixer(mu=101, width=128)
     model.p_s = priors
 
     train_set = ToyDataMixes(path=path % "train", mel=True, sources=True)

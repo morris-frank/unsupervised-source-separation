@@ -33,11 +33,11 @@ class q_sǀm(nn.Module):
 
 
 class CUMixer(BaseModel):
-    def __init__(self, μ: int, mel_channels: int = 80, width: int = 64):
+    def __init__(self, mu: int, mel_channels: int = 80, width: int = 64):
         super(CUMixer, self).__init__()
         self.params = clean_init_args(locals().copy())
         self.name = "cat_supervised"
-        self.μ = μ
+        self.μ = mu
 
         self.n_classes = 4
 
