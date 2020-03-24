@@ -127,8 +127,9 @@ class CUMixer(BaseModel):
 
         ℒ = self.ℒ.ce_mix
 
+        is_supervised = random() < 0.1
         for k in range(self.n_classes):
-            if random() < 0.1:
+            if is_supervised:
                 logits = q_s.logits[:, k, ...].transpose(1, 2)
                 setattr(self.ℒ, f"nll_{k}", F.nll_loss(logits, s[:, k, ...]))
                 ℒ += getattr(self.ℒ, f"nll_{k}")

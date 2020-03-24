@@ -41,8 +41,9 @@ def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = N
     # Add new logs from ℒ logger
     if hasattr(model, "L"):
         for k, v in model.ℒ.log.items():
-            log[f"{k}/{cat}"] = mean(v)
-            model.ℒ.log[k] = []
+            if len(v):
+                log[f"{k}/{cat}"] = mean(v)
+                model.ℒ.log[k] = []
 
     # Print to console
     _step = step if step is not None else "---"
