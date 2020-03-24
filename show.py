@@ -11,6 +11,7 @@ from thesis import plot
 from thesis.data.toy import ToyDataSourceK, ToyDataMixes
 from thesis.io import load_model
 from thesis.utils import get_newest_file
+from thesis.functional import decode_μ_law, encode_μ_law
 
 
 def show_sample(data, weights):
@@ -19,8 +20,13 @@ def show_sample(data, weights):
     dset = ToyDataMixes(path=f"{data}/test/", mel=True, sources=True)
 
     for (m, mel), s in dset:
-        #μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean
-        μ_ŝ, _ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0))
+        s = encode_μ_law(s, model.μ).long()
+        # μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean  # For Beta dist
+        # μ_ŝ, _ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0))  # For Gaussian
+        μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).logits.argmax(
+            dim=-1
+        )  # For categorical
+        μ_ŝ = decode_μ_law(μ_ŝ, model.μ)
         _ = plot.toy.reconstruction(s, μ_ŝ, m)
         plt.show()
         input("?")
