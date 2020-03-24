@@ -98,7 +98,7 @@ class CUMixer(BaseModel):
         q_s = self.q_s(m, m_mel)
         ŝ = q_s.sample()
         log_q_ŝ = q_s.log_prob(ŝ)
-        decode_μ_law(ŝ, self.μ)
+        ŝ = decode_μ_law(ŝ, self.μ)
 
         for k in range(self.n_classes):
             # Get Log likelihood under prior
