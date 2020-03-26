@@ -78,6 +78,12 @@ def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
         kwargs = save_point["params"]["kwargs"].copy()
         model = model_class(*args, **kwargs)
 
+        if "upsample_conv.0.bias" in state_dict.keys():
+            for i in (0, 1):
+                state_dict[f"c_up.up.c{i}.bias"] = state_dict[f"upsample_conv.{2*i}.bias"]
+                for n in ('g', 'v'):
+                    state_dict[f"c_up.up.c{i}.weight_{n}"] = state_dict[f"upsample_conv.{2*i}.weight_{n}"]
+
         if next(iter(state_dict.keys())).startswith("module."):
             _state_dict = OrderedDict({k[7:]: v for k, v in state_dict.items()})
             state_dict = _state_dict
