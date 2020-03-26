@@ -66,24 +66,22 @@ def squeeze(tensor):
     return tensor[:, 100:PRINT_LENGTH].numpy()
 
 
-def reconstruction(
-        s: torch.Tensor, ŝ: torch.Tensor, m: torch.Tensor = None
-) -> plt.Figure:
-    s, ŝ = squeeze(s), squeeze(ŝ)
-    hasM = m is not None
-    if hasM:
-        m = squeeze(m)
+def reconstruction(*signals: torch.Tensor):
+    colores = ["k", "n", "y", "g", "r"]
+    signals = list(map(squeeze, signals))
+    ch = set(s.shape[0] for s in signals)
+    N, hasM = max(ch), len(ch) >= 2
+    ylim = (min(map(np.min, signals)), max(map(np.max, signals)))
 
-    N = s.shape[0]
-    smin, smax = min(s.min(), ŝ.min()), max(s.max(), ŝ.max())
     fig, axs = plt.subplots(N+hasM, sharex="all")
-
-    for i in range(N):
-        axs[i].plot(s[i, :], "k-", alpha=0.8)
-        axs[i].plot(ŝ[i, :], "n-")
-        axs[i].set_ylim([smin, smax])
-        if hasM:
-            axs[-1].plot(m[0, :], c="k")
+    for k, signal in enumerate(signals):
+        if signal.shape[0] < N:
+            axs[-1].plot(signal[0, :], c="k")
+        else:
+            c = colores[k % len(colores)]
+            for i in range(N):
+                axs[i].plot(signal[i, :], f"{c}-")
+                axs[i].set_ylim(ylim)
     return fig
 
 

@@ -95,6 +95,8 @@ def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
 
 
 def exit_prompt():
-    inp = input("Continue? (q for exit)\t")
+    inp = input("REPL? \t")
     if inp.lower().strip() == 'q':
         exit()
+    elif inp.lower().strip() == 'c':
+        import ipdb; ipdb.set_trace()

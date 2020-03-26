@@ -3,6 +3,25 @@ from math import sqrt, log
 
 import torch
 from torch import distributions as dist
+from torch.distributions import constraints
+
+
+class AffineBeta(dist.Beta):
+    def __init__(self, *args, s: float = 2., t: float = -1., **kwargs):
+        super(AffineBeta, self).__init__(*args, **kwargs)
+        self.support = constraints.interval(t, s + t)
+        self.s, self.t = s, t
+
+    @property
+    def mean(self):
+        return self.s * super(AffineBeta, self).mean + self.t
+
+    def rsample(self, sample_shape=()):
+        return self.s * super(AffineBeta, self).rsample(sample_shape) + self.t
+
+    def log_prob(self, value):
+        value = (value - self.t) / self.s
+        return super(AffineBeta, self).log_prob(value)
 
 
 def norm_cdf(x: torch.Tensor):

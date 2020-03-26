@@ -20,13 +20,16 @@ def show_sample(data, weights):
     dset = ToyDataRandomAmplitude(path=f"{data}/test/")
 
     for (m, mel), s in dset:
-        s = discretize(s, model.μ).long()
-        # μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean  # For Beta dist
+        q_s = model.q_s(m.unsqueeze(0), mel.unsqueeze(0))
+        α, β = q_s.concentration0, q_s.concentration1
+        plot.toy.reconstruction(s, α, β, m)
+        #μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).sample()  # For Beta dist
         # μ_ŝ, _ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0))  # For Gaussian
-        μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).logits.argmax(
-            dim=-1
-        )  # For categorical
-        _ = plot.toy.reconstruction(s, μ_ŝ, m)
+        #s = discretize(s, model.μ).long()
+        # μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).logits.argmax(
+        #     dim=-1
+        # )  # For categorical
+        #_ = plot.toy.reconstruction(s, μ_ŝ, m)
         plt.show()
         exit_prompt()
 

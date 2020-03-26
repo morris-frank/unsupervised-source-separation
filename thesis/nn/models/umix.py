@@ -1,15 +1,15 @@
 from typing import Tuple
 
 import torch
-from torch import distributions as dist
 from torch import nn
 from torch.nn import functional as F
 from torchaudio.transforms import MelSpectrogram
 
 from . import BaseModel
-from ..wavenet import Wavenet
-from ...utils import clean_init_args
 from ..modules import STFTUpsample
+from ..wavenet import Wavenet
+from ...dist import AffineBeta
+from ...utils import clean_init_args
 
 
 class q_sǀm(nn.Module):
@@ -84,7 +84,7 @@ class UMixer(BaseModel):
 
         α, β = zip(*[q(m, m_mel) for q in self.q_sǀm])
         α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
-        q_s = dist.Beta(α, β)
+        q_s = AffineBeta(α, β)
         return q_s
 
     def forward(
