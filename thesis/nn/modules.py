@@ -125,31 +125,6 @@ class ChannelConvInvert(nn.Module):
             return z, logdet_w
 
 
-class Flatten(nn.Module):
-    def forward(self, x):
-        return x.flatten(start_dim=1)
-
-
-class AttentionBlock(nn.Module):
-    def __init__(self, input_nc, output_nc, resize=True):
-        super().__init__()
-        self.conv = nn.Conv2d(input_nc, output_nc, 3, padding=1, bias=False)
-        self.norm = nn.InstanceNorm2d(output_nc, affine=True)
-        self._resize = resize
-
-    def forward(self, *inputs):
-        downsampling = len(inputs) == 1
-        x = inputs[0] if downsampling else torch.cat(inputs, dim=1)
-        x = self.conv(x)
-        x = self.norm(x)
-        x = skip = F.relu(x)
-        if self._resize:
-            x = F.interpolate(
-                skip, scale_factor=0.5 if downsampling else 2.0, mode="nearest"
-            )
-        return (x, skip) if downsampling else x
-
-
 class STFTUpsample(nn.Module):
     def __init__(self, kernel_sizes: List[int]):
         super(STFTUpsample, self).__init__()
