@@ -8,6 +8,7 @@ from . import BaseModel
 from ..wavenet import Wavenet
 from ...functional import likelihood_normal, split_LtoC, flip_channels
 from ...utils import clean_init_args
+from ..modules import STFTUpsample
 
 
 class ActNorm(nn.Module):
@@ -145,6 +146,8 @@ class Flowavenet(BaseModel):
         self.params = clean_init_args(locals().copy())
         self.block_per_split, self.n_block = block_per_split, n_block
 
+        self.c_up = STFTUpsample([16, 16])
+
         self.blocks = nn.ModuleList()
         for i in range(self.n_block):
             split = (i < self.n_block - 1) and (i + 1) % self.block_per_split == 0
@@ -158,21 +161,11 @@ class Flowavenet(BaseModel):
             if not split:
                 in_channel *= 2
 
-        self.upsample_conv = nn.ModuleList()
-        for s in [16, 16]:
-            convt = nn.ConvTranspose2d(
-                1, 1, (3, 2 * s), padding=(1, s // 2), stride=(1, s)
-            )
-            convt = nn.utils.weight_norm(convt)
-            nn.init.kaiming_normal_(convt.weight)
-            self.upsample_conv.append(convt)
-            self.upsample_conv.append(nn.LeakyReLU(0.4))
-
     def forward(self, x, c):
         B, _, T = x.size()
         logdet, log_p_sum = 0, 0
         out = x
-        c = self.upsample(c)[:, :, :T]
+        c = self.c_up(c, T)
 
         for k, block in enumerate(self.blocks):
             out, c, logdet_new, logp_new = block(out, c)
@@ -185,13 +178,6 @@ class Flowavenet(BaseModel):
         log_p_sum += -0.5 * (log(2.0 * pi) + out.pow(2)).sum(1, keepdim=True)
         logdet = logdet / (B * T)
         return log_p_sum, logdet
-
-    def upsample(self, c):
-        c = c.unsqueeze(1)
-        for f in self.upsample_conv:
-            c = f(c)
-        c = c.squeeze(1)
-        return c
 
     def test(self, source, mel):
         B, _, T = source.size()
