@@ -49,8 +49,8 @@ def train_umix(path: str):
     model = UMixer(width=128)
     # model.p_s = _load_prior_networks()
 
-    train_set = ToyData(path=path % "train", mel=True, sources=True)
-    test_set = ToyData(path=path % "test", mel=True, sources=True)
+    train_set = ToyDataRandomAmplitude(path=path % "train")
+    test_set = ToyDataRandomAmplitude(path=path % "test")
     return model, train_set, test_set
 
 
@@ -69,8 +69,8 @@ def train_numix(path: str):
 
     model = NUMixer(width=128)
 
-    train_set = ToyData(path=path % "train", mel=True, sources=True)
-    test_set = ToyData(path=path % "test", mel=True, sources=True)
+    train_set = ToyDataRandomAmplitude(path=path % "train")
+    test_set = ToyDataRandomAmplitude(path=path % "test")
     return model, train_set, test_set
 
 
