@@ -5,9 +5,9 @@ def test_μ_law():
     from .functional import encode_μ_law, decode_μ_law
 
     x = torch.tensor([-1, -0.5, 0, 0.5, 1.0], dtype=torch.float)
-    y = torch.tensor([-127, -111, 0, 111, 127], dtype=torch.int8)
+    y = torch.tensor([0, 16, 127, 238, 254], dtype=torch.uint8)
 
-    assert torch.all(encode_μ_law(x).type(torch.int8) == y)
+    assert torch.all(encode_μ_law(x).type(torch.uint8) == y)
     assert torch.allclose(decode_μ_law(y), x, atol=0.1)
 
 

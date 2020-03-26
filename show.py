@@ -8,7 +8,7 @@ from colorama import Fore
 from matplotlib import pyplot as plt
 
 from thesis import plot
-from thesis.data.toy import ToyDataSourceK, ToyData
+from thesis.data.toy import ToyDataSourceK, ToyDataRandomAmplitude
 from thesis.functional import encode_μ_law
 from thesis.io import load_model, get_newest_file
 from thesis.data.toy import TOY_SIGNALS
@@ -17,7 +17,7 @@ from thesis.data.toy import TOY_SIGNALS
 def show_sample(data, weights):
     model = load_model(weights, "cpu")
 
-    dset = ToyData(path=f"{data}/test/", mel=True, sources=True)
+    dset = ToyDataRandomAmplitude(path=f"{data}/test/")
 
     for (m, mel), s in dset:
         s = encode_μ_law(s, model.μ).long()
