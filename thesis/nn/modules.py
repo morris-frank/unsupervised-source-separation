@@ -155,14 +155,14 @@ class STFTUpsample(nn.Module):
         super(STFTUpsample, self).__init__()
 
         self.up = nn.Sequential()
-        for ks in kernel_sizes:
+        for i, ks in enumerate(kernel_sizes):
             conv = nn.ConvTranspose2d(
                 1, 1, (3, 2 * ks), padding=(1, ks // 2), stride=(1, ks)
             )
             conv = nn.utils.weight_norm(conv)
             nn.init.kaiming_normal_(conv.weight)
-            self.up.append(conv)
-            self.up.append(nn.LeakyReLU(0.4))
+            self.up.add_module(f"c{i}", conv)
+            self.up.add_module(f"a{i}", nn.LeakyReLU(0.4))
 
     def forward(self, c: torch.Tensor, width: int):
         c = self.up(c.unsqueeze(1)).squeeze(1)
