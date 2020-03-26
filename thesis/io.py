@@ -1,6 +1,8 @@
+import os
 import warnings
 from collections import OrderedDict
-from os.path import abspath, exists
+from glob import glob
+from os import path
 from typing import Any
 
 import librosa
@@ -13,6 +15,15 @@ from .functional import encode_μ_law
 warnings.simplefilter("ignore", SourceChangeWarning)
 
 
+def get_newest_file(folder: str, match: str = "*pt"):
+    return sorted(glob(f"{folder}/{match}"), key=lambda x: path.getmtime(x))[-1]
+
+
+def glob_remove(path: str):
+    for fp in glob(path):
+        os.remove(fp)
+
+
 def save_append(fp: str, obj: Any):
     """
     Appends to a pickled torch save. Create file if not exists.
@@ -20,8 +31,8 @@ def save_append(fp: str, obj: Any):
         fp: Path to file
         obj: New obj to append
     """
-    fp = abspath(fp)
-    if exists(fp):
+    fp = path.abspath(fp)
+    if path.exists(fp):
         data = torch.load(fp)
     else:
         data = [obj]

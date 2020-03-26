@@ -13,7 +13,7 @@ from torch.nn.utils import clip_grad_norm_
 from torch.utils import data
 
 from .nn.models import BaseModel
-from .utils import remove_glob
+from .utils import glob_remove
 
 LAST_LOG = defaultdict(float)
 LAST_LOG["start"] = True
@@ -162,7 +162,7 @@ def train(
         # TEST AND SAVE THE MODEL (every 30min)
         if (time.time() - it_timer) > 1800 or it == iterations - 1:
             if not keep_checkpoints:
-                remove_glob((f"checkpoints/{model_id}_*.pt"))
+                glob_remove((f"checkpoints/{model_id}_*.pt"))
             save_point = {
                 "it": it,
                 "model_state_dict": model.state_dict(),

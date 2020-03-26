@@ -8,6 +8,9 @@ import torch
 from ..data import Dataset
 
 
+TOY_SIGNALS = ["sin", "square", "saw", "triangle"]
+
+
 class _ToyData(Dataset):
     def __init__(self, path: str, crop: Optional[int] = None):
         self.files = glob(f"{path}/*npy")

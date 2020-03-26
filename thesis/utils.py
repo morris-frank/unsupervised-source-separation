@@ -1,12 +1,11 @@
 from collections import defaultdict
 from contextlib import contextmanager
-from glob import glob
 from itertools import product
-from os.path import getmtime
-import os
 from typing import Dict, Any
 
 import torch
+from torch import nn
+from torch.nn.utils import remove_weight_norm
 
 
 def clean_init_args(_locals: Dict) -> Dict[str, Any]:
@@ -65,10 +64,15 @@ class _LossLogger(object):
             self.log[key].append(value)
 
 
-def get_newest_file(folder: str, match: str = "*pt"):
-    return sorted(glob(f"{folder}/{match}"), key=lambda x: getmtime(x))[-1]
+def remove_list_weight_norm(ml: nn.ModuleList) -> nn.ModuleList:
+    """
+    Removes weight norm from all layers in a ModuleList
 
+    Args:
+        ml: the ModuleList
 
-def remove_glob(path: str):
-    for fp in glob(path):
-        os.remove(fp)
+    Returns:
+        the changes modulelist
+    """
+    _ml = nn.ModuleList([remove_weight_norm(l) for l in ml])
+    return _ml

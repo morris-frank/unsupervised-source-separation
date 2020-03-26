@@ -3,20 +3,18 @@ import os
 from argparse import ArgumentParser
 from functools import partial
 
+from colorama import Fore
 from torch import autograd
 
-from thesis.data.toy import ToyDataSourceK, ToyData, ToyDataRandomAmplitude
-from thesis.io import load_model
+from thesis.data.toy import ToyDataSourceK, ToyData, ToyDataRandomAmplitude, TOY_SIGNALS
+from thesis.io import load_model, get_newest_file
 from thesis.train import train
-from thesis.utils import optional, get_newest_file
-from colorama import Fore
-
-signals = ["sin", "square", "saw", "triangle"]
+from thesis.utils import optional
 
 
 def _load_prior_networks():
     priors = []
-    for source in ["sin", "square", "saw", "triangle"]:
+    for source in TOY_SIGNALS:
         weight = get_newest_file("./checkpoints", f"*{source}*pt")
         print(
             f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using\t{Fore.GREEN}{weight}{Fore.RESET}"
@@ -25,8 +23,9 @@ def _load_prior_networks():
     return priors
 
 
-def train_prior(path: str, k: int):
+def train_prior(path: str, signal: str):
     from thesis.nn.models.flowavenet import Flowavenet
+    k = TOY_SIGNALS.index(signal)
 
     mel_channels = 80
     model = Flowavenet(
@@ -37,7 +36,7 @@ def train_prior(path: str, k: int):
         n_layer=2,
         block_per_split=2,
         width=48,
-        name=signals[k],
+        name=signal,
     )
     train_set = ToyDataSourceK(path=path % "train", k=k, mel=True)
     test_set = ToyDataSourceK(path=path % "test", k=k, mel=True)
@@ -48,7 +47,7 @@ def train_umix(path: str):
     from thesis.nn.models.umix import UMixer
 
     model = UMixer(width=128)
-    #model.p_s = _load_prior_networks()
+    # model.p_s = _load_prior_networks()
 
     train_set = ToyData(path=path % "train", mel=True, sources=True)
     test_set = ToyData(path=path % "test", mel=True, sources=True)
@@ -98,10 +97,10 @@ def main(args):
 
 
 EXPERIMENTS = {
-    "prior-0": partial(train_prior, k=0),
-    "prior-1": partial(train_prior, k=1),
-    "prior-2": partial(train_prior, k=2),
-    "prior-3": partial(train_prior, k=3),
+    "sin": partial(train_prior, signal="sin"),
+    "square": partial(train_prior, signal="square"),
+    "saw": partial(train_prior, signal="saw"),
+    "triangle": partial(train_prior, signal="triangle"),
     "umix": train_umix,
     "numix": train_numix,
     "cumix": train_cumix,

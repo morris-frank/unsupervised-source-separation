@@ -7,7 +7,7 @@ from torch.nn import functional as F
 from . import BaseModel
 from ..modules import STFTUpsample
 from ..wavenet import Wavenet
-from ...functional import rsample_truncated_normal
+from ...dist import rsample_truncated_normal
 from ...utils import clean_init_args
 
 

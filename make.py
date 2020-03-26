@@ -1,30 +1,26 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
-import torch
 from os import makedirs
 from os.path import abspath, exists
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 from colorama import Fore
 from tqdm import tqdm
 
-from thesis.data.toy import ToyData
-from thesis.io import load_model
-from thesis.plot import toy
-from thesis.utils import get_newest_file
+from thesis import plot
+from thesis.data.toy import ToyData, TOY_SIGNALS
+from thesis.io import load_model, get_newest_file
 
 mpl.use("agg")
 
 
-TOY_SOURCES = ["sin", "square", "saw", "triangle"]
-
-
 def make_cross_likelihood_plot(data, _k, weight):
     fp = "./figures/cross_likelihood.npy"
-    K = len(TOY_SOURCES)
-    k = TOY_SOURCES.index(_k)
+    K = len(TOY_SIGNALS)
+    k = TOY_SIGNALS.index(_k)
 
     model = load_model(f"{weight}", "cuda").to("cuda")
 
@@ -54,7 +50,7 @@ def make_separation_examples(data):
         mix = mix.unsqueeze(0).to("cuda")
         mel = mel.unsqueeze(0).to("cuda")
         ŝ = model.umix(mix, mel)[0]
-        _ = toy.reconstruction(sources, ŝ, mix)
+        _ = plot.toy.reconstruction(sources, ŝ, mix)
         plt.savefig(f"./figures/{weights}/separate_{i}.png", dpi=200)
         plt.close()
 
@@ -68,7 +64,9 @@ def main(args):
         )
 
     if not exists(args.data):
-        raise FileNotFoundError(f"This data directory does not exits, you  stupid fuck\n{args.data}")
+        raise FileNotFoundError(
+            f"This data directory does not exits, you  stupid fuck\n{args.data}"
+        )
 
     makedirs("./figures", exist_ok=True)
 

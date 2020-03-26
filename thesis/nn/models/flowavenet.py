@@ -5,10 +5,11 @@ from torch import nn
 from torch.nn import functional as F
 
 from . import BaseModel
-from ..wavenet import Wavenet
-from ...functional import likelihood_normal, split_LtoC, flip_channels
-from ...utils import clean_init_args
 from ..modules import STFTUpsample
+from ..wavenet import Wavenet
+from ...dist import likelihood_normal
+from ...functional import split_LtoC, flip_channels
+from ...utils import clean_init_args
 
 
 class ActNorm(nn.Module):

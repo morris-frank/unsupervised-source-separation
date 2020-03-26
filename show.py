@@ -9,9 +9,9 @@ from matplotlib import pyplot as plt
 
 from thesis import plot
 from thesis.data.toy import ToyDataSourceK, ToyData
-from thesis.io import load_model
-from thesis.utils import get_newest_file
 from thesis.functional import encode_μ_law
+from thesis.io import load_model, get_newest_file
+from thesis.data.toy import TOY_SIGNALS
 
 
 def show_sample(data, weights):
@@ -34,11 +34,11 @@ def show_sample(data, weights):
 def show_cross_likelihood():
     log_p = np.load("./figures/cross_likelihood.npy")
 
-    fig = plot.toy.plot_signal_heatmap((log_p.mean(-1)), ["sin", "sq", "saw", "tri"])
+    fig = plot.toy.plot_signal_heatmap((log_p.mean(-1)), TOY_SIGNALS)
     fig.suptitle(r"mean of likelihood log p(s)")
     fig.show()
     input("?")
-    fig = plot.toy.plot_signal_heatmap(log_p.var(-1), ["sin", "sq", "saw", "tri"])
+    fig = plot.toy.plot_signal_heatmap(log_p.var(-1), TOY_SIGNALS)
     fig.suptitle("var of likelihood log p(s)")
     fig.show()
     input("?")

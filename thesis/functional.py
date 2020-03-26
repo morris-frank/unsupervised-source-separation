@@ -1,30 +1,11 @@
 import random
-from math import log, sqrt
-from math import pi as π
+from math import log
 from typing import Tuple
 
 import torch
-from torch import distributions as dist
-from torch import nn
 from torch.nn import functional as F
-from torch.nn.utils import remove_weight_norm
 
 
-def remove_list_weight_norm(ml: nn.ModuleList) -> nn.ModuleList:
-    """
-    Removes weight norm from all layers in a ModuleList
-
-    Args:
-        ml: the ModuleList
-
-    Returns:
-        the changes modulelist
-    """
-    _ml = nn.ModuleList([remove_weight_norm(l) for l in ml])
-    return _ml
-
-
-# @torch.jit.script
 def dilate(x: torch.Tensor, new: int, old: int = 1) -> torch.Tensor:
     """
     Will dilate the input tensor of shape [N, C, L]
@@ -167,77 +148,3 @@ def split_LtoC(x: torch.Tensor) -> torch.Tensor:
 def flip_channels(x: torch.Tensor) -> torch.Tensor:
     x_a, x_b = x.chunk(2, 1)
     return torch.cat([x_b, x_a], 1)
-
-
-def norm_cdf(x: torch.Tensor):
-    """
-    Element-wise cumulative value for tensor x under a normal distribution.
-
-    Args:
-        x: the tensor
-
-    Returns:
-        the norm cdfs
-    """
-    return (1.0 + torch.erf(x / sqrt(2.0))) / 2.0
-
-
-def rsample_truncated_normal(
-    μ: torch.Tensor, σ: torch.Tensor, ll: bool = False, a: float = -1.0, b: float = 1.0
-):
-    """
-    Takes an rsample from a truncated normal distribution given the mean μ and
-    the variance σ. Sample is same sized as μ and σ.
-
-    Args:
-        μ: Means
-        σ: Variances
-        ll: if true also returns the log likelihood of the samples!
-        a: Left/lower bound/truncation
-        b: Right/upper bound/truncation
-
-    Returns:
-        A sample from the truncated normal sized as μ/σ.
-    """
-    assert μ.shape == σ.shape
-
-    l = norm_cdf((-μ + a) / σ)
-    u = norm_cdf((-μ + b) / σ)
-
-    udist = dist.uniform.Uniform(2 * l - 1, 2 * u - 1)
-    tensor = udist.rsample()
-
-    tensor.erfinv_()
-    tensor.mul_(σ * sqrt(2.))
-    tensor.add_(μ)
-
-    tensor.clamp_(a, b)
-
-    if ll:
-        denom = torch.log(u - l)
-        ξ = (tensor - μ) / σ
-        num = -.5 * ξ * ξ - .5 * log(2. * π)
-        log_l = -torch.log(σ) + num - denom
-        return tensor, log_l
-    else:
-        return tensor
-
-
-def likelihood_truncated_normal(
-    x: torch.Tensor, μ: torch.Tensor, σ: torch.Tensor, a: float = -1.0, b: float = 1.0
-):
-    assert μ.shape == σ.shape
-
-    l = norm_cdf((-μ + a) / σ)
-    u = norm_cdf((-μ + b) / σ)
-
-    ξ = (x - μ) / σ
-    φ_ξ = 1 / sqrt(2 * π) * torch.exp(-0.5 * ξ * ξ)
-
-    f_x = φ_ξ / (u - l) / σ
-
-    return f_x
-
-
-def likelihood_normal(x, μ, log_σ):
-    return -0.5 * log(2. * π) - log_σ - 0.5 * (x - μ) ** 2 / torch.exp(2. * log_σ)
