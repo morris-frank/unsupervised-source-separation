@@ -10,7 +10,7 @@ from torchaudio.transforms import MelSpectrogram
 from . import BaseModel
 from ..modules import STFTUpsample
 from ..wavenet import Wavenet
-from ...functional import encode_μ_law
+from ...functional import discretize
 from ...utils import clean_init_args
 
 
@@ -113,8 +113,7 @@ class CUMixer(BaseModel):
         self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor
     ) -> torch.Tensor:
         m, m_mel = x
-        s = encode_μ_law(s, self.μ).long()
-        β = 1.1
+        s = discretize(s, self.μ).long()
         q_s = self.forward(m, m_mel)
 
         # ℒ = self.ℒ.ce_mix
@@ -127,7 +126,7 @@ class CUMixer(BaseModel):
                 setattr(self.ℒ, f"nll_{k}", F.nll_loss(logits, s[:, k, ...]))
                 ℒ += getattr(self.ℒ, f"nll_{k}")
 
-            # ℒ += β * getattr(self.ℒ, f"KL_{k}")
+            # ℒ += getattr(self.ℒ, f"KL_{k}")
 
         return ℒ
 

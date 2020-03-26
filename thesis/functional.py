@@ -48,6 +48,15 @@ def shift1d(x: torch.Tensor, shift: int) -> torch.Tensor:
     return y.contiguous()
 
 
+def discretize(x: torch.Tensor, μ: int = 101):
+    assert μ & 1
+    assert x.max() <= 1. and x.min() >= -1.
+    μ -= 1
+    hμ = μ // 2
+    out = torch.round(x * hμ) + hμ
+    return out
+
+
 def encode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
     """
     Encodes the input tensor element-wise with μ-law encoding
@@ -61,7 +70,7 @@ def encode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
     """
     assert μ & 1
     assert x.max() <= 1.0 and x.min() >= -1.0
-    μ = μ - 1
+    μ -= 1
     hμ = μ // 2
     out = torch.sign(x) * torch.log(1 + μ * torch.abs(x)) / log(μ)
     out = torch.round(out * hμ) + hμ

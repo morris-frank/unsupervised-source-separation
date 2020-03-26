@@ -81,7 +81,7 @@ class ToyData(_ToyData):
 
 
 class ToyDataRandomAmplitude(ToyData):
-    def __init__(self, min: float = 0.5, *args, **kwargs):
+    def __init__(self, min: float = .25, *args, **kwargs):
         super(ToyDataRandomAmplitude, self).__init__(mix=True, mel=True, sources=True, *args, **kwargs)
         self.min = min
 

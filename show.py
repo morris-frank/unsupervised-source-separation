@@ -9,7 +9,7 @@ from matplotlib import pyplot as plt
 
 from thesis import plot
 from thesis.data.toy import ToyDataSourceK, ToyDataRandomAmplitude
-from thesis.functional import encode_μ_law
+from thesis.functional import discretize
 from thesis.io import load_model, get_newest_file
 from thesis.data.toy import TOY_SIGNALS
 
@@ -20,7 +20,7 @@ def show_sample(data, weights):
     dset = ToyDataRandomAmplitude(path=f"{data}/test/")
 
     for (m, mel), s in dset:
-        s = encode_μ_law(s, model.μ).long()
+        s = discretize(s, model.μ).long()
         # μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean  # For Beta dist
         # μ_ŝ, _ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0))  # For Gaussian
         μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).logits.argmax(

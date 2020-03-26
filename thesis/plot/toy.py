@@ -76,13 +76,16 @@ def reconstruction(
         m = squeeze(m)
 
     N = s.shape[0]
+    smin, smax = min(s.min(), ŝ.min()), max(s.max(), ŝ.max())
     fig, axs = plt.subplots(N+1 if hasM else N, 2, sharex="all")
     if axs.ndim == 1:
         axs = axs[None, ...]
 
     for i in range(N):
         axs[i, 0].plot(s[i, :], c="b")
+        axs[i, 0].set_ylim([smin, smax])
         axs[i, 1].plot(ŝ[i, :], c="y")
+        axs[i, 1].set_ylim([smin, smax])
         if m is not None:
             axs[-1, 0].plot(m[0, :], c="k")
     return fig
