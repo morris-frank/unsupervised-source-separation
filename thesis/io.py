@@ -98,5 +98,5 @@ def exit_prompt():
     inp = input("REPL? \t")
     if inp.lower().strip() == 'q':
         exit()
-    elif inp.lower().strip() == 'c':
+    elif inp.lower().strip() == 'h':
         import ipdb; ipdb.set_trace()
