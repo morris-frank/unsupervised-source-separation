@@ -12,8 +12,8 @@ from torch import optim
 from torch.nn.utils import clip_grad_norm_
 from torch.utils import data
 
+from .io import glob_remove
 from .nn.models import BaseModel
-from .utils import glob_remove
 
 LAST_LOG = defaultdict(float)
 LAST_LOG["start"] = True
