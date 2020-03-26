@@ -10,7 +10,7 @@ from matplotlib import pyplot as plt
 from thesis import plot
 from thesis.data.toy import ToyDataSourceK, ToyDataRandomAmplitude
 from thesis.functional import discretize
-from thesis.io import load_model, get_newest_file
+from thesis.io import load_model, get_newest_file, exit_prompt
 from thesis.data.toy import TOY_SIGNALS
 
 
@@ -28,7 +28,7 @@ def show_sample(data, weights):
         )  # For categorical
         _ = plot.toy.reconstruction(s, μ_ŝ, m)
         plt.show()
-        input("?")
+        exit_prompt()
 
 
 def show_cross_likelihood():
@@ -37,11 +37,11 @@ def show_cross_likelihood():
     fig = plot.toy.plot_signal_heatmap((log_p.mean(-1)), TOY_SIGNALS)
     fig.suptitle(r"mean of likelihood log p(s)")
     fig.show()
-    input("?")
+    exit_prompt()
     fig = plot.toy.plot_signal_heatmap(log_p.var(-1), TOY_SIGNALS)
     fig.suptitle("var of likelihood log p(s)")
     fig.show()
-    input("?")
+    exit_prompt()
     plt.close()
 
 

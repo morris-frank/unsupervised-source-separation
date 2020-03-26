@@ -1,5 +1,8 @@
 lines.color: 282828
 lines.linewidth: 2
+lines.solid_capstyle: round
+lines.antialiased: True
+
 patch.edgecolor: 282828
 
 text.color: 282828
@@ -14,8 +17,8 @@ ytick.color: 282828
 
 grid.color: 888888
 
+figure.autolayout: True
 figure.facecolor: f9f5d7
-figure.edgecolor: f9f5d7
 
 savefig.facecolor: f9f5d7
 savefig.edgecolor: f9f5d7
@@ -23,4 +26,4 @@ savefig.edgecolor: f9f5d7
 font.family: Fira Sans
 font.weight: regular
 font.variant: normal
-font.size: 14.0
+font.size: 12.0

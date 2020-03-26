@@ -69,25 +69,21 @@ def squeeze(tensor):
 def reconstruction(
         s: torch.Tensor, ŝ: torch.Tensor, m: torch.Tensor = None
 ) -> plt.Figure:
-    hasM = m is not None
-
     s, ŝ = squeeze(s), squeeze(ŝ)
+    hasM = m is not None
     if hasM:
         m = squeeze(m)
 
     N = s.shape[0]
     smin, smax = min(s.min(), ŝ.min()), max(s.max(), ŝ.max())
-    fig, axs = plt.subplots(N+1 if hasM else N, 2, sharex="all")
-    if axs.ndim == 1:
-        axs = axs[None, ...]
+    fig, axs = plt.subplots(N+hasM, sharex="all")
 
     for i in range(N):
-        axs[i, 0].plot(s[i, :], c="b")
-        axs[i, 0].set_ylim([smin, smax])
-        axs[i, 1].plot(ŝ[i, :], c="y")
-        axs[i, 1].set_ylim([smin, smax])
-        if m is not None:
-            axs[-1, 0].plot(m[0, :], c="k")
+        axs[i].plot(s[i, :], "k-", alpha=0.8)
+        axs[i].plot(ŝ[i, :], "n-")
+        axs[i].set_ylim([smin, smax])
+        if hasM:
+            axs[-1].plot(m[0, :], c="k")
     return fig
 
 

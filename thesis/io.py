@@ -92,3 +92,9 @@ def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
 
     # TODO implement continue training load
     raise NotImplementedError
+
+
+def exit_prompt():
+    inp = input("Continue? (q for exit)\t")
+    if inp.lower().strip() == 'q':
+        exit()
