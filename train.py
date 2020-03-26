@@ -12,10 +12,10 @@ from thesis.train import train
 from thesis.utils import optional
 
 
-def _load_prior_networks():
+def _load_prior_networks(prefix: str = ""):
     priors = []
     for source in TOY_SIGNALS:
-        weight = get_newest_file("./checkpoints", f"*{source}*pt")
+        weight = get_newest_file("./checkpoints", f"{prefix}*{source}*pt")
         print(
             f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using\t{Fore.GREEN}{weight}{Fore.RESET}"
         )
@@ -25,6 +25,7 @@ def _load_prior_networks():
 
 def train_prior(path: str, signal: str):
     from thesis.nn.models.flowavenet import Flowavenet
+
     k = TOY_SIGNALS.index(signal)
 
     mel_channels = 80
@@ -47,10 +48,11 @@ def train_umix(path: str):
     from thesis.nn.models.umix import UMixer
 
     model = UMixer(width=128)
-    # model.p_s = _load_prior_networks()
+    model.name = "unsupervised-fix-ampl"
+    model.p_s = _load_prior_networks("Mar22")
 
-    train_set = ToyDataRandomAmplitude(path=path % "train")
-    test_set = ToyDataRandomAmplitude(path=path % "test")
+    train_set = ToyData(path=path % "train", mel=True, sources=True)
+    test_set = ToyData(path=path % "test", mel=True, sources=True)
     return model, train_set, test_set
 
 

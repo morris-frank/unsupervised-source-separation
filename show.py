@@ -20,7 +20,8 @@ def show_sample(data, weights):
     dset = ToyDataRandomAmplitude(path=f"{data}/test/")
 
     for (m, mel), s in dset:
-        μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).sample()  # For Beta dist
+        q_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0))
+        μ_ŝ = q_ŝ.mean
         # μ_ŝ, _ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0))  # For Gaussian
         #s = discretize(s, model.μ).long()
         # μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).logits.argmax(
