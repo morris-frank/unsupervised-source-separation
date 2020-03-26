@@ -10,7 +10,7 @@ import numpy as np
 from colorama import Fore
 from tqdm import tqdm
 
-from thesis.data.toy import ToyDataMixes, ToyDataSources
+from thesis.data.toy import ToyData
 from thesis.io import load_model
 from thesis.plot import toy
 from thesis.utils import get_newest_file
@@ -28,7 +28,7 @@ def make_cross_likelihood_plot(data, _k, weight):
 
     model = load_model(f"{weight}", "cuda").to("cuda")
 
-    test_set = ToyDataSources(path=f"{data}/test/", mel=True)
+    test_set = ToyData(path=f"{data}/test/", mix=False, sources=True, mel_sources=True)
     results = np.zeros((K, K, len(test_set)))
 
     for i, (s, m) in enumerate(tqdm(test_set)):
@@ -49,7 +49,7 @@ def make_separation_examples(data):
     weights = "Mar11-1028_UMixer_supervised_010120.pt"
     makedirs(f"./figures/{weights}/", exist_ok=True)
     model = load_model(f"./checkpoints/{weights}", "cuda").to("cuda")
-    dset = ToyDataMixes(path=f"{data}/test/", mel=True, sources=True)
+    dset = ToyData(path=f"{data}/test/", mel=True, sources=True)
     for i, ((mix, mel), sources) in enumerate(tqdm(dset)):
         mix = mix.unsqueeze(0).to("cuda")
         mel = mel.unsqueeze(0).to("cuda")

@@ -1,3 +1,5 @@
+from typing import List
+
 import torch
 from torch import nn
 from torch.autograd import Variable
@@ -146,3 +148,24 @@ class AttentionBlock(nn.Module):
                 skip, scale_factor=0.5 if downsampling else 2.0, mode="nearest"
             )
         return (x, skip) if downsampling else x
+
+
+class STFTUpsample(nn.Module):
+    def __init__(self, kernel_sizes: List[int]):
+        super(STFTUpsample, self).__init__()
+
+        self.up = nn.Sequential()
+        for ks in kernel_sizes:
+            conv = nn.ConvTranspose2d(
+                1, 1, (3, 2 * ks), padding=(1, ks // 2), stride=(1, ks)
+            )
+            conv = nn.utils.weight_norm(conv)
+            nn.init.kaiming_normal_(conv.weight)
+            self.up.append(conv)
+            self.up.append(nn.LeakyReLU(0.4))
+
+    def forward(self, c: torch.Tensor, width: int):
+        c = self.up(c.unsqueeze(1)).squeeze(1)
+        si = (c.shape[-1] - width) // 2
+        c = c[..., si : si + width]
+        return c

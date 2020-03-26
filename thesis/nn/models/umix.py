@@ -9,6 +9,7 @@ from torchaudio.transforms import MelSpectrogram
 from . import BaseModel
 from ..wavenet import Wavenet
 from ...utils import clean_init_args
+from ..modules import STFTUpsample
 
 
 class q_sǀm(nn.Module):
@@ -43,6 +44,9 @@ class UMixer(BaseModel):
 
         self.n_classes = 4
 
+        # A learned upsampler for the conditional
+        self.c_up = STFTUpsample([16, 16])
+
         # The encoders
         self.q_sǀm = nn.ModuleList()
         for k in range(self.n_classes):
@@ -63,16 +67,6 @@ class UMixer(BaseModel):
             cin_channels=None,
         )
 
-        self.upsample_conv = nn.ModuleList()
-        for s in [16, 16]:
-            convt = nn.ConvTranspose2d(
-                1, 1, (3, 2 * s), padding=(1, s // 2), stride=(1, s)
-            )
-            convt = nn.utils.weight_norm(convt)
-            nn.init.kaiming_normal_(convt.weight)
-            self.upsample_conv.append(convt)
-            self.upsample_conv.append(nn.LeakyReLU(0.4))
-
         n_fft = 1024
         hop_length = 256
         sr = 16000
@@ -86,12 +80,10 @@ class UMixer(BaseModel):
         )
 
     def q_s(self, m, m_mel):
-        m_mel = self.upsample(m_mel)
-        m_mel = m_mel[:, :, : m.shape[-1]]
+        m_mel = self.c_up(m_mel, m.shape[-1])
 
         α, β = zip(*[q(m, m_mel) for q in self.q_sǀm])
         α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
-        # return α, β
         q_s = dist.Beta(α, β)
         return q_s
 
@@ -130,13 +122,6 @@ class UMixer(BaseModel):
         ℒ = self.ℒ.l1_recon + self.ℒ.supervised_l1_recon
 
         for k in range(self.n_classes):
-           ℒ += β * getattr(self.ℒ, f"KL_{k}")
+            ℒ += β * getattr(self.ℒ, f"KL_{k}")
 
         return ℒ
-
-    def upsample(self, c):
-        c = c.unsqueeze(1)
-        for f in self.upsample_conv:
-            c = f(c)
-        c = c.squeeze(1)
-        return c

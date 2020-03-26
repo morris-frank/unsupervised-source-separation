@@ -5,6 +5,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from . import BaseModel
+from ..modules import STFTUpsample
 from ..wavenet import Wavenet
 from ...functional import rsample_truncated_normal
 from ...utils import clean_init_args
@@ -29,9 +30,9 @@ class q_sǀm(nn.Module):
 
     def forward(self, m: torch.Tensor, m_mel: torch.Tensor):
         f = self.f(m, m_mel)
-        α = self.f_α(f) * (1-1e-6)
-        β = self.f_β(f) + 1e-10
-        return α, β
+        μ = self.f_α(f) * (1 - 1e-6)
+        σ = self.f_β(f) + 1e-10
+        return μ, σ
 
 
 class NUMixer(BaseModel):
@@ -42,51 +43,31 @@ class NUMixer(BaseModel):
 
         self.n_classes = 4
 
+        # A learned upsampler for the conditional
+        self.c_up = STFTUpsample([16, 16])
+
         # The encoders
         self.q_sǀm = nn.ModuleList()
         for k in range(self.n_classes):
             self.q_sǀm.append(q_sǀm(mel_channels, width))
 
-        self.upsample_conv = nn.ModuleList()
-        for s in [16, 16]:
-            convt = nn.ConvTranspose2d(
-                1, 1, (3, 2 * s), padding=(1, s // 2), stride=(1, s)
-            )
-            convt = nn.utils.weight_norm(convt)
-            nn.init.kaiming_normal_(convt.weight)
-            self.upsample_conv.append(convt)
-            self.upsample_conv.append(nn.LeakyReLU(0.4))
-
     def q_s(self, m, m_mel):
-        m_mel = self.upsample(m_mel)
-        m_mel = m_mel[:, :, : m.shape[-1]]
+        m_mel = self.c_up(m_mel, m.shape[-1])
 
-        α, β = zip(*[q(m, m_mel) for q in self.q_sǀm])
-        α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
-        return α, β
+        μ, σ = zip(*[q(m, m_mel) for q in self.q_sǀm])
+        return torch.cat(μ, dim=1), torch.cat(σ, dim=1)
 
-    def forward(
-        self, m: torch.Tensor, m_mel: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, m: torch.Tensor, m_mel: torch.Tensor):
         μ, σ = self.q_s(m, m_mel)
         ŝ, log_q_ŝ = rsample_truncated_normal(μ, σ, ll=True)
-
-        m_ = None
-        return ŝ, m_
+        return ŝ
 
     def test(
         self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor
     ) -> torch.Tensor:
         m, m_mel = x
-        ŝ, _ = self.forward(m, m_mel)
+        ŝ = self.forward(m, m_mel)
 
-        self.ℒ.supervised_l1_recon = F.l1_loss(ŝ, s)
-        ℒ = self.ℒ.supervised_l1_recon
+        self.ℒ.supervised_mse = F.mse_loss(ŝ, s)
+        ℒ = self.ℒ.supervised_mse
         return ℒ
-
-    def upsample(self, c):
-        c = c.unsqueeze(1)
-        for f in self.upsample_conv:
-            c = f(c)
-        c = c.squeeze(1)
-        return c

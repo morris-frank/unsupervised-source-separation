@@ -8,16 +8,16 @@ from colorama import Fore
 from matplotlib import pyplot as plt
 
 from thesis import plot
-from thesis.data.toy import ToyDataSourceK, ToyDataMixes
+from thesis.data.toy import ToyDataSourceK, ToyData
 from thesis.io import load_model
 from thesis.utils import get_newest_file
-from thesis.functional import decode_μ_law, encode_μ_law
+from thesis.functional import encode_μ_law
 
 
 def show_sample(data, weights):
     model = load_model(weights, "cpu")
 
-    dset = ToyDataMixes(path=f"{data}/test/", mel=True, sources=True)
+    dset = ToyData(path=f"{data}/test/", mel=True, sources=True)
 
     for (m, mel), s in dset:
         s = encode_μ_law(s, model.μ).long()

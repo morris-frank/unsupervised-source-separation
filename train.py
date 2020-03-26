@@ -5,13 +5,24 @@ from functools import partial
 
 from torch import autograd
 
-from thesis.data.toy import ToyDataSourceK, ToyDataMixes
+from thesis.data.toy import ToyDataSourceK, ToyData, ToyDataRandomAmplitude
 from thesis.io import load_model
 from thesis.train import train
 from thesis.utils import optional, get_newest_file
 from colorama import Fore
 
 signals = ["sin", "square", "saw", "triangle"]
+
+
+def _load_prior_networks():
+    priors = []
+    for source in ["sin", "square", "saw", "triangle"]:
+        weight = get_newest_file("./checkpoints", f"*{source}*pt")
+        print(
+            f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using\t{Fore.GREEN}{weight}{Fore.RESET}"
+        )
+        priors.append(load_model(weight, "cuda").to("cuda"))
+    return priors
 
 
 def train_prior(path: str, k: int):
@@ -36,38 +47,21 @@ def train_prior(path: str, k: int):
 def train_umix(path: str):
     from thesis.nn.models.umix import UMixer
 
-    priors = []
-    for source in ["sin", "square", "saw", "triangle"]:
-        weight = get_newest_file("./checkpoints", f"*{source}*pt")
-        print(
-            f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using\t{Fore.GREEN}{weight}{Fore.RESET}"
-        )
-        priors.append(load_model(weight, "cuda").to("cuda"))
-
     model = UMixer(width=128)
-    model.p_s = priors
+    #model.p_s = _load_prior_networks()
 
-    train_set = ToyDataMixes(path=path % "train", mel=True, sources=True)
-    test_set = ToyDataMixes(path=path % "test", mel=True, sources=True)
+    train_set = ToyData(path=path % "train", mel=True, sources=True)
+    test_set = ToyData(path=path % "test", mel=True, sources=True)
     return model, train_set, test_set
 
 
 def train_cumix(path: str):
     from thesis.nn.models.cumix import CUMixer
 
-    priors = []
-    for source in ["sin", "square", "saw", "triangle"]:
-        weight = get_newest_file("./checkpoints", f"*{source}*pt")
-        print(
-            f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using\t{Fore.GREEN}{weight}{Fore.RESET}"
-        )
-        priors.append(load_model(weight, "cuda").to("cuda"))
-
     model = CUMixer(mu=101, width=128)
-    model.p_s = priors
 
-    train_set = ToyDataMixes(path=path % "train", mel=True, sources=True)
-    test_set = ToyDataMixes(path=path % "test", mel=True, sources=True)
+    train_set = ToyDataRandomAmplitude(path=path % "train")
+    test_set = ToyDataRandomAmplitude(path=path % "test")
     return model, train_set, test_set
 
 
@@ -76,8 +70,8 @@ def train_numix(path: str):
 
     model = NUMixer(width=128)
 
-    train_set = ToyDataMixes(path=path % "train", mel=True, sources=True)
-    test_set = ToyDataMixes(path=path % "test", mel=True, sources=True)
+    train_set = ToyData(path=path % "train", mel=True, sources=True)
+    test_set = ToyData(path=path % "test", mel=True, sources=True)
     return model, train_set, test_set
 
 

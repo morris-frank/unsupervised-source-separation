@@ -6,21 +6,9 @@ import numpy as np
 import torch
 
 from ..data import Dataset
-from ..functional import encode_μ_law
 
 
-def μ_enc(
-    mix: np.ndarray, sources: np.ndarray, μ: Optional[int] = None,
-):
-    assert μ & 1
-    hμ = (μ - 1) // 2
-    mix = encode_μ_law(mix, μ=μ) / hμ
-    sources = encode_μ_law(sources, μ=μ)
-    sources = (sources + hμ).long()
-    return mix, sources
-
-
-class ToyData(Dataset):
+class _ToyData(Dataset):
     def __init__(self, path: str, crop: Optional[int] = None):
         self.files = glob(f"{path}/*npy")
         self.crop = crop
@@ -49,12 +37,61 @@ class ToyData(Dataset):
         ).transpose(1, 2)
         return datum
 
+
+class ToyData(_ToyData):
+    def __init__(
+        self,
+        mix: bool = True,
+        mel: bool = False,
+        sources: bool = False,
+        mel_sources: bool = False,
+        *args,
+        **kwargs,
+    ):
+        super(ToyData, self).__init__(*args, **kwargs)
+        assert mix or sources
+        assert mix or not mel
+        assert sources or not mel_sources
+        self.mix, self.mel = mix, mel
+        self.sources, self.mel_sources = sources, mel_sources
+
+    @staticmethod
+    def _mel_get(datum, name, mel):
+        if mel:
+            return datum[name].contiguous(), datum[f"mel_{name}"].contiguous()
+        else:
+            return datum[name].contiguous()
+
     def __getitem__(self, idx: int):
         datum = self.get(idx)
-        return datum["mix"], datum["sources"]
+
+        if self.sources:
+            sources = self._mel_get(datum, "sources", self.mel_sources)
+
+        if self.mix:
+            mix = self._mel_get(datum, "mix", self.mel)
+            if self.sources:
+                return mix, sources
+            return mix
+        else:
+            return sources
 
 
-class ToyDataSourceK(ToyData):
+class ToyDataRandomAmplitude(ToyData):
+    def __init__(self, min: float = 0.5, *args, **kwargs):
+        super(ToyDataRandomAmplitude, self).__init__(mix=True, mel=True, sources=True, *args, **kwargs)
+        self.min = min
+
+    def __getitem__(self, idx):
+        (_, m_mel), s = super(ToyDataRandomAmplitude, self).__getitem__(idx)
+        # Generate some random amplitudes
+        A = torch.rand(s.shape[0], 1) * (1. - self.min) + self.min
+        s = A * s
+        m = s.mean(0, keepdim=True)
+        return (m, m_mel), s
+
+
+class ToyDataSourceK(_ToyData):
     def __init__(self, k: int, mel: bool = False, *args, **kwargs):
         super(ToyDataSourceK, self).__init__(*args, **kwargs)
         self.k, self.mel = k, mel
@@ -68,43 +105,3 @@ class ToyDataSourceK(ToyData):
             return source, mel
         else:
             return source
-
-
-class ToyDataSources(ToyData):
-    def __init__(self, mel: bool = False, *args, **kwargs):
-        super(ToyDataSources, self).__init__(*args, **kwargs)
-        self.mel = mel
-
-    def __getitem__(self, idx: int):
-        datum = self.get(idx)
-        sources = datum["sources"].unsqueeze(1)  # Add an empty channel dim
-
-        if self.mel:
-            mel = datum["mel_sources"]
-            return sources, mel
-        else:
-            return sources
-
-
-class ToyDataMixes(ToyData):
-    def __init__(self, mel: bool = False, sources: bool = False, *args, **kwargs):
-        super(ToyDataMixes, self).__init__(*args, **kwargs)
-        self.mel = mel
-        self.sources = sources
-
-    def __getitem__(self, idx: int):
-        datum = self.get(idx)
-        mix = datum["mix"].contiguous()
-        mel = datum["mel_mix"].contiguous()
-        sources = datum["sources"].contiguous()
-
-        if self.sources:
-            if self.mel:
-                return (mix, mel), sources
-            else:
-                return mix, sources
-        else:
-            if self.mel:
-                return mix, mel
-            else:
-                return mix
