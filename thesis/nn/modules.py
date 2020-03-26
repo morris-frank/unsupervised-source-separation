@@ -32,7 +32,7 @@ class Conv1d(nn.Module):
 
     def forward(self, tensor):
         out = self.conv(tensor)
-        if self.causal and self.padding is not 0:
+        if self.causal and self.padding != 0:
             out = out[:, :, : -self.padding]
         return out
 
@@ -44,7 +44,7 @@ class ZeroConv1d(nn.Module):
         self.conv = nn.Conv1d(in_channel, out_channel, 1, padding=0)
         self.conv.weight.data.zero_()
         self.conv.bias.data.zero_()
-        self.scale = nn.Parameter(torch.zeros(1, out_channel, 1))
+        self.scale = nn.Parameter(torch.zeros(1, out_channel, 1), requires_grad=True)
 
     def forward(self, x):
         out = self.conv(x)
