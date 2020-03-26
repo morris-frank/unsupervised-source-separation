@@ -25,13 +25,13 @@ class q_sǀm(nn.Module):
             cin_channels=mel_channels,
         )
 
-        self.f_α = nn.Sequential(nn.Conv1d(dim, 1, 1), nn.Tanh())
-        self.f_β = nn.Sequential(nn.Conv1d(dim, 1, 1), nn.Softplus())
+        self.f_μ = nn.Sequential(nn.Conv1d(dim, 1, 1), nn.Tanh())
+        self.f_σ = nn.Sequential(nn.Conv1d(dim, 1, 1), nn.Softplus())
 
     def forward(self, m: torch.Tensor, m_mel: torch.Tensor):
         f = self.f(m, m_mel)
-        μ = self.f_α(f) * (1 - 1e-6)
-        σ = self.f_β(f) + 1e-10
+        μ = self.f_μ(f) * (1 - 1e-6)
+        σ = self.f_σ(f) + 1e-10
         return μ, σ
 
 

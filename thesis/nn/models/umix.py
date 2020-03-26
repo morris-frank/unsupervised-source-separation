@@ -114,14 +114,15 @@ class UMixer(BaseModel):
         self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor
     ) -> torch.Tensor:
         m, m_mel = x
-        β = 1.1
-        ŝ, _ = self.forward(m, m_mel)
+        # ŝ, _ = self.forward(m, m_mel)
+        ŝ = self.q_s(m, m_mel).rsample()
 
-        self.ℒ.supervised_l1_recon = F.l1_loss(ŝ, s)
+        self.ℒ.supervised_mse = F.mse_loss(ŝ, s)
 
-        ℒ = self.ℒ.l1_recon + self.ℒ.supervised_l1_recon
-
-        for k in range(self.n_classes):
-            ℒ += β * getattr(self.ℒ, f"KL_{k}")
+        ℒ = self.ℒ.supervised_mse
+        # ℒ = self.ℒ.l1_recon + self.ℒ.supervised_l1_recon
+        #
+        # for k in range(self.n_classes):
+        #     ℒ += β * getattr(self.ℒ, f"KL_{k}")
 
         return ℒ
