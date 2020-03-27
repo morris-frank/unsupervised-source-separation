@@ -87,6 +87,20 @@ class UMixer(BaseModel):
         q_s = AffineBeta(α, β)
         return q_s
 
+    def test_forward(self, m, m_mel):
+        q_s = self.q_s(m, m_mel)
+        ŝ = q_s.mean
+        log_q_ŝ = q_s.log_prob(ŝ)
+
+        p_ŝ = []
+        for k in range(self.n_classes):
+            ŝ_mel = self.c_up(self.mel(ŝ[:, k, :]), m.shape[-1])
+            log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
+            p_ŝ.append(log_p_ŝ)
+
+        m_ = self.p_mǀs(ŝ)
+        return ŝ, m_, p_ŝ, log_q_ŝ
+
     def forward(
         self, m: torch.Tensor, m_mel: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -120,8 +134,8 @@ class UMixer(BaseModel):
         for k in range(self.n_classes):
             ℒ += 1. * getattr(self.ℒ, f"KL_{k}")
 
-        # ŝ = self.q_s(m, m_mel).rsample()
-        # self.ℒ.supervised_mse = F.mse_loss(ŝ, s)
-        # ℒ = self.ℒ.supervised_mse
+        if torch.rand() < 0.1:
+            self.ℒ.supervised_mse = F.mse_loss(ŝ, s)
+            ℒ += self.ℒ.supervised_mse
 
         return ℒ

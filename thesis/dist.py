@@ -13,6 +13,14 @@ class AffineBeta(dist.Beta):
         self.s, self.t = s, t
 
     @property
+    def α(self):
+        return self.concentration1
+
+    @property
+    def β(self):
+        return self.concentration0
+
+    @property
     def mean(self):
         return self.s * super(AffineBeta, self).mean + self.t
 

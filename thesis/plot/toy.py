@@ -73,15 +73,17 @@ def reconstruction(*signals: torch.Tensor):
     N, hasM = max(ch), len(ch) >= 2
     ylim = (min(map(np.min, signals)), max(map(np.max, signals)))
 
-    fig, axs = plt.subplots(N+hasM, sharex="all")
+    fig, axs = plt.subplots(N+hasM, sharex="all", squeeze=False)
+    if not isinstance(axs, np.ndarray):
+        axs = list(axs)
     for k, signal in enumerate(signals):
         if signal.shape[0] < N:
-            axs[-1].plot(signal[0, :], c="k")
+            axs[-1, 0].plot(signal[0, :], c="k")
         else:
             c = colores[k % len(colores)]
             for i in range(N):
-                axs[i].plot(signal[i, :], f"{c}-")
-                axs[i].set_ylim(ylim)
+                axs[i, 0].plot(signal[i, :], f"{c}-")
+                axs[i, 0].set_ylim(ylim)
     return fig
 
 

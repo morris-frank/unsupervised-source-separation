@@ -12,14 +12,14 @@ from thesis.train import train
 from thesis.utils import optional
 
 
-def _load_prior_networks(prefix: str = ""):
+def _load_prior_networks(prefix: str = "", device="cuda"):
     priors = []
     for source in TOY_SIGNALS:
         weight = get_newest_file("./checkpoints", f"{prefix}*{source}*pt")
         print(
             f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using\t{Fore.GREEN}{weight}{Fore.RESET}"
         )
-        priors.append(load_model(weight, "cuda").to("cuda"))
+        priors.append(load_model(weight, device).to(device))
     return priors
 
 
@@ -48,7 +48,7 @@ def train_umix(path: str):
     from thesis.nn.models.umix import UMixer
 
     model = UMixer(width=128)
-    model.name = "unsupervised-fix-ampl"
+    model.name = "semi-supervised-fix-ampl"
     model.p_s = _load_prior_networks("Mar22")
 
     train_set = ToyData(path=path % "train", mel=True, sources=True)
