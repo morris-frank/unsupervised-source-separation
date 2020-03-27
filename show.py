@@ -8,7 +8,7 @@ from colorama import Fore
 from matplotlib import pyplot as plt
 
 from thesis import plot
-from thesis.data.toy import ToyDataSourceK, ToyDataRandomAmplitude
+from thesis.data.toy import ToyDataSourceK, ToyDataRandomAmplitude, ToyData
 from thesis.functional import discretize
 from thesis.io import load_model, get_newest_file, exit_prompt
 from thesis.data.toy import TOY_SIGNALS
@@ -17,21 +17,22 @@ from train import _load_prior_networks
 
 def show_sample(data, weights):
     model = load_model(weights, "cpu")
-    model.p_s = _load_prior_networks(prefix='Mar26', device="cpu")
+    # model.p_s = _load_prior_networks(prefix='Mar22', device="cpu")
 
-    dset = ToyDataRandomAmplitude(path=f"{data}/test/")
+    # dset = ToyDataRandomAmplitude(path=f"{data}/test/")
+    dset = ToyData(path=f"{data}/test/", mel=True, sources=True)
 
     for (m, mel), s in dset:
-        ŝ, m_, p_ŝ, log_q_ŝ = model.test_forward(m.unsqueeze(0), mel.unsqueeze(0))
-        plot.toy.reconstruction(s, ŝ, m, m_)
-        plot.toy.reconstruction(s, torch.cat(p_ŝ, 1))
-        # μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean
+        # ŝ, m_, p_ŝ, log_q_ŝ = model.test_forward(m.unsqueeze(0), mel.unsqueeze(0))
+        # plot.toy.reconstruction(s, ŝ, m, m_)
+        # plot.toy.reconstruction(s, torch.cat(p_ŝ, 1))
+        μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean
         # μ_ŝ, _ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0))  # For Gaussian
         #s = discretize(s, model.μ).long()
         # μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).logits.argmax(
         #     dim=-1
         # )  # For categorical
-        # _ = plot.toy.reconstruction(s, μ_ŝ, m)
+        _ = plot.toy.reconstruction(s, μ_ŝ, m)
         plt.show()
         exit_prompt()
 

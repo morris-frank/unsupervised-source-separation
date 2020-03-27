@@ -12,6 +12,7 @@ from torch import nn
 from torch.nn import functional as F
 from tqdm import trange
 
+from ..utils import get_func_arguments
 from ..data.toy import ToyData
 
 PRINT_LENGTH = 500
@@ -42,8 +43,7 @@ def fig_summary(fname: str):
     ax3 = fig.add_subplot(3, 2, 5)
     plt.title("Loss over shapes @ no destroy ")
     sns.scatterplot(
-        x="periodicity", y="loss", hue="shape", data=df[df.destroy == zer],
-        ax=ax3
+        x="periodicity", y="loss", hue="shape", data=df[df.destroy == zer], ax=ax3
     )
 
     ax4 = fig.add_subplot(2, 2, 2)
@@ -67,34 +67,37 @@ def squeeze(tensor):
 
 
 def reconstruction(*signals: torch.Tensor):
+    arguments = get_func_arguments()
     colores = ["k", "n", "y", "g", "r"]
     signals = list(map(squeeze, signals))
     ch = set(s.shape[0] for s in signals)
     N, hasM = max(ch), len(ch) >= 2
     ylim = (min(map(np.min, signals)), max(map(np.max, signals)))
 
-    fig, axs = plt.subplots(N+hasM, sharex="all", squeeze=False)
+    fig, axs = plt.subplots(N + hasM, sharex="all", squeeze=False)
     if not isinstance(axs, np.ndarray):
         axs = list(axs)
-    for k, signal in enumerate(signals):
+    for k, (signal, name) in enumerate(zip(signals, arguments)):
         if signal.shape[0] < N:
-            axs[-1, 0].plot(signal[0, :], c="k")
+            axs[-1, 0].plot(signal[0, :], c="k", label=name)
         else:
             c = colores[k % len(colores)]
             for i in range(N):
-                axs[i, 0].plot(signal[i, :], f"{c}-")
+                axs[i, 0].plot(signal[i, :], f"{c}-", label=name)
                 axs[i, 0].set_ylim(ylim)
+    for ax in axs.flatten().tolist():
+        ax.legend()
     return fig
 
 
 def prepare_plot_freq_loss(
-        model: nn.Module,
-        data: ToyData,
-        ns: int,
-        μ: int,
-        destroy: float = 0.0,
-        single: bool = False,
-        device: str = "cpu",
+    model: nn.Module,
+    data: ToyData,
+    ns: int,
+    μ: int,
+    destroy: float = 0.0,
+    single: bool = False,
+    device: str = "cpu",
 ) -> pd.DataFrame:
     d = {"n": [], "shape": [], "loss": [], "periodicity": [], "destroy": []}
     model = model.to(device)
@@ -114,7 +117,7 @@ def prepare_plot_freq_loss(
             d["periodicity"].append(prms[i]["φ"])
             d["loss"].append(
                 F.cross_entropy(
-                    logits[:, i * μ: (i + 1) * μ, :], stems[None, i, :]
+                    logits[:, i * μ : (i + 1) * μ, :], stems[None, i, :]
                 ).item()
             )
     df = pd.DataFrame(data=d)
@@ -129,26 +132,33 @@ def plot_freq_loss(fname: str):
     plt.show()
 
 
-def add_plot_tick(ax, symbol, pos=0.5, where='tensor', size=0.05):
+def add_plot_tick(ax, symbol, pos=0.5, where="tensor", size=0.05):
 
-    if 'tensor' in where:
+    if "tensor" in where:
         anchor, loc = (pos, 1.01), 8
     else:
         anchor, loc = (-0.025, pos), 7
 
-    _ax = inset_axes(ax, width=size, height=size, bbox_transform=ax.transAxes, bbox_to_anchor=anchor, loc=loc)
+    _ax = inset_axes(
+        ax,
+        width=size,
+        height=size,
+        bbox_transform=ax.transAxes,
+        bbox_to_anchor=anchor,
+        loc=loc,
+    )
     _ax.axison = False
 
     x = np.linspace(0, τ)
 
-    if 'sin' in symbol:
-        _ax.plot(x, np.sin(x), c='k')
-    elif 'tri' in symbol:
-        _ax.plot(x, sawtooth(x, width=0.5), c='k')
-    elif 'saw' in symbol:
-        _ax.plot(x, sawtooth(x, width=1.), c='k')
-    elif 'sq' in symbol:
-        _ax.plot(x, square(x), c='k')
+    if "sin" in symbol:
+        _ax.plot(x, np.sin(x), c="k")
+    elif "tri" in symbol:
+        _ax.plot(x, sawtooth(x, width=0.5), c="k")
+    elif "saw" in symbol:
+        _ax.plot(x, sawtooth(x, width=1.0), c="k")
+    elif "sq" in symbol:
+        _ax.plot(x, square(x), c="k")
     else:
         raise ValueError("unknown symbol")
 
@@ -161,11 +171,10 @@ def plot_signal_heatmap(data, symbols):
     ax.axison = False
     ax.imshow(data, norm=colors.SymLogNorm(linthresh=0.03))
 
-    pos_tick = np.linspace(0, 1, 2*n+1)[1::2]
-    size = 1/n * 2.5
+    pos_tick = np.linspace(0, 1, 2 * n + 1)[1::2]
+    size = 1 / n * 2.5
 
     for i in range(n):
-        add_plot_tick(ax, symbols[i], pos=pos_tick[i], where='tensor', size=size)
-        add_plot_tick(ax, symbols[i], pos=pos_tick[-i-1], where='y', size=size)
+        add_plot_tick(ax, symbols[i], pos=pos_tick[i], where="tensor", size=size)
+        add_plot_tick(ax, symbols[i], pos=pos_tick[-i - 1], where="y", size=size)
     return fig
-

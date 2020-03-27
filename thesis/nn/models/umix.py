@@ -11,6 +11,8 @@ from ..wavenet import Wavenet
 from ...dist import AffineBeta
 from ...utils import clean_init_args
 
+from random import random
+
 
 class q_sǀm(nn.Module):
     def __init__(self, mel_channels, dim):
@@ -134,7 +136,7 @@ class UMixer(BaseModel):
         for k in range(self.n_classes):
             ℒ += 1. * getattr(self.ℒ, f"KL_{k}")
 
-        if torch.rand() < 0.1:
+        if random() < 0.1:
             self.ℒ.supervised_mse = F.mse_loss(ŝ, s)
             ℒ += self.ℒ.supervised_mse
 

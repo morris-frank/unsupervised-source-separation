@@ -1,3 +1,5 @@
+import inspect
+import re
 from collections import defaultdict
 from contextlib import contextmanager
 from itertools import product
@@ -76,3 +78,12 @@ def remove_list_weight_norm(ml: nn.ModuleList) -> nn.ModuleList:
     """
     _ml = nn.ModuleList([remove_weight_norm(l) for l in ml])
     return _ml
+
+
+def get_func_arguments():
+    func_name = str(inspect.stack()[1][3]).strip()
+    argument_string = inspect.stack()[2][4][0].strip()
+    argument_string = argument_string.split(func_name)[1][1:-1]
+
+    arguments = re.split(r",\s*(?![^()]*\))", argument_string)
+    return arguments
