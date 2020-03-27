@@ -28,7 +28,7 @@ def make_cross_likelihood_plot(data, _k, weight):
     results = np.zeros((K, K, len(test_set)))
 
     for i, (s, m) in enumerate(tqdm(test_set)):
-        s, m = s.to("cuda"), m.to("cuda")
+        s, m = s.unsqueeze(0).to("cuda"), m.unsqueeze(0).to("cuda")
         logp, _ = model(s, m)
         results[k, :, i] = logp.mean(-1).squeeze().cpu().numpy()
 
