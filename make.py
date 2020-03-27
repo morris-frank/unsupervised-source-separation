@@ -21,14 +21,15 @@ def make_cross_likelihood_plot(data, _k, weight):
     fp = "./figures/cross_likelihood.npy"
     K = len(TOY_SIGNALS)
     k = TOY_SIGNALS.index(_k)
+    dev = "cuda"
 
-    model = load_model(f"{weight}", "cuda").to("cuda")
+    model = load_model(f"{weight}", dev).to(dev)
 
     test_set = ToyData(path=f"{data}/test/", mix=False, sources=True, mel_sources=True)
     results = np.zeros((K, K, len(test_set)))
 
     for i, (s, m) in enumerate(tqdm(test_set)):
-        s, m = s.unsqueeze(0).to("cuda"), m.unsqueeze(0).to("cuda")
+        s, m = s.unsqueeze(1).to(dev), m.to(dev)
         logp, _ = model(s, m)
         results[k, :, i] = logp.mean(-1).squeeze().cpu().numpy()
 
