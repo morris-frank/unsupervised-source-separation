@@ -49,7 +49,7 @@ def train_umix(path: str):
 
     model = UMixer(width=128)
     model.name = "semi-supervised-fix-ampl"
-    model.p_s = _load_prior_networks("Mar22")
+    model.p_s = _load_prior_networks("Mar26")
 
     train_set = ToyData(path=path % "train", mel=True, sources=True)
     test_set = ToyData(path=path % "test", mel=True, sources=True)
