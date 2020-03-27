@@ -84,6 +84,12 @@ if __name__ == "__main__":
     parser.add_argument("command", type=str, help="show ∨ something")
     parser.add_argument("--weights", type=abspath)
     parser.add_argument("-k", type=str)
-    parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--data", type=abspath, default="/home/morris/var/data/toy")
+    parser.add_argument(
+        "--gpu",
+        type=int,
+        required=False,
+        nargs="+",
+        help="The GPU ids to use. If unset, will use CPU.",
+    )
     main(parser.parse_args())

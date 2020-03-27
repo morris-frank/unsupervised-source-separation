@@ -10,11 +10,13 @@ from train import EXPERIMENTS
 
 
 def main(args):
-    if args.experiment not in EXPERIMENTS:
+    if args.file not in ("make", "train"):
+        raise ValueError("Invalid file given")
+    if args.file == "train" and args.experiment not in EXPERIMENTS:
         raise ValueError("Invalid experiment given.")
 
     p = "gpu_short" if args.short else "gpu_shared"
-    t = "0:05:00" if args.short else f"{args.hours}:00:00"
+    t = "0:30:00" if args.short else f"{args.hours}:00:00"
 
     c = {
         "job-name": args.experiment,
@@ -34,15 +36,17 @@ def main(args):
         ""
     )
     f += "cd /home/frankm/thesis\n"
+
     f += (
-        f"srun /home/frankm/.pyenv/shims/python3.7 train.py "
+        f"srun /home/frankm/.pyenv/shims/python3.7 {args.file}.py "
         f"{args.experiment} --data=/home/frankm/data/toy/ --gpu 0"
     )
 
-    if args.short:
-        f += " --batch_size=2 -debug"
-    else:
+    if args.file == "train":
         f += f" --batch_size={args.batch_size} -wandb"
+
+    if args.k:
+        f += f" -k {args.k}"
 
     fn = "_temp.job"
     with open(fn, "w") as fp:
@@ -61,4 +65,6 @@ if __name__ == "__main__":
     parser.add_argument("--short", action="store_true")
     parser.add_argument("-t", type=int, default=5, dest="hours")
     parser.add_argument("--batch_size", type=int)
+    parser.add_argument("-f", type=str, default='train', dest="file")
+    parser.add_argument("-k", type=str, required=False)
     main(parser.parse_args())
