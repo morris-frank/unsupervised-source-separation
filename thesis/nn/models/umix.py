@@ -116,7 +116,7 @@ class UMixer(BaseModel):
         # Scale the posterior samples so they fill range [-1, 1].
         # This is necessary as we start around zero with the values and the
         # prior distributions assign too high likelihoods around zero!
-        ŝ_max = ŝ.detach().squeeze().abs().max(dim=1).values.unsqueeze(-1)
+        ŝ_max = ŝ.detach().squeeze().abs().max(dim=-1, keepdim=True).values
         ŝ = ŝ / ŝ_max
 
         for k in range(self.n_classes):
