@@ -66,7 +66,7 @@ def squeeze(tensor):
     return tensor[:, 100:PRINT_LENGTH].numpy()
 
 
-def reconstruction(*signals: torch.Tensor):
+def reconstruction(*signals: torch.Tensor, sharey: bool = True):
     arguments = get_func_arguments()
     colores = ["k", "n", "y", "g", "r"]
     signals = list(map(squeeze, signals))
@@ -74,7 +74,7 @@ def reconstruction(*signals: torch.Tensor):
     N, hasM = max(ch), len(ch) >= 2
     ylim = (min(map(np.min, signals)), max(map(np.max, signals)))
 
-    fig, axs = plt.subplots(N + hasM, sharex="all", squeeze=False)
+    fig, axs = plt.subplots(N + hasM, sharex="all", sharey='none', squeeze=False)
     if not isinstance(axs, np.ndarray):
         axs = list(axs)
     for k, (signal, name) in enumerate(zip(signals, arguments)):
@@ -84,7 +84,11 @@ def reconstruction(*signals: torch.Tensor):
             c = colores[k % len(colores)]
             for i in range(N):
                 axs[i, 0].plot(signal[i, :], f"{c}-", label=name)
-                axs[i, 0].set_ylim(ylim)
+                if sharey:
+                    axs[i, 0].set_ylim(ylim)
+                # else:
+                #     axs[i, 0].relim()
+                #     axs[i, 0].autoscale_view()
     for ax in axs.flatten().tolist():
         ax.legend()
     return fig

@@ -81,9 +81,11 @@ def remove_list_weight_norm(ml: nn.ModuleList) -> nn.ModuleList:
 
 
 def get_func_arguments():
-    func_name = str(inspect.stack()[1][3]).strip()
-    argument_string = inspect.stack()[2][4][0].strip()
-    argument_string = argument_string.split(func_name)[1][1:-1]
-
+    func_name = inspect.stack()[1].function.strip()
+    code_line = inspect.stack()[2].code_context[0].strip()
+    try:
+        argument_string = re.search(rf"{func_name}\((.*)\)", code_line)[1]
+    except TypeError:
+        import ipdb; ipdb.set_trace()
     arguments = re.split(r",\s*(?![^()]*\))", argument_string)
     return arguments

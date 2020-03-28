@@ -8,31 +8,27 @@ from colorama import Fore
 from matplotlib import pyplot as plt
 
 from thesis import plot
-from thesis.data.toy import ToyDataSourceK, ToyDataRandomAmplitude, ToyData
-from thesis.functional import discretize
-from thesis.io import load_model, get_newest_file, exit_prompt
 from thesis.data.toy import TOY_SIGNALS
+from thesis.data.toy import ToyData
+from thesis.io import load_model, get_newest_file, exit_prompt
 from train import _load_prior_networks
 
 
 def show_sample(data, weights):
     model = load_model(weights, "cpu")
-    # model.p_s = _load_prior_networks(prefix='Mar22', device="cpu")
+    model.p_s = _load_prior_networks(prefix="Mar26", device="cpu")
 
     # dset = ToyDataRandomAmplitude(path=f"{data}/test/")
     dset = ToyData(path=f"{data}/test/", mel=True, sources=True)
 
     for (m, mel), s in dset:
-        # ŝ, m_, p_ŝ, log_q_ŝ = model.test_forward(m.unsqueeze(0), mel.unsqueeze(0))
-        # plot.toy.reconstruction(s, ŝ, m, m_)
-        # plot.toy.reconstruction(s, torch.cat(p_ŝ, 1))
-        μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean
-        # μ_ŝ, _ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0))  # For Gaussian
-        #s = discretize(s, model.μ).long()
-        # μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).logits.argmax(
-        #     dim=-1
-        # )  # For categorical
-        _ = plot.toy.reconstruction(s, μ_ŝ, m)
+        ŝ, m_, p_ŝ, log_q_ŝ, α, β = model.test_forward(m.unsqueeze(0), mel.unsqueeze(0))
+        plot.toy.reconstruction(s, ŝ, m, m_)
+        plot.toy.reconstruction(m, m_, p_ŝ)
+        plot.toy.reconstruction(m, m_, log_q_ŝ)
+        plot.toy.reconstruction(m, m_, α, β)
+        # μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean
+        # _ = plot.toy.reconstruction(s, μ_ŝ, m)
         plt.show()
         exit_prompt()
 
@@ -51,29 +47,63 @@ def show_cross_likelihood():
     plt.close()
 
 
-def show_log_p_z_test(data):
-    weights = "Mar22-0051_Flowavenet_sin_009425.pt"
-    model = load_model(f"./checkpoints/{weights}", "cpu")
-    dset = ToyDataSourceK(path=f"{data}/test/", k=0, mel=True)
-    dset_alt = ToyDataSourceK(path=f"{data}/test/", k=1, mel=True)
+def make_mel(signal):
+    from torchaudio.transforms import MelSpectrogram
+
+    mel_channels = 80
+    n_fft = 1024
+    hop_length = 256
+    sr = 16000
+    mel = MelSpectrogram(
+        sample_rate=sr,
+        n_fft=n_fft,
+        hop_length=hop_length,
+        n_mels=mel_channels,
+        f_min=125,
+        f_max=7600,
+    )
+    return mel(signal)
+
+
+def show_prior(data, source):
+    weights = get_newest_file("./checkpoints", f"*{source}*pt")
+    model = load_model(weights, "cpu").to("cpu")
     model.eval()
-    for i, ((s, m), (sz, mz)) in enumerate(zip(dset, dset_alt)):
-        s[:, 1100:] = sz[:, 1100:]
-        m[:, 5:] = mz[:, 5:]
-        s, m = s.unsqueeze(0), m.unsqueeze(0)
-        log_p, logdet = model(s, m)
 
-        s_ = s * torch.rand_like(s)
-        log_p_, logdet_ = model(s_, m)
+    dset = ToyData(path=f"{data}/test/", mel=True, sources=True, mel_sources=True)
 
-        print(
-            f"log_p|log_det: {log_p.detach().mean().item()}|{logdet.detach().item()}\tlog_p_|log_det_: {log_p_.detach().mean().item()}|{logdet_.detach().item()}"
-        )
-        _ = plot.toy.reconstruction(
-            torch.cat([s, s_], 1), torch.cat([log_p, log_p_], 1)
-        )
+    for (m, m_mel), (s, s_mel) in dset:
+        rand_s = torch.rand_like(m) * 0.1
+        rand_mel = make_mel(rand_s)
+
+        sig = torch.cat((s, m, rand_s), dim=0).unsqueeze(1)
+        mel = torch.cat((s_mel, m_mel.unsqueeze(0), rand_mel), dim=0)
+
+        log_p, _ = model(sig, mel)
+
+        plot.toy.reconstruction(sig, sharey=False)
+        plot.toy.reconstruction(log_p, sharey=False)
         plt.show()
-        input()
+        exit_prompt()
+
+
+def show_posterior(source):
+    weights = get_newest_file("./checkpoints", f"*{source}*pt")
+    model = load_model(weights, "cpu").to("cpu")
+    model.eval()
+
+    data = torch.load("./mean_posterior.pt")
+
+    for s, _ in data:
+        s_max = s.detach().squeeze().abs().max(dim=1).values[:, None, None]
+        s = s / s_max
+        s_mel = make_mel(s)
+        log_p, _ = model(s, s_mel.squeeze())
+
+        plot.toy.reconstruction(s, sharey=False)
+        plot.toy.reconstruction(log_p, sharey=False)
+        plt.show()
+        exit_prompt()
 
 
 def main(args):
@@ -87,12 +117,16 @@ def main(args):
         with torch.no_grad():
             show_sample(args.data, args.weights)
 
+    elif args.command == "posterior":
+        with torch.no_grad():
+            show_posterior(args.k)
+
     elif args.command == "cross-likelihood":
         show_cross_likelihood()
 
-    elif args.command == "logpz":
+    elif args.command == "prior":
         with torch.no_grad():
-            show_log_p_z_test(args.data)
+            show_prior(args.data, args.k)
 
     else:
         raise ValueError("Invalid command given")
@@ -104,4 +138,5 @@ if __name__ == "__main__":
     parser.add_argument("--weights", type=abspath)
     parser.add_argument("--device", type=str, default="cpu")
     parser.add_argument("--data", type=abspath, default="/home/morris/var/data/toy")
+    parser.add_argument("-k", type=str)
     main(parser.parse_args())

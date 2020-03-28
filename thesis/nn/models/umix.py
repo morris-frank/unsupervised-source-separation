@@ -94,14 +94,20 @@ class UMixer(BaseModel):
         ŝ = q_s.mean
         log_q_ŝ = q_s.log_prob(ŝ)
 
+        # Scale the posterior samples so they fill range [-1, 1].
+        # This is necessary as we start around zero with the values and the
+        # prior distributions assign too high likelihoods around zero!
+        ŝ_max = ŝ.detach().squeeze().abs().max(dim=1).values[:, None, None]
+        ŝ = ŝ / ŝ_max
+
         p_ŝ = []
         for k in range(self.n_classes):
-            ŝ_mel = self.c_up(self.mel(ŝ[:, k, :]), m.shape[-1])
+            ŝ_mel = self.mel(ŝ[:, k, :]), m.shape[-1]
             log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
             p_ŝ.append(log_p_ŝ)
 
         m_ = self.p_mǀs(ŝ)
-        return ŝ, m_, p_ŝ, log_q_ŝ
+        return ŝ, m_, torch.cat(p_ŝ, 1), log_q_ŝ, q_s.α, q_s.β
 
     def forward(
         self, m: torch.Tensor, m_mel: torch.Tensor

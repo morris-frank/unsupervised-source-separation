@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from thesis import plot
 from thesis.data.toy import ToyData, TOY_SIGNALS
-from thesis.io import load_model, get_newest_file
+from thesis.io import load_model, get_newest_file, save_append
 
 mpl.use("agg")
 
@@ -56,6 +56,16 @@ def make_separation_examples(data):
         plt.close()
 
 
+def make_posterior_examples(data, weights):
+    model = load_model(weights, "cpu")
+    dset = ToyData(path=f"{data}/test/", mel=True, sources=True)
+
+    for (m, mel), s in tqdm(dset):
+        (ŝ,) = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean
+        ŝ_mel = torch.cat([model.mel(ŝ[k, :])[None, :] for k in range(4)], dim=0)
+        save_append("./mean_posterior.pt", (ŝ.unsqueeze(1), ŝ_mel))
+
+
 def main(args):
     if args.weights is None:
         match = "*pt" if args.k is None else f"*{args.k}*pt"
@@ -76,6 +86,9 @@ def main(args):
             make_cross_likelihood_plot(args.data, args.k, args.weights)
     elif args.command == "separate":
         make_separation_examples(args.data)
+    elif args.command == "posterior":
+        with torch.no_grad():
+            make_posterior_examples(args.data, args.weights)
     else:
         raise ValueError("Invalid Command given")
 
