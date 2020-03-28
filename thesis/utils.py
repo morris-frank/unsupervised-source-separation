@@ -65,6 +65,11 @@ class _LossLogger(object):
                 value = value.detach().mean().item()
             self.log[key].append(value)
 
+    def clear(self):
+        attrs = set(self.__dict__.keys()) - {'log'}
+        for attr in attrs:
+            del self.__dict__[attr]
+
 
 def remove_list_weight_norm(ml: nn.ModuleList) -> nn.ModuleList:
     """
