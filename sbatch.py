@@ -33,7 +33,8 @@ def main(args):
     f += (
         "export LD_LIBRARY_PATH="
         "/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH\n\n"
-        ""
+        "export LC_ALL=en_US.utf8\n"
+        "export LANG=\"$LC_ALL\""
     )
     f += "cd /home/frankm/thesis\n"
 
