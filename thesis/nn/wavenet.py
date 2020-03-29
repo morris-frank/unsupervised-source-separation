@@ -126,3 +126,10 @@ class Wavenet(nn.Module):
         else:
             out = self.final(h)
         return out
+
+    def check_for_nans(self):
+        for i, b in enumerate(self.res_blocks):
+            convs = [b.gate_conv.conv, b.filter_conv.conv, b.res_conv, b.skip_conv, b.gate_conv_c, b.filter_conv_c]
+            for c in convs:
+                if torch.any(torch.isnan(c.weight)) or torch.any(torch.isnan(c.bias)):
+                    print(f"NaN in Block {i:02} in {str(c)}")

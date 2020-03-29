@@ -5,7 +5,7 @@ from os import path
 
 from torch import autograd
 
-from thesis.data.toy import ToyDataSourceK, ToyData, ToyDataRandomAmplitude
+from thesis.data.toy import ToyDataSourceK, ToyDataRandomAmplitude
 from thesis.io import load_model, get_newest_file
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, IS_HERMES
 from thesis.train import train
@@ -49,28 +49,8 @@ def train_umix(path: str):
     model.name = "semi-supervised-fix-ampl"
     model.p_s = _load_prior_networks("Mar26")
 
-    train_set = ToyData(path=path % "train", mel=True, sources=True)
-    test_set = ToyData(path=path % "test", mel=True, sources=True)
-    return model, train_set, test_set
-
-
-def train_cumix(path: str):
-    from thesis.nn.models.cumix import CUMixer
-
-    model = CUMixer(mu=101, width=128)
-
-    train_set = ToyDataRandomAmplitude(path=path % "train")
-    test_set = ToyDataRandomAmplitude(path=path % "test")
-    return model, train_set, test_set
-
-
-def train_numix(path: str):
-    from thesis.nn.models.numix import NUMixer
-
-    model = NUMixer(width=128)
-
-    train_set = ToyDataRandomAmplitude(path=path % "train")
-    test_set = ToyDataRandomAmplitude(path=path % "test")
+    train_set = ToyDataRandomAmplitude(path=path % "train", min=0.9)
+    test_set = ToyDataRandomAmplitude(path=path % "test", min=0.9)
     return model, train_set, test_set
 
 
@@ -100,8 +80,6 @@ EXPERIMENTS = {
     "saw": partial(train_prior, signal="saw"),
     "triangle": partial(train_prior, signal="triangle"),
     "umix": train_umix,
-    "numix": train_numix,
-    "cumix": train_cumix,
 }
 
 if __name__ == "__main__":

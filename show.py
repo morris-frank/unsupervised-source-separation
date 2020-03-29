@@ -16,7 +16,7 @@ from thesis.functional import mel_spectrogram
 
 def show_sample(args):
     model = load_model(args.weights, args.device)
-    model.p_s = _load_prior_networks(prefix="Mar26", device=args.device)
+    # model.p_s = _load_prior_networks(prefix="Mar26", device=args.device)
 
     # dset = ToyDataRandomAmplitude(path=f"{data}/test/")
     dset = ToyData(path=f"{args.data}/test/", mel=True, sources=True)
@@ -40,6 +40,7 @@ def show_cross_likelihood():
     fig.suptitle(r"mean of likelihood log p(s)")
     fig.show()
     exit_prompt()
+
     fig = plot.toy.plot_signal_heatmap(log_p.var(-1), TOY_SIGNALS)
     fig.suptitle("var of likelihood log p(s)")
     fig.show()

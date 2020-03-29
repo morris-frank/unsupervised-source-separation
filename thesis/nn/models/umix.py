@@ -1,3 +1,4 @@
+from random import random
 from typing import Tuple
 
 import torch
@@ -6,12 +7,9 @@ from torch.nn import functional as F
 from torchaudio.transforms import MelSpectrogram
 
 from . import BaseModel
-from ..modules import STFTUpsample
 from ..wavenet import Wavenet
 from ...dist import AffineBeta
 from ...utils import clean_init_args
-
-from random import random
 
 
 class q_sǀm(nn.Module):
@@ -46,9 +44,6 @@ class UMixer(BaseModel):
 
         self.n_classes = 4
 
-        # A learned upsampler for the conditional
-        # self.c_up = STFTUpsample([16, 16])
-
         # The encoders
         self.q_sǀm = nn.ModuleList()
         for k in range(self.n_classes):
@@ -82,8 +77,7 @@ class UMixer(BaseModel):
         )
 
     def q_s(self, m, m_mel):
-        # m_mel = self.c_up(m_mel, m.shape[-1])
-        m_mel = F.interpolate(m_mel, m.shape[-1], mode='linear', align_corners=False)
+        m_mel = F.interpolate(m_mel, m.shape[-1], mode="linear", align_corners=False)
 
         α, β = zip(*[q(m, m_mel) for q in self.q_sǀm])
         α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
@@ -124,7 +118,7 @@ class UMixer(BaseModel):
             # Get Log likelihood under prior
             ŝ_mel = self.mel(ŝ[:, k, :])
             with torch.no_grad():
-                log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
+                log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel).clamp(-1e5, 1e5)
                 log_p_ŝ = log_p_ŝ.detach()[:, None]
 
             # Kullback Leibler for this k'th source
@@ -144,7 +138,7 @@ class UMixer(BaseModel):
 
         ℒ = self.ℒ.reconstruction
         for k in range(self.n_classes):
-            ℒ += 1. * getattr(self.ℒ, f"KL_{k}")
+            ℒ += 1.0 * getattr(self.ℒ, f"KL_{k}")
 
         if random() < 0.1:
             self.ℒ.supervised_mse = F.mse_loss(ŝ, s)
