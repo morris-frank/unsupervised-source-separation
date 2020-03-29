@@ -46,6 +46,9 @@ def main(args):
     if args.file == "train":
         f += f" --batch_size={args.batch_size} -wandb"
 
+    if args.debug:
+        f += " -debug"
+
     if args.k:
         f += f" -k {args.k}"
 
@@ -68,4 +71,5 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int)
     parser.add_argument("-f", type=str, default='train', dest="file")
     parser.add_argument("-k", type=str, required=False)
+    parser.add_argument("-debug", action="store_true")
     main(parser.parse_args())

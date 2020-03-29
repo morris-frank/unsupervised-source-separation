@@ -47,7 +47,7 @@ class UMixer(BaseModel):
         self.n_classes = 4
 
         # A learned upsampler for the conditional
-        self.c_up = STFTUpsample([16, 16])
+        # self.c_up = STFTUpsample([16, 16])
 
         # The encoders
         self.q_sǀm = nn.ModuleList()
@@ -82,7 +82,8 @@ class UMixer(BaseModel):
         )
 
     def q_s(self, m, m_mel):
-        m_mel = self.c_up(m_mel, m.shape[-1])
+        # m_mel = self.c_up(m_mel, m.shape[-1])
+        m_mel = F.interpolate(m_mel, m.shape[-1], mode='linear', align_corners=False)
 
         α, β = zip(*[q(m, m_mel) for q in self.q_sǀm])
         α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)

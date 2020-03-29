@@ -146,13 +146,14 @@ def train(
 
         if torch.isnan(ℒ):
             print(Fore.RED + "nan loss. skip optim!" + Fore.RESET)
+            print(Fore.RED + "ACTUALLY IM GONNA EXIT……" + Fore.RESET)
             save_point = {
-                "it": it,
                 "model_state_dict": model.state_dict(),
                 "params": model.params,
                 "batch": batch,
             }
             torch.save(save_point, f"checkpoints/failed_{model_id}_{it:06}.pt")
+            exit()
             model.zero_grad()
             model.ℒ.clear()
             del ℒ
