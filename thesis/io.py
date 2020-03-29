@@ -9,6 +9,7 @@ import librosa
 import torch
 from torch import nn
 from torch.serialization import SourceChangeWarning
+from colorama import Fore
 
 from .functional import encode_μ_law
 
@@ -16,7 +17,11 @@ warnings.simplefilter("ignore", SourceChangeWarning)
 
 
 def get_newest_file(folder: str, match: str = "*pt"):
-    return sorted(glob(f"{folder}/{match}"), key=lambda x: path.getmtime(x))[-1]
+    chosen = sorted(glob(f"{folder}/{match}"), key=lambda x: path.getmtime(x))[-1]
+    print(
+        f"{Fore.YELLOW}For {Fore.GREEN}{match} {Fore.YELLOW}we using\t{Fore.GREEN}{chosen}{Fore.RESET}"
+    )
+    return chosen
 
 
 def glob_remove(path: str):
@@ -81,7 +86,9 @@ def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
         if "upsample_conv.0.bias" in state_dict.keys():
             for i in (0, 1):
                 for n in ("bias", "weight_g", "weight_v"):
-                    state_dict[f"c_up.up.c{i}.{n}"] = state_dict[f"upsample_conv.{2*i}.{n}"]
+                    state_dict[f"c_up.up.c{i}.{n}"] = state_dict[
+                        f"upsample_conv.{2*i}.{n}"
+                    ]
                     del state_dict[f"upsample_conv.{2*i}.{n}"]
 
         if next(iter(state_dict.keys())).startswith("module."):
@@ -102,7 +109,9 @@ def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
 
 def exit_prompt():
     inp = input("REPL? \t")
-    if inp.lower().strip() == 'q':
+    if inp.lower().strip() == "q":
         exit()
-    elif inp.lower().strip() == 'h':
-        import ipdb; ipdb.set_trace()
+    elif inp.lower().strip() == "h":
+        import ipdb
+
+        ipdb.set_trace()

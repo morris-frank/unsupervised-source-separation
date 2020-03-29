@@ -1,25 +1,24 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
-from os.path import abspath
+from os import path
 
 import numpy as np
 import torch
-from colorama import Fore
 from matplotlib import pyplot as plt
 
 from thesis import plot
-from thesis.data.toy import TOY_SIGNALS
 from thesis.data.toy import ToyData
 from thesis.io import load_model, get_newest_file, exit_prompt
+from thesis.setup import TOY_SIGNALS, DEFAULT_DATA
 from train import _load_prior_networks
 
 
-def show_sample(data, weights):
-    model = load_model(weights, "cpu")
-    model.p_s = _load_prior_networks(prefix="Mar26", device="cpu")
+def show_sample(args):
+    model = load_model(args.weights, args.device)
+    model.p_s = _load_prior_networks(prefix="Mar26", device=args.device)
 
     # dset = ToyDataRandomAmplitude(path=f"{data}/test/")
-    dset = ToyData(path=f"{data}/test/", mel=True, sources=True)
+    dset = ToyData(path=f"{args.data}/test/", mel=True, sources=True)
 
     for (m, mel), s in dset:
         ŝ, m_, log_q_ŝ, α, β = model.test_forward(m.unsqueeze(0), mel.unsqueeze(0))
@@ -65,12 +64,11 @@ def make_mel(signal):
     return mel(signal)
 
 
-def show_prior(data, source):
-    weights = get_newest_file("./checkpoints", f"*{source}*pt")
-    model = load_model(weights, "cpu").to("cpu")
+def show_prior(args):
+    model = load_model(args.weights, args.device).to(args.device)
     model.eval()
 
-    dset = ToyData(path=f"{data}/test/", mel=True, sources=True, mel_sources=True)
+    dset = ToyData(path=f"{args.data}/test/", mel=True, sources=True, mel_sources=True)
 
     for (m, m_mel), (s, s_mel) in dset:
         rand_s = torch.rand_like(m) * 0.1
@@ -87,12 +85,11 @@ def show_prior(data, source):
         exit_prompt()
 
 
-def show_posterior(source):
-    weights = get_newest_file("./checkpoints", f"*{source}*pt")
-    model = load_model(weights, "cpu").to("cpu")
+def show_posterior(args):
+    model = load_model(args.weights, args.device).to(args.device)
     model.eval()
 
-    data = torch.load("./mean_posterior.pt")
+    data = torch.load(f"./figures/{args.basename}/mean_posterior.pt")
 
     for s, _ in data:
         s_max = s.detach().squeeze().abs().max(dim=1).values[:, None, None]
@@ -108,35 +105,27 @@ def show_posterior(source):
 
 def main(args):
     if args.weights is None:
-        args.weights = get_newest_file("./checkpoints")
-        print(
-            f"{Fore.YELLOW}Weights not given. Using instead: {Fore.GREEN}{args.weights}{Fore.RESET}"
-        )
+        match = f"*{args.k}*pt" if args.k else "*pt"
+        args.weights = get_newest_file("./checkpoints", match)
+        args.basename = path.basename(args.weights)[:-3]
+    args.device = "cpu" if not args.gpu else "cuda"
 
-    if args.command == "sample":
-        with torch.no_grad():
-            show_sample(args.data, args.weights)
+    with torch.no_grad():
+        COMMANDS[args.command](args)
 
-    elif args.command == "posterior":
-        with torch.no_grad():
-            show_posterior(args.k)
 
-    elif args.command == "cross-likelihood":
-        show_cross_likelihood()
-
-    elif args.command == "prior":
-        with torch.no_grad():
-            show_prior(args.data, args.k)
-
-    else:
-        raise ValueError("Invalid command given")
-
+COMMANDS = {
+    "sample": show_sample,
+    "posterior": show_posterior,
+    "cross-likelihood": show_cross_likelihood,
+    "prior": show_prior,
+}
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("command", type=str)
-    parser.add_argument("--weights", type=abspath)
-    parser.add_argument("--device", type=str, default="cpu")
-    parser.add_argument("--data", type=abspath, default="/home/morris/var/data/toy")
-    parser.add_argument("-k", type=str)
+    parser.add_argument("command", choices=COMMANDS.keys())
+    parser.add_argument("--weights", type=path.abspath)
+    parser.add_argument("--data", type=path.abspath, default=DEFAULT_DATA)
+    parser.add_argument("-k", choices=TOY_SIGNALS)
+    parser.add_argument("-gpu", action="store_true")
     main(parser.parse_args())

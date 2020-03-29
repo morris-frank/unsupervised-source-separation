@@ -1,26 +1,24 @@
 #!/usr/bin/env python
-import os
 from argparse import ArgumentParser
 from functools import partial
+from os import path
 
-from colorama import Fore
 from torch import autograd
 
-from thesis.data.toy import ToyDataSourceK, ToyData, ToyDataRandomAmplitude, TOY_SIGNALS
+from thesis.data.toy import ToyDataSourceK, ToyData, ToyDataRandomAmplitude
 from thesis.io import load_model, get_newest_file
+from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, IS_HERMES
 from thesis.train import train
 from thesis.utils import optional
 
 
 def _load_prior_networks(prefix: str = "", device="cuda"):
-    priors = []
-    for source in TOY_SIGNALS:
-        weight = get_newest_file("./checkpoints", f"{prefix}*{source}*pt")
-        print(
-            f"{Fore.YELLOW}For {Fore.GREEN}{source} {Fore.YELLOW}we using\t{Fore.GREEN}{weight}{Fore.RESET}"
+    return [
+        load_model(get_newest_file("./checkpoints", f"{prefix}*{s}*pt"), device).to(
+            device
         )
-        priors.append(load_model(weight, device).to(device))
-    return priors
+        for s in TOY_SIGNALS
+    ]
 
 
 def train_prior(path: str, signal: str):
@@ -77,13 +75,11 @@ def train_numix(path: str):
 
 
 def main(args):
-    if args.experiment not in EXPERIMENTS:
-        raise ValueError("Invalid experiment given.")
+    if IS_HERMES:
+        args.batch_size = 2
 
     model, train_set, test_set = EXPERIMENTS[args.experiment](f"{args.data}/%s/")
 
-    if os.uname().nodename == "hermes":
-        args.batch_size = 2
     train_loader = train_set.loader(args.batch_size)
     test_loader = test_set.loader(args.batch_size)
 
@@ -110,20 +106,11 @@ EXPERIMENTS = {
 
 if __name__ == "__main__":
     parser = ArgumentParser()
-    parser.add_argument("experiment", type=str, help="choose the experiment")
+    parser.add_argument("experiment", choices=EXPERIMENTS.keys())
     parser.add_argument(
-        "--gpu",
-        type=int,
-        required=False,
-        nargs="+",
-        help="The GPU ids to use. If unset, will use CPU.",
+        "--gpu", type=int, required=False, nargs="+",
     )
-    parser.add_argument(
-        "--data",
-        type=os.path.abspath,
-        required=True,
-        help="The top-level directory of dataset.",
-    )
+    parser.add_argument("--data", type=path.abspath, default=DEFAULT_DATA)
     parser.add_argument("-wandb", action="store_true", help="Logs to WandB.")
     parser.add_argument("--iterations", default=50000, type=int)
     parser.add_argument("--batch_size", type=int, default=None)
