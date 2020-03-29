@@ -6,7 +6,6 @@ from statistics import mean
 from typing import Dict, List, Optional
 
 import torch
-import wandb as _wandb
 from colorama import Fore
 from torch import optim
 from torch.nn.utils import clip_grad_norm_
@@ -17,6 +16,8 @@ from .nn.models import BaseModel
 
 LAST_LOG = defaultdict(float)
 LAST_LOG["start"] = True
+
+_wandb = None
 
 
 def run_test_with_batch(model, batch, device):
@@ -109,6 +110,10 @@ def train(
         # model = nn.DataParallel(model, device_ids=gpu)
 
     if wandb:
+        global _wandb
+        import wandb as __wandb
+
+        _wandb = __wandb
         _wandb.init(
             name=model_id,
             config=model.params["kwargs"],
@@ -124,7 +129,9 @@ def train(
     train_iterator = iter(train_loader)
     it_timer = time.time()
     model.train()
-    print(f"\n{Fore.YELLOW}{'-'*20}{Fore.GREEN} Start training {Fore.YELLOW}{'-'*20}{Fore.RESET}")
+    print(
+        f"\n{Fore.YELLOW}{'-'*20}{Fore.GREEN} Start training {Fore.YELLOW}{'-'*20}{Fore.RESET}"
+    )
     for it in range(iterations):
         it_start_time = time.time()
         # Load next random batch
@@ -139,6 +146,13 @@ def train(
 
         if torch.isnan(ℒ):
             print(Fore.RED + "nan loss. skip optim!" + Fore.RESET)
+            save_point = {
+                "it": it,
+                "model_state_dict": model.state_dict(),
+                "params": model.params,
+                "batch": batch,
+            }
+            torch.save(save_point, f"checkpoints/failed_{model_id}_{it:06}.pt")
             model.zero_grad()
             model.ℒ.clear()
             del ℒ

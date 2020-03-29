@@ -33,8 +33,8 @@ class q_sǀm(nn.Module):
 
     def forward(self, m: torch.Tensor, m_mel: torch.Tensor):
         f = self.f(m, m_mel)
-        α = self.f_α(f) + 1e-10
-        β = self.f_β(f) + 1e-10
+        α = self.f_α(f) + 1e-4
+        β = self.f_β(f) + 1e-4
         return α, β
 
 
@@ -94,24 +94,24 @@ class UMixer(BaseModel):
         ŝ = q_s.mean
         log_q_ŝ = q_s.log_prob(ŝ)
 
-        ŝ_max = ŝ.detach().squeeze().abs().max(dim=1).values.unsqueeze(-1)
+        ŝ_max = ŝ.detach().squeeze().abs().max(dim=-1, keepdim=True).values
         ŝ = ŝ / ŝ_max
 
-        p_ŝ = []
-        for k in range(self.n_classes):
-            ŝ_mel = self.mel(ŝ[:, k, :])
-            log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
-            p_ŝ.append(log_p_ŝ)
+        # p_ŝ = []
+        # for k in range(self.n_classes):
+        #     ŝ_mel = self.mel(ŝ[:, k, :])
+        #     log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
+        #     p_ŝ.append(log_p_ŝ)
 
         m_ = self.p_mǀs(ŝ)
-        return ŝ, m_, torch.cat(p_ŝ, 1), log_q_ŝ, q_s.α, q_s.β
+        return ŝ, m_, log_q_ŝ, q_s.α, q_s.β
 
     def forward(
         self, m: torch.Tensor, m_mel: torch.Tensor
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         q_s = self.q_s(m, m_mel)
         ŝ = q_s.rsample()
-        log_q_ŝ = q_s.log_prob(ŝ)
+        log_q_ŝ = q_s.log_prob(ŝ).clamp(-1e5, 1e5)
 
         # Scale the posterior samples so they fill range [-1, 1].
         # This is necessary as we start around zero with the values and the

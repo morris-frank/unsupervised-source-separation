@@ -22,9 +22,9 @@ def show_sample(data, weights):
     dset = ToyData(path=f"{data}/test/", mel=True, sources=True)
 
     for (m, mel), s in dset:
-        ŝ, m_, p_ŝ, log_q_ŝ, α, β = model.test_forward(m.unsqueeze(0), mel.unsqueeze(0))
+        ŝ, m_, log_q_ŝ, α, β = model.test_forward(m.unsqueeze(0), mel.unsqueeze(0))
         plot.toy.reconstruction(s, ŝ, m, m_)
-        plot.toy.reconstruction(m, m_, p_ŝ)
+        # plot.toy.reconstruction(m, m_, p_ŝ)
         plot.toy.reconstruction(m, m_, log_q_ŝ)
         plot.toy.reconstruction(m, m_, α, β)
         # μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean
