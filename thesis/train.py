@@ -139,7 +139,6 @@ def train(
 
         if torch.isnan(ℒ):
             print(Fore.RED + "nan loss. skip optim!" + Fore.RESET)
-            print(model.ℒ)
             model.zero_grad()
             model.ℒ.clear()
             del ℒ
