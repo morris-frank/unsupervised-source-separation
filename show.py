@@ -11,6 +11,7 @@ from thesis.data.toy import ToyData
 from thesis.io import load_model, get_newest_file, exit_prompt
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA
 from train import _load_prior_networks
+from thesis.functional import mel_spectrogram
 
 
 def show_sample(args):
@@ -46,24 +47,6 @@ def show_cross_likelihood():
     plt.close()
 
 
-def make_mel(signal):
-    from torchaudio.transforms import MelSpectrogram
-
-    mel_channels = 80
-    n_fft = 1024
-    hop_length = 256
-    sr = 16000
-    mel = MelSpectrogram(
-        sample_rate=sr,
-        n_fft=n_fft,
-        hop_length=hop_length,
-        n_mels=mel_channels,
-        f_min=125,
-        f_max=7600,
-    )
-    return mel(signal)
-
-
 def show_prior(args):
     model = load_model(args.weights, args.device).to(args.device)
     model.eval()
@@ -72,7 +55,7 @@ def show_prior(args):
 
     for (m, m_mel), (s, s_mel) in dset:
         rand_s = torch.rand_like(m) * 0.1
-        rand_mel = make_mel(rand_s)
+        rand_mel = mel_spectrogram(rand_s)
 
         sig = torch.cat((s, m, rand_s), dim=0).unsqueeze(1)
         mel = torch.cat((s_mel, m_mel.unsqueeze(0), rand_mel), dim=0)
@@ -94,7 +77,7 @@ def show_posterior(args):
     for s, _ in data:
         s_max = s.detach().squeeze().abs().max(dim=1).values[:, None, None]
         s = s / s_max
-        s_mel = make_mel(s)
+        s_mel = mel_spectrogram(s)
         log_p, _ = model(s, s_mel.squeeze())
 
         plot.toy.reconstruction(s, sharey=False)

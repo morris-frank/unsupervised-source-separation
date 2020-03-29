@@ -157,3 +157,21 @@ def split_LtoC(x: torch.Tensor) -> torch.Tensor:
 def flip_channels(x: torch.Tensor) -> torch.Tensor:
     x_a, x_b = x.chunk(2, 1)
     return torch.cat([x_b, x_a], 1)
+
+
+def mel_spectrogram(signal):
+    from torchaudio.transforms import MelSpectrogram
+
+    mel_channels = 80
+    n_fft = 1024
+    hop_length = 256
+    sr = 16000
+    mel = MelSpectrogram(
+        sample_rate=sr,
+        n_fft=n_fft,
+        hop_length=hop_length,
+        n_mels=mel_channels,
+        f_min=125,
+        f_max=7600,
+    )
+    return mel(signal)
