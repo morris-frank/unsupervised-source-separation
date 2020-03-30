@@ -114,8 +114,8 @@ class UMixer(BaseModel):
 
         for k in range(self.n_classes):
             # Get Log likelihood under prior
-            ŝ_mel = self.mel(ŝ[:, k, :])
             with torch.no_grad():
+                ŝ_mel = self.mel(ŝ[:, k, :])
                 log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
                 log_p_ŝ = log_p_ŝ.detach()[:, None].clamp(-1e5, 1e5)
 
