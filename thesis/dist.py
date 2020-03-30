@@ -7,10 +7,10 @@ from torch.distributions import constraints
 
 
 class AffineBeta(dist.Beta):
-    def __init__(self, *args, s: float = 2., t: float = -1., **kwargs):
+    def __init__(self, *args, s: float = 2., t: float = -1., ε: float = 1e-4, **kwargs):
         super(AffineBeta, self).__init__(*args, **kwargs)
         self.support = constraints.interval(t, s + t)
-        self.s, self.t = s, t
+        self.s, self.t, self.ε = s, t, ε
 
     @property
     def α(self):
@@ -25,7 +25,8 @@ class AffineBeta(dist.Beta):
         return self.s * super(AffineBeta, self).mean + self.t
 
     def rsample(self, sample_shape=()):
-        return self.s * super(AffineBeta, self).rsample(sample_shape) + self.t
+        samp = self.s * super(AffineBeta, self).rsample(sample_shape) + self.t
+        return samp.clamp(self.t + self.ε, self.s + self.t - self.ε)
 
     def log_prob(self, value):
         value = (value - self.t) / self.s

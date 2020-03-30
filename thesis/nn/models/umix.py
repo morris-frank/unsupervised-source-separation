@@ -89,8 +89,7 @@ class UMixer(BaseModel):
         ŝ = q_s.mean
         log_q_ŝ = q_s.log_prob(ŝ)
 
-        ŝ_max = ŝ.detach().squeeze().abs().max(dim=-1, keepdim=True).values
-        ŝ = ŝ / ŝ_max
+        ŝ = F.normalize(ŝ, p=float('inf'), dim=-1)
 
         # p_ŝ = []
         # for k in range(self.n_classes):
@@ -111,8 +110,7 @@ class UMixer(BaseModel):
         # Scale the posterior samples so they fill range [-1, 1].
         # This is necessary as we start around zero with the values and the
         # prior distributions assign too high likelihoods around zero!
-        ŝ_max = ŝ.detach().squeeze().abs().max(dim=-1, keepdim=True).values
-        ŝ = ŝ / ŝ_max
+        ŝ = F.normalize(ŝ, p=float('inf'), dim=-1)
 
         for k in range(self.n_classes):
             # Get Log likelihood under prior
