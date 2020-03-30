@@ -7,7 +7,7 @@ import torch
 from matplotlib import pyplot as plt
 
 from thesis import plot
-from thesis.data.toy import ToyData
+from thesis.data.toy import ToyData, ToyDataRandomAmplitude
 from thesis.io import load_model, get_newest_file, exit_prompt
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA
 from train import _load_prior_networks
@@ -16,17 +16,16 @@ from thesis.functional import mel_spectrogram
 
 def show_sample(args):
     model = load_model(args.weights, args.device)
-    # model.p_s = _load_prior_networks(prefix="Mar26", device=args.device)
+    model.p_s = _load_prior_networks(prefix="Mar26", device=args.device)
 
-    # dset = ToyDataRandomAmplitude(path=f"{data}/test/")
-    dset = ToyData(path=f"{args.data}/test/", mel=True, sources=True)
+    dset = ToyDataRandomAmplitude(path=f"{args.data}/test/", min=0.9)
 
     for (m, mel), s in dset:
-        ŝ, m_, log_q_ŝ, α, β = model.test_forward(m.unsqueeze(0), mel.unsqueeze(0))
+        ŝ, m_, log_q_ŝ, p_ŝ, α, β = model.test_forward(m.unsqueeze(0), mel.unsqueeze(0))
         plot.toy.reconstruction(s, ŝ, m, m_)
-        # plot.toy.reconstruction(m, m_, p_ŝ)
-        plot.toy.reconstruction(m, m_, log_q_ŝ)
-        plot.toy.reconstruction(m, m_, α, β)
+        plot.toy.reconstruction(m, m_, p_ŝ, ylim=(-500, 1))
+        # plot.toy.reconstruction(m, m_, log_q_ŝ)
+        # plot.toy.reconstruction(m, m_, α, β)
         # μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean
         # _ = plot.toy.reconstruction(s, μ_ŝ, m)
         plt.show()

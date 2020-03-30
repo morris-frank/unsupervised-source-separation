@@ -66,13 +66,14 @@ def squeeze(tensor):
     return tensor[:, 100:PRINT_LENGTH].numpy()
 
 
-def reconstruction(*signals: torch.Tensor, sharey: bool = True):
+def reconstruction(*signals: torch.Tensor, sharey: bool = True, ylim = None):
     arguments = get_func_arguments()
     colores = ["k", "n", "y", "g", "r"]
     signals = list(map(squeeze, signals))
     ch = set(s.shape[0] for s in signals)
     N, hasM = max(ch), len(ch) >= 2
-    ylim = (min(map(np.min, signals)), max(map(np.max, signals)))
+    if not ylim:
+        ylim = (min(map(np.min, signals)), max(map(np.max, signals)))
 
     fig, axs = plt.subplots(N + hasM, sharex="all", sharey='none', squeeze=False)
     if not isinstance(axs, np.ndarray):

@@ -46,23 +46,23 @@ class UMixer(BaseModel):
 
         # The encoders
         self.q_sǀm = nn.ModuleList()
-        for k in range(self.n_classes):
+        for k in range(self.n_classes - 1):
             self.q_sǀm.append(q_sǀm(mel_channels, width))
 
         # The placeholder for the prior networks
         self.p_s = None
 
         # the decoder
-        self.p_mǀs = Wavenet(
-            in_channels=self.n_classes,
-            out_channels=1,
-            n_blocks=1,
-            n_layers=8,
-            residual_channels=32,
-            gate_channels=32,
-            skip_channels=32,
-            cin_channels=None,
-        )
+        # self.p_mǀs = Wavenet(
+        #     in_channels=self.n_classes,
+        #     out_channels=1,
+        #     n_blocks=1,
+        #     n_layers=8,
+        #     residual_channels=32,
+        #     gate_channels=32,
+        #     skip_channels=32,
+        #     cin_channels=None,
+        # )
 
         n_fft = 1024
         hop_length = 256
@@ -91,14 +91,14 @@ class UMixer(BaseModel):
 
         ŝ = F.normalize(ŝ, p=float('inf'), dim=-1)
 
-        # p_ŝ = []
-        # for k in range(self.n_classes):
-        #     ŝ_mel = self.mel(ŝ[:, k, :])
-        #     log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
-        #     p_ŝ.append(log_p_ŝ)
+        p_ŝ = []
+        for k in range(self.n_classes):
+            ŝ_mel = self.mel(ŝ[:, k, :])
+            log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
+            p_ŝ.append(log_p_ŝ)
 
         m_ = self.p_mǀs(ŝ)
-        return ŝ, m_, log_q_ŝ, q_s.α, q_s.β
+        return ŝ, m_, log_q_ŝ, torch.cat(p_ŝ, dim=1), q_s.α, q_s.β
 
     def forward(
         self, m: torch.Tensor, m_mel: torch.Tensor

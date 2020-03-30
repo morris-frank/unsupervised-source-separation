@@ -54,6 +54,19 @@ def train_umix(path: str):
     return model, train_set, test_set
 
 
+def train_wn(path):
+    from thesis.nn.models.wn import WN
+
+    model = WN(width=128)
+    model.p_s = load_model(get_newest_file("./checkpoints", f"*saw*pt"), "cuda").to(
+        "cuda"
+    )
+
+    train_set = ToyDataRandomAmplitude(path=path % "train", min=0.9)
+    test_set = ToyDataRandomAmplitude(path=path % "test", min=0.9)
+    return model, train_set, test_set
+
+
 def main(args):
     if IS_HERMES:
         args.batch_size = 2
@@ -85,6 +98,7 @@ EXPERIMENTS = {
     "saw": partial(train_prior, signal="saw"),
     "triangle": partial(train_prior, signal="triangle"),
     "umix": train_umix,
+    "wn": train_wn,
 }
 
 if __name__ == "__main__":
