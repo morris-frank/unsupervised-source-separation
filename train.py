@@ -3,13 +3,13 @@ from argparse import ArgumentParser
 from functools import partial
 from os import path
 
+import torch
 from torch import autograd
 
 from thesis.data.toy import ToyDataSourceK, ToyDataRandomAmplitude
 from thesis.io import load_model, get_newest_file
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, IS_HERMES
 from thesis.train import train
-from thesis.utils import optional
 
 
 def _load_prior_networks(prefix: str = "", device="cuda"):
@@ -63,7 +63,12 @@ def main(args):
     train_loader = train_set.loader(args.batch_size)
     test_loader = test_set.loader(args.batch_size)
 
-    with optional(args.debug, autograd.detect_anomaly()):
+    if args.debug:
+        torch.manual_seed(0)
+        torch.backends.cudnn.deterministic = True
+        torch.backends.cudnn.benchmark = False
+
+    with autograd.set_detect_anomaly(args.debug):
         train(
             model=model,
             gpu=args.gpu,

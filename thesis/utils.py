@@ -1,7 +1,6 @@
 import inspect
 import re
 from collections import defaultdict
-from contextlib import contextmanager
 from itertools import product
 from typing import Dict, Any
 
@@ -43,15 +42,6 @@ def range_product(*args: int) -> product:
         the product iterator
     """
     return product(*map(range, args))
-
-
-@contextmanager
-def optional(condition, context_manager):
-    if condition:
-        with context_manager:
-            yield
-    else:
-        yield
 
 
 class _LossLogger(object):

@@ -12,8 +12,8 @@ from torch.nn.utils import clip_grad_value_
 from torch.utils import data
 
 from .io import glob_remove
-from .utils import max_grad, any_invalid_grad
 from .nn.models import BaseModel
+from .utils import max_grad, any_invalid_grad
 
 LAST_LOG = defaultdict(float)
 LAST_LOG["start"] = True
@@ -146,25 +146,35 @@ def train(
         model.zero_grad()
 
         if torch.isnan(ℒ) or torch.isinf(ℒ):
-            print(Fore.RED + "NaN Loss ℒ.\n"
-                             "Try Again. I'm gonna try to continue…" + Fore.RESET)
+            print(
+                Fore.RED + "NaN Loss ℒ.\n"
+                "Try Again. I'm gonna try to continue…" + Fore.RESET
+            )
             model.zero_grad()
             model.ℒ.clear()
             del ℒ
+            exit()
             continue
         else:
             ℒ.backward()
             clip_grad_value_(model.parameters(), 1)
             if any_invalid_grad(model.parameters()):
-                print(Fore.RED + "There was a NaN or inf in one of the grads.\n"
-                                 "Saving everything……" + Fore.RESET)
-                save_point = {"model_state_dict": model.state_dict(),
-                              "params": model.params,
-                              "batch": batch,
-                              "optimizer_state_dict": optimizer.state_dict(),
-                              "it": it,
-                              "scheduler": scheduler.state_dict()}
-                torch.save(save_point, f"checkpoints/invalid_grad_{model_id}_{it:06}.pt")
+                print(
+                    Fore.RED + "There was a NaN or inf in one of the grads.\n"
+                    "Saving everything……" + Fore.RESET
+                )
+                save_point = {
+                    "model_state_dict": model.state_dict(),
+                    "params": model.params,
+                    "batch": batch,
+                    "optimizer_state_dict": optimizer.state_dict(),
+                    "it": it,
+                    "scheduler": scheduler.state_dict(),
+                }
+                torch.save(
+                    save_point, f"checkpoints/invalid_grad_{model_id}_{it:06}.pt"
+                )
+                exit()
             optimizer.step()
             scheduler.step(it)
 
