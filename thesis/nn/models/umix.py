@@ -123,7 +123,7 @@ class UMixer(BaseModel):
             KL_k = -torch.mean(log_p_ŝ - log_q_ŝ[:, k, :])
             setattr(self.ℒ, f"KL_{k}", KL_k)
 
-        m_ = ŝ.mean(dim=1)
+        m_ = ŝ.mean(dim=1, keepdim=True)
         self.ℒ.reconstruction = F.mse_loss(m_, m)
 
         return ŝ, m_
