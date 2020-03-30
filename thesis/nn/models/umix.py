@@ -97,7 +97,7 @@ class UMixer(BaseModel):
             log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
             p_ŝ.append(log_p_ŝ)
 
-        m_ = self.p_mǀs(ŝ)
+        m_ = ŝ.mean(dim=1)
         return ŝ, m_, log_q_ŝ, torch.cat(p_ŝ, dim=1), q_s.α, q_s.β
 
     def forward(
@@ -123,7 +123,7 @@ class UMixer(BaseModel):
             KL_k = -torch.mean(log_p_ŝ - log_q_ŝ[:, k, :])
             setattr(self.ℒ, f"KL_{k}", KL_k)
 
-        m_ = self.p_mǀs(ŝ)
+        m_ = ŝ.mean(dim=1)
         self.ℒ.reconstruction = F.mse_loss(m_, m)
 
         return ŝ, m_
@@ -138,7 +138,7 @@ class UMixer(BaseModel):
         for k in range(self.n_classes):
             ℒ += 1.0 * getattr(self.ℒ, f"KL_{k}")
 
-        if random() < 0.1:
+        if random() < .3:
             self.ℒ.supervised_mse = F.mse_loss(ŝ, s)
             ℒ += self.ℒ.supervised_mse
 

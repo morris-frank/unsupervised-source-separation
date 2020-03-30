@@ -45,7 +45,7 @@ class WN(BaseModel):
         ŝ = F.normalize(ŝ, p=float("inf"), dim=-1)
 
         with torch.no_grad():
-            ŝ_mel = self.mel(ŝ)
+            ŝ_mel = self.mel(ŝ[:, 0, :])
             log_p_ŝ, _ = self.p_s(ŝ, ŝ_mel)
             log_p_ŝ = log_p_ŝ.detach()[:, None].clamp(-1e5, 1e5)
 
@@ -57,7 +57,7 @@ class WN(BaseModel):
         self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor
     ) -> torch.Tensor:
         m, m_mel = x
-        ŝ, _ = self.forward(torch.rand_like(m), torch.rand_like(m_mel))
+        _ = self.forward(torch.rand_like(m), torch.rand_like(m_mel))
 
-        ℒ = self.ℒ.kl
+        ℒ = self.ℒ.KL
         return ℒ
