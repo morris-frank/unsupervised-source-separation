@@ -8,10 +8,11 @@ from typing import Dict, List, Optional
 import torch
 from colorama import Fore
 from torch import optim
-from torch.nn.utils import clip_grad_norm_
+from torch.nn.utils import clip_grad_value_
 from torch.utils import data
 
 from .io import glob_remove
+from .utils import max_grad, any_invalid_grad
 from .nn.models import BaseModel
 
 LAST_LOG = defaultdict(float)
@@ -61,7 +62,7 @@ def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = N
     print()
     LAST_LOG["start"] = False
 
-    if _wandb.run is not None:
+    if _wandb is not None:
         _wandb.log(log, step=step)
 
 
@@ -144,23 +145,26 @@ def train(
         ℒ = run_test_with_batch(model, batch, device)
         model.zero_grad()
 
-        if torch.isnan(ℒ):
-            print(Fore.RED + "nan loss. skip optim!" + Fore.RESET)
-            print(Fore.RED + "ACTUALLY IM GONNA EXIT……" + Fore.RESET)
-            save_point = {
-                "model_state_dict": model.state_dict(),
-                "params": model.params,
-                "batch": batch,
-            }
-            torch.save(save_point, f"checkpoints/failed_{model_id}_{it:06}.pt")
-            exit()
+        if torch.isnan(ℒ) or torch.isinf(ℒ):
+            print(Fore.RED + "NaN Loss ℒ.\n"
+                             "Try Again. I'm gonna try to continue…" + Fore.RESET)
             model.zero_grad()
             model.ℒ.clear()
             del ℒ
             continue
         else:
             ℒ.backward()
-            clip_grad_norm_(model.parameters(), 10)
+            clip_grad_value_(model.parameters(), 1)
+            if any_invalid_grad(model.parameters()):
+                print(Fore.RED + "There was a NaN or inf in one of the grads.\n"
+                                 "Saving everything……" + Fore.RESET)
+                save_point = {"model_state_dict": model.state_dict(),
+                              "params": model.params,
+                              "batch": batch,
+                              "optimizer_state_dict": optimizer.state_dict(),
+                              "it": it,
+                              "scheduler": scheduler.state_dict()}
+                torch.save(save_point, f"checkpoints/invalid_grad_{model_id}_{it:06}.pt")
             optimizer.step()
             scheduler.step(it)
 
@@ -173,6 +177,7 @@ def train(
                 "Loss/train": mean(losses),
                 "Time/train": mean(it_times),
                 "LR": optimizer.param_groups[0]["lr"],
+                "MaxGrad/train": max_grad(model.parameters()),
             }
             print_log(model, log, "train", step=it)
             losses, it_times = [], []
@@ -180,7 +185,7 @@ def train(
         # TEST AND SAVE THE MODEL (every 30min)
         if (time.time() - it_timer) > 1800 or it == iterations - 1:
             if not keep_checkpoints:
-                glob_remove((f"checkpoints/{model_id}_*.pt"))
+                glob_remove(f"checkpoints/{model_id}_*.pt")
             save_point = {
                 "it": it,
                 "model_state_dict": model.state_dict(),

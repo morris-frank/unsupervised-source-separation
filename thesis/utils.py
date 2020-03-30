@@ -66,7 +66,7 @@ class _LossLogger(object):
             self.log[key].append(value)
 
     def clear(self):
-        attrs = set(self.__dict__.keys()) - {'log'}
+        attrs = set(self.__dict__.keys()) - {"log"}
         for attr in attrs:
             del self.__dict__[attr]
 
@@ -91,6 +91,23 @@ def get_func_arguments():
     try:
         argument_string = re.search(rf"{func_name}\((.*)\)", code_line)[1]
     except TypeError:
-        import ipdb; ipdb.set_trace()
+        import ipdb
+
+        ipdb.set_trace()
     arguments = re.split(r",\s*(?![^()]*\))", argument_string)
     return arguments
+
+
+def any_invalid_grad(parameters):
+    parameters = list(filter(lambda x: x.grad is not None, parameters))
+    any_is_invalid = any(
+        torch.isnan(p.grad.data).any() or torch.isinf(p.grad.data).any()
+        for p in parameters
+    )
+    return any_is_invalid
+
+
+def max_grad(parameters):
+    parameters = list(filter(lambda x: x.grad is not None, parameters))
+    max_value = max(p.grad.data.abs().max() for p in parameters)
+    return max_value
