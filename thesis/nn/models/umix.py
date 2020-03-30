@@ -80,7 +80,6 @@ class UMixer(BaseModel):
         m_mel = F.interpolate(m_mel, m.shape[-1], mode="linear", align_corners=False)
 
         α, β = zip(*[q(m, m_mel) for q in self.q_sǀm])
-        import ipdb; ipdb.set_trace()
         α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
         q_s = AffineBeta(α, β)
         return q_s
