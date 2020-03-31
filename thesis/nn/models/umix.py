@@ -79,7 +79,7 @@ class UMixer(BaseModel):
     def q_s(self, m, m_mel):
         m_mel = F.interpolate(m_mel, m.shape[-1], mode="linear", align_corners=False)
 
-        α, β = zip(*[q(m, m_mel) for q in self.q_sǀm])
+        α, β = zip(*[q(torch.randn_like(m), m_mel) for q in self.q_sǀm])
         α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
         q_s = AffineBeta(α, β)
         return q_s
