@@ -6,7 +6,7 @@ from os import path
 import torch
 from torch import autograd
 
-from thesis.data.toy import ToyDataSourceK, ToyDataRandomAmplitude
+from thesis.data.toy import ToyData
 from thesis.io import load_model, get_newest_file
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, IS_HERMES
 from thesis.train import train
@@ -37,8 +37,9 @@ def train_prior(path: str, signal: str):
         width=48,
         name=signal,
     )
-    train_set = ToyDataSourceK(path=path % "train", k=k, mel=True)
-    test_set = ToyDataSourceK(path=path % "test", k=k, mel=True)
+
+    train_set = ToyData(path % "train", source=k, mel_source=True)
+    test_set = ToyData(path % "test", source=k, mel_source=True)
     return model, train_set, test_set
 
 
@@ -49,21 +50,23 @@ def train_umix(path: str):
     model.name = "semi-supervised-fix-ampl"
     model.p_s = _load_prior_networks("Mar26")
 
-    train_set = ToyDataRandomAmplitude(path=path % "train", min=0.9)
-    test_set = ToyDataRandomAmplitude(path=path % "test", min=0.9)
+    train_set = ToyData(path % "train", mix=True, mel=True, source=True, rand_amplitude=0.1)
+    test_set = ToyData(path % "test", mix=True, mel=True, source=True, rand_amplitude=0.1)
     return model, train_set, test_set
 
 
 def train_wn(path):
     from thesis.nn.models.wn import WN
+    signal = "saw"
+    k = TOY_SIGNALS.index(signal)
 
     model = WN(width=128)
-    model.p_s = load_model(get_newest_file("./checkpoints", f"*saw*pt"), "cuda").to(
+    model.p_s = load_model(get_newest_file("./checkpoints", f"*{signal}*pt"), "cuda").to(
         "cuda"
     )
 
-    train_set = ToyDataRandomAmplitude(path=path % "train", min=0.9)
-    test_set = ToyDataRandomAmplitude(path=path % "test", min=0.9)
+    train_set = ToyData(path % "train", source=k, mel_source=True, rand_amplitude=0.1)
+    test_set = ToyData(path % "test", source=k, mel_source=True, rand_amplitude=0.1)
     return model, train_set, test_set
 
 

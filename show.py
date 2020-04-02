@@ -7,7 +7,7 @@ import torch
 from matplotlib import pyplot as plt
 
 from thesis import plot
-from thesis.data.toy import ToyData, ToyDataRandomAmplitude
+from thesis.data.toy import ToyData
 from thesis.io import load_model, get_newest_file, exit_prompt
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA
 from train import _load_prior_networks
@@ -16,12 +16,12 @@ from thesis.functional import mel_spectrogram
 
 def show_sample(args):
     model = load_model(args.weights, args.device)
-    model.p_s = _load_prior_networks(prefix="Mar26", device=args.device)
+    # model.p_s = _load_prior_networks(prefix="Mar26", device=args.device)
 
-    dset = ToyDataRandomAmplitude(path=f"{args.data}/test/", min=0.9)
+    data = ToyData(f"{args.data}/test/", mix=True, mel=True, source=True, rand_amplitude=0.1)
 
-    for (m, mel), s in dset:
-        ŝ, m_, log_q_ŝ, p_ŝ, α, β = model.test_forward(m.unsqueeze(0), mel.unsqueeze(0))
+    for (m, mel), s in data.loader(1):
+        ŝ, m_, log_q_ŝ, p_ŝ, α, β = model.test_forward(m, mel)
         plot.toy.reconstruction(s, ŝ, m, m_)
         plot.toy.reconstruction(m, m_, p_ŝ, ylim=(-500, 1))
         # plot.toy.reconstruction(m, m_, log_q_ŝ)
@@ -51,9 +51,9 @@ def show_prior(args):
     model = load_model(args.weights, args.device).to(args.device)
     model.eval()
 
-    dset = ToyData(path=f"{args.data}/test/", mel=True, sources=True, mel_sources=True)
+    data = ToyData(f"{args.data}/test/", mix=True, mel=True, source=True, mel_source=True)
 
-    for (m, m_mel), (s, s_mel) in dset:
+    for (m, m_mel), (s, s_mel) in data:
         rand_s = torch.rand_like(m) * 0.1
         rand_mel = mel_spectrogram(rand_s)
 

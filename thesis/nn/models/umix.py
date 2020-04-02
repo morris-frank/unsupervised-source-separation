@@ -10,6 +10,7 @@ from . import BaseModel
 from ..wavenet import Wavenet
 from ...dist import AffineBeta
 from ...utils import clean_init_args
+from ..modules import MelSpectrogram
 
 
 class q_sǀm(nn.Module):
@@ -64,22 +65,12 @@ class UMixer(BaseModel):
         #     cin_channels=None,
         # )
 
-        n_fft = 1024
-        hop_length = 256
-        sr = 16000
-        self.mel = MelSpectrogram(
-            sample_rate=sr,
-            n_fft=n_fft,
-            hop_length=hop_length,
-            n_mels=mel_channels,
-            f_min=125,
-            f_max=7600,
-        )
+        self.mel = MelSpectrogram()
 
     def q_s(self, m, m_mel):
         m_mel = F.interpolate(m_mel, m.shape[-1], mode="linear", align_corners=False)
 
-        α, β = zip(*[q(torch.randn_like(m), m_mel) for q in self.q_sǀm])
+        α, β = zip(*[q(m, m_mel) for q in self.q_sǀm])
         α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
         q_s = AffineBeta(α, β)
         return q_s

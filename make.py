@@ -24,12 +24,10 @@ def make_cross_likelihood_plot(args):
 
     model = load_model(args.weights, args.device).to(args.device)
 
-    test_set = ToyData(
-        path=f"{args.data}/test/", mix=False, sources=True, mel_sources=True
-    )
-    results = np.zeros((K, K, len(test_set)))
+    data = ToyData(f"{args.data}/test/", source=True, mel_source=True)
+    results = np.zeros((K, K, len(data)))
 
-    for i, (s, m) in enumerate(tqdm(test_set)):
+    for i, (s, m) in enumerate(tqdm(data)):
         s, m = s.unsqueeze(1).to(args.device), m.to(args.device)
         logp, _ = model(s, m)
         results[k, :, i] = logp.mean(-1).squeeze().cpu().numpy()
@@ -45,8 +43,8 @@ def make_cross_likelihood_plot(args):
 
 def make_separation_examples(args):
     model = load_model(args.weights, args.device).to(args.device)
-    dset = ToyData(path=f"{args.data}/test/", mel=True, sources=True)
-    for i, ((mix, mel), sources) in enumerate(tqdm(dset)):
+    data = ToyData(f"{args.data}/test/", mix=True, mel=True, source=True)
+    for i, ((mix, mel), sources) in enumerate(tqdm(data)):
         mix = mix.unsqueeze(0).to(args.device)
         mel = mel.unsqueeze(0).to(args.device)
         ŝ = model.umix(mix, mel)[0]
@@ -57,7 +55,7 @@ def make_separation_examples(args):
 
 def make_posterior_examples(args):
     model = load_model(args.weights, args.device)
-    dset = ToyData(path=f"{args.data}/test/", mel=True, sources=True)
+    dset = ToyData(path=f"{args.data}/test/", mix=True, mel=True, source=True)
 
     for (m, mel), s in tqdm(dset):
         (ŝ,) = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean

@@ -4,6 +4,7 @@ import torch
 from torch import nn
 from torch.autograd import Variable
 from torch.nn import functional as F
+from torchaudio.transforms import MelSpectrogram as _MelSpectrogram
 
 from .functions import VectorQuantizationStraightThrough, VectorQuantization
 from ..functional import orthonormal
@@ -144,3 +145,15 @@ class STFTUpsample(nn.Module):
         si = (c.shape[-1] - width) // 2
         c = c[..., si : si + width]
         return c
+
+
+class MelSpectrogram(_MelSpectrogram):
+    def __init__(self):
+        super(MelSpectrogram, self).__init__(
+            sample_rate=16000,
+            n_fft=1024,
+            hop_length=256,
+            n_mels=80,
+            f_min=125,
+            f_max=7600,
+        )
