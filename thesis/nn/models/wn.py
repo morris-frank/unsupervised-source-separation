@@ -45,13 +45,9 @@ class WN(BaseModel):
 
         return ŝ
 
-    def test(
-        self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor
-    ) -> torch.Tensor:
-        s, s_mel = x
-
+    def test(self, s, s_mel):
         s_noised = (s + 0.1 * torch.randn_like(s)).clamp(-1, 1)
-        s_mel_noised = self.mel(s_noised)
+        s_mel_noised = self.mel(s_noised.squeeze())
         ŝ = self.forward(s_noised, s_mel_noised)
 
         self.ℒ.supervision = F.mse_loss(ŝ, s)
