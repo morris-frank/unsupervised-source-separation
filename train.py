@@ -1,7 +1,6 @@
 #!/usr/bin/env python
+import os
 from argparse import ArgumentParser
-from functools import partial
-from os import path
 
 import torch
 from torch import autograd
@@ -50,20 +49,25 @@ def train_umix(path: str):
     model.name = "semi-supervised-fix-ampl"
     model.p_s = _load_prior_networks("Mar26")
 
-    train_set = ToyData(path % "train", mix=True, mel=True, source=True, rand_amplitude=0.1)
-    test_set = ToyData(path % "test", mix=True, mel=True, source=True, rand_amplitude=0.1)
+    train_set = ToyData(
+        path % "train", mix=True, mel=True, source=True, rand_amplitude=0.1
+    )
+    test_set = ToyData(
+        path % "test", mix=True, mel=True, source=True, rand_amplitude=0.1
+    )
+
     return model, train_set, test_set
 
 
-def train_wn(path):
+def train_wn(path, signal):
     from thesis.nn.models.wn import WN
-    signal = "saw"
     k = TOY_SIGNALS.index(signal)
 
     model = WN(width=128)
-    model.p_s = load_model(get_newest_file("./checkpoints", f"*{signal}*pt"), "cuda").to(
-        "cuda"
-    )
+    model.name = signal
+    model.p_s = load_model(
+        get_newest_file("./checkpoints", f"*{signal}*pt"), "cuda"
+    ).to("cuda")
 
     train_set = ToyData(path % "train", source=k, mel_source=True, rand_amplitude=0.1)
     test_set = ToyData(path % "test", source=k, mel_source=True, rand_amplitude=0.1)
@@ -74,7 +78,10 @@ def main(args):
     if IS_HERMES:
         args.batch_size = 2
 
-    model, train_set, test_set = EXPERIMENTS[args.experiment](f"{args.data}/%s/")
+    fa = {"path": f"{args.data}/%s/"}
+    if args.signal is not None:
+        fa["signal"] = args.signal
+    model, train_set, test_set = EXPERIMENTS[args.experiment](**fa)
 
     train_loader = train_set.loader(args.batch_size)
     test_loader = test_set.loader(args.batch_size)
@@ -96,10 +103,7 @@ def main(args):
 
 
 EXPERIMENTS = {
-    "sin": partial(train_prior, signal="sin"),
-    "square": partial(train_prior, signal="square"),
-    "saw": partial(train_prior, signal="saw"),
-    "triangle": partial(train_prior, signal="triangle"),
+    "prior": train_prior,
     "umix": train_umix,
     "wn": train_wn,
 }
@@ -107,10 +111,11 @@ EXPERIMENTS = {
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("experiment", choices=EXPERIMENTS.keys())
+    parser.add_argument("-k", choices=TOY_SIGNALS, dest="signal")
     parser.add_argument(
         "--gpu", type=int, required=False, nargs="+",
     )
-    parser.add_argument("--data", type=path.abspath, default=DEFAULT_DATA)
+    parser.add_argument("--data", type=os.path.abspath, default=DEFAULT_DATA)
     parser.add_argument("-wandb", action="store_true", help="Logs to WandB.")
     parser.add_argument("--iterations", default=50000, type=int)
     parser.add_argument("--batch_size", type=int, default=None)
