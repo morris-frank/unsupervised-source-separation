@@ -131,7 +131,8 @@ def train(
     it_timer = time.time()
     model.train()
     print(
-        f"\n{Fore.YELLOW}{'-'*20}{Fore.GREEN} Start training {Fore.YELLOW}{'-'*20}{Fore.RESET}"
+        f"\n{Fore.YELLOW}This is {Fore.GREEN}{model_id}{Fore.RESET}\n"
+        f"{Fore.YELLOW}{'-'*20}{Fore.GREEN} Start training {Fore.YELLOW}{'-'*20}{Fore.RESET}"
     )
     for it in range(iterations):
         it_start_time = time.time()
