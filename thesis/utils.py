@@ -5,8 +5,6 @@ from itertools import product
 from typing import Dict, Any
 
 import torch
-from torch import nn
-from torch.nn.utils import remove_weight_norm
 
 
 def clean_init_args(_locals: Dict) -> Dict[str, Any]:
@@ -59,20 +57,6 @@ class _LossLogger(object):
         attrs = set(self.__dict__.keys()) - {"log"}
         for attr in attrs:
             del self.__dict__[attr]
-
-
-def remove_list_weight_norm(ml: nn.ModuleList) -> nn.ModuleList:
-    """
-    Removes weight norm from all layers in a ModuleList
-
-    Args:
-        ml: the ModuleList
-
-    Returns:
-        the changes modulelist
-    """
-    _ml = nn.ModuleList([remove_weight_norm(l) for l in ml])
-    return _ml
 
 
 def get_func_arguments():

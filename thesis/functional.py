@@ -5,29 +5,6 @@ import torch
 from torch.nn import functional as F
 
 
-def dilate(x: torch.Tensor, new: int, old: int = 1) -> torch.Tensor:
-    """
-    Will dilate the input tensor of shape [N, C, L]
-
-    Args:
-        x: input tensor
-        new: new amount of dilation to get
-        old: current amount if dilation of tensor
-
-    Returns:
-        dilated tensor
-    """
-    n, c, w = x.shape  # N == Batch size × old
-    dilation = new / old
-    if dilation == 1:
-        return x
-    w, n = int(w / dilation), int(n * dilation)
-    x = x.permute(1, 2, 0)
-    x = torch.reshape(x, [c, w, n])
-    x = x.permute(2, 0, 1)
-    return x.contiguous()
-
-
 def shift1d(x: torch.Tensor, shift: int) -> torch.Tensor:
     """
     Shifts a Tensor to the left or right and pads with zeros.
@@ -77,24 +54,6 @@ def destroy_along_channels(x: torch.Tensor, amount: float) -> torch.Tensor:
         else:
             x[:, i] = 0.0
     return x
-
-
-def orthonormal(*dim: int) -> torch.Tensor:
-    """
-    Creates an orthonormal Tensor with the given dimensions.
-
-    Args:
-        *dim: The dimensions.
-
-    Returns:
-        the Tensor (new)
-    """
-    # this guarantees |det(weights)| == 1 but not the sign
-    data = torch.qr(torch.empty(*dim).normal_())[0]
-
-    if torch.det(data) < 0:
-        data[:, 0] = -data[:, 0]
-    return data
 
 
 def split(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:

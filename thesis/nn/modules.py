@@ -6,13 +6,16 @@ from torch.autograd import Variable
 from torch.nn import functional as F
 from torchaudio.transforms import MelSpectrogram as _MelSpectrogram
 
-from .functions import VectorQuantizationStraightThrough, VectorQuantization
-from ..functional import orthonormal
-
 
 class Conv1d(nn.Module):
     def __init__(
-        self, in_channels, out_channels, kernel_size=3, dilation=1, causal=False, bias=True
+        self,
+        in_channels,
+        out_channels,
+        kernel_size=3,
+        dilation=1,
+        causal=False,
+        bias=True,
     ):
         super(Conv1d, self).__init__()
 
@@ -27,7 +30,7 @@ class Conv1d(nn.Module):
             kernel_size,
             dilation=dilation,
             padding=self.padding,
-            bias=bias
+            bias=bias,
         )
         self.conv = nn.utils.weight_norm(self.conv)
         nn.init.kaiming_normal_(self.conv.weight)
@@ -54,33 +57,6 @@ class ZeroConv1d(nn.Module):
         return out
 
 
-class VQEmbedding(nn.Module):
-    def __init__(self, K, D):
-        super(VQEmbedding, self).__init__()
-        self.embedding = nn.Embedding(K, D)
-        self.embedding.weight.data.uniform_(-1.0 / K, 1.0 / K)
-
-    def forward(self, z_e_x):
-        z_e_x_ = z_e_x.permute(0, 2, 1).contiguous()
-        latents = VectorQuantization.apply(z_e_x_, self.embedding.weight)
-        return latents
-
-    def straight_through(self, z_e_x):
-        z_e_x_ = z_e_x.permute(0, 2, 1).contiguous()
-        z_q_x_, indices = VectorQuantizationStraightThrough.apply(
-            z_e_x_, self.embedding.weight.detach()
-        )
-        z_q_x = z_q_x_.permute(0, 2, 1).contiguous()
-
-        z_q_x_bar_flatten = torch.index_select(
-            self.embedding.weight, dim=0, index=indices
-        )
-        z_q_x_bar_ = z_q_x_bar_flatten.view_as(z_e_x_)
-        z_q_x_bar = z_q_x_bar_.permute(0, 2, 1).contiguous()
-
-        return z_q_x, z_q_x_bar
-
-
 class LinearInvert(nn.Linear):
     def __init__(self, in_features: int, out_features: int):
         super(LinearInvert, self).__init__(
@@ -102,29 +78,6 @@ class LinearInvert(nn.Linear):
         else:
             y = super(LinearInvert, self).forward(x)
             return y
-
-
-class ChannelConvInvert(nn.Module):
-    def __init__(self, channels: int):
-        super(ChannelConvInvert, self).__init__()
-        self.conv = nn.Conv1d(channels, channels, 1, bias=False)
-
-        self.conv.weight.data = orthonormal(channels, channels).unsqueeze(-1)
-        self.inv_w = None
-
-    def forward(self, z: torch.Tensor, reverse: bool = False):
-        w = self.conv.weight.squeeze()
-
-        if reverse:
-            if self.inv_w is None:
-                inv_w = w.type(z.dtype).inverse()
-                self.inv_w = Variable(inv_w.unsqueeze(-1))
-            z = F.conv1d(z, self.inv_w, bias=None)
-            return z
-        else:
-            logdet_w = torch.logdet(w)
-            z = self.conv(z)
-            return z, logdet_w
 
 
 class STFTUpsample(nn.Module):
@@ -158,12 +111,14 @@ class MelSpectrogram(_MelSpectrogram):
             f_min=125,
             f_max=7600,
         )
-        self.reference = 20.
-        self.min_db = -100.
-    
+        self.reference = 20.0
+        self.min_db = -100.0
+
     def forward(self, waveform):
         mel_specgram = super(MelSpectrogram, self).forward(waveform)
-        mel_spectrogram = 20 * torch.log10(mel_specgram.clamp(min=1e-4)) - self.reference
+        mel_spectrogram = (
+            20 * torch.log10(mel_specgram.clamp(min=1e-4)) - self.reference
+        )
         mel_spectrogram = (mel_spectrogram - self.min_db) / (-self.min_db)
         # mel_spectrogram = ((mel_spectrogram - self.min_db) / (-self.min_db)).clamp(0, 1)
         return mel_spectrogram

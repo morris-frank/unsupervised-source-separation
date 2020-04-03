@@ -7,7 +7,9 @@ from torch.distributions import constraints
 
 
 class AffineBeta(dist.Beta):
-    def __init__(self, *args, s: float = 2., t: float = -1., ε: float = 1e-4, **kwargs):
+    def __init__(
+        self, *args, s: float = 2.0, t: float = -1.0, ε: float = 1e-4, **kwargs
+    ):
         super(AffineBeta, self).__init__(*args, **kwargs)
         self.support = constraints.interval(t, s + t)
         self.s, self.t, self.ε = s, t, ε
@@ -85,22 +87,6 @@ def rsample_truncated_normal(
         return tensor, log_l
     else:
         return tensor
-
-
-def likelihood_truncated_normal(
-    x: torch.Tensor, μ: torch.Tensor, σ: torch.Tensor, a: float = -1.0, b: float = 1.0
-):
-    assert μ.shape == σ.shape
-
-    l = norm_cdf((-μ + a) / σ)
-    u = norm_cdf((-μ + b) / σ)
-
-    ξ = (x - μ) / σ
-    φ_ξ = 1 / sqrt(2 * π) * torch.exp(-0.5 * ξ * ξ)
-
-    f_x = φ_ξ / (u - l) / σ
-
-    return f_x
 
 
 def likelihood_normal(x, μ, log_σ):

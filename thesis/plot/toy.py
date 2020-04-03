@@ -2,72 +2,25 @@ from math import tau as τ
 
 import matplotlib.pyplot as plt
 import numpy as np
-import pandas as pd
-import seaborn as sns
 import torch
 from matplotlib import colors
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from scipy.signal import sawtooth, square
-from torch import nn
-from torch.nn import functional as F
-from tqdm import trange
 
 from ..utils import get_func_arguments
-from ..data.toy import ToyData
 
 PRINT_START = 100
 PRINT_LENGTH = 500
-
-
-def fig_summary(fname: str):
-    df = pd.read_pickle(fname)
-    df.destroy = df.destroy.astype("category")
-    zer = df[df.destroy == 0.0].iloc[0].destroy
-
-    fig = plt.figure(figsize=(5, 8))
-
-    ax1 = fig.add_subplot(3, 2, 1)
-    plt.title("Influence of the latent embedding")
-    sns.scatterplot(
-        x="periodicity",
-        y="loss",
-        hue="destroy",
-        data=df,
-        palette=["r", "g", "b"],
-        ax=ax1,
-    )
-
-    ax2 = fig.add_subplot(3, 2, 3)
-    plt.title("Mean loss over different destroy and source shapes")
-    sns.boxplot(x="destroy", y="loss", hue="shape", data=df, ax=ax2)
-
-    ax3 = fig.add_subplot(3, 2, 5)
-    plt.title("Loss over shapes @ no destroy ")
-    sns.scatterplot(
-        x="periodicity", y="loss", hue="shape", data=df[df.destroy == zer], ax=ax3
-    )
-
-    ax4 = fig.add_subplot(2, 2, 2)
-    plt.title("Mean period/loss for a sample @ no destroy")
-    rdf = df[df.destroy == zer].groupby("n").agg("mean")
-    sns.relplot(x="periodicity", y="loss", data=rdf, ax=ax4)
-
-    ax5 = fig.add_subplot(2, 2, 4)
-    plt.title("Sum period/loss for a sample @ no destroy")
-    rdf = df[df.destroy == zer].groupby("n").agg("sum")
-    sns.relplot(x="periodicity", y="loss", data=rdf, ax=ax5)
-
-    return fig
 
 
 def squeeze(tensor):
     tensor = tensor.detach().cpu().squeeze()
     if tensor.dim() == 1:
         tensor = tensor.unsqueeze(0)
-    return tensor[:, PRINT_START:PRINT_START+PRINT_LENGTH].numpy()
+    return tensor[:, PRINT_START : PRINT_START + PRINT_LENGTH].numpy()
 
 
-def reconstruction(*signals: torch.Tensor, sharey: bool = True, ylim = None):
+def reconstruction(*signals: torch.Tensor, sharey: bool = True, ylim=None):
     arguments = get_func_arguments()
     colores = ["k", "n", "y", "g", "r"]
     signals = list(map(squeeze, signals))
@@ -76,7 +29,7 @@ def reconstruction(*signals: torch.Tensor, sharey: bool = True, ylim = None):
     if not ylim:
         ylim = (min(map(np.min, signals)), max(map(np.max, signals)))
 
-    fig, axs = plt.subplots(N + hasM, sharex="all", sharey='none', squeeze=False)
+    fig, axs = plt.subplots(N + hasM, sharex="all", sharey="none", squeeze=False)
     if not isinstance(axs, np.ndarray):
         axs = list(axs)
     for k, (signal, name) in enumerate(zip(signals, arguments)):
@@ -94,48 +47,6 @@ def reconstruction(*signals: torch.Tensor, sharey: bool = True, ylim = None):
     for ax in axs.flatten().tolist():
         ax.legend()
     return fig
-
-
-def prepare_plot_freq_loss(
-    model: nn.Module,
-    data: ToyData,
-    ns: int,
-    μ: int,
-    destroy: float = 0.0,
-    single: bool = False,
-    device: str = "cpu",
-) -> pd.DataFrame:
-    d = {"n": [], "shape": [], "loss": [], "periodicity": [], "destroy": []}
-    model = model.to(device)
-    model.eval()
-    for n in trange(len(data.data)):
-        mix, stems = data[n]
-        mix = mix.unsqueeze(0)
-        prms = data.data[n]["params"]
-
-        logits = model.infer(mix, stems)
-        # TODO: FIX THIS
-        logits = logits.cpu()
-        for i in range(ns):
-            d["n"].append(n)
-            d["shape"].append(prms[i]["shape"])
-            d["destroy"].append(destroy)
-            d["periodicity"].append(prms[i]["φ"])
-            d["loss"].append(
-                F.cross_entropy(
-                    logits[:, i * μ : (i + 1) * μ, :], stems[None, i, :]
-                ).item()
-            )
-    df = pd.DataFrame(data=d)
-    return df
-
-
-def plot_freq_loss(fname: str):
-    df = pd.read_pickle(fname)
-    df.destroy = df.destroy.astype("category")
-    # zer = df.destroy.iloc[0]
-    sns.scatterplot(x="periodicity", y="loss", hue="shape", data=df)
-    plt.show()
 
 
 def add_plot_tick(ax, symbol, pos=0.5, where="tensor", size=0.05):

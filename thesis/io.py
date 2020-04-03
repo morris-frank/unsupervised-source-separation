@@ -5,13 +5,11 @@ from glob import glob
 from os import path
 from typing import Any
 
-import librosa
 import torch
+from colorama import Fore
 from torch import nn
 from torch.serialization import SourceChangeWarning
-from colorama import Fore
 
-from .audio import encode_μ_law
 from .setup import DEFAULT_CHECKPOINTS
 
 warnings.simplefilter("ignore", SourceChangeWarning)
@@ -26,10 +24,10 @@ def get_newest_file(folder: str, match: str = "*pt"):
 
 
 def get_newest_checkpoint(match: str):
-    if '*' not in match:
+    if "*" not in match:
         return match
-    if not match.endswith('pt'):
-        match += '*pt'
+    if not match.endswith("pt"):
+        match += "*pt"
     return get_newest_file(DEFAULT_CHECKPOINTS, match)
 
 
@@ -54,23 +52,6 @@ def save_append(fp: str, obj: Any):
     torch.save(data, fp)
 
 
-def load_audio(fp: str) -> torch.Tensor:
-    """
-    Loads an audio file with librosa and output μ-law encoded.
-
-    Args:
-        fp: Path to file
-
-    Returns:
-        Content in μ-law
-    """
-    raw, sr = librosa.load(fp, mono=True, sr=None)
-    assert sr == 16000
-    raw = torch.tensor(raw[None, None, ...], dtype=torch.float32)
-    x = encode_μ_law(raw) / 128
-    return x
-
-
 def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
     """
 
@@ -92,7 +73,7 @@ def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
         kwargs = save_point["params"]["kwargs"].copy()
         model = model_class(*args, **kwargs)
 
-        for k in filter(lambda x: x.startswith('p_s.'), list(state_dict.keys())):
+        for k in filter(lambda x: x.startswith("p_s."), list(state_dict.keys())):
             del state_dict[k]
 
         if next(iter(state_dict.keys())).startswith("module."):
