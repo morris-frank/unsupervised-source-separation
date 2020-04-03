@@ -12,12 +12,8 @@ class NWN(BaseModel):
     def __init__(self, width: int = 64):
         super(NWN, self).__init__()
         self.params = clean_init_args(locals().copy())
-        self.name = ""
 
-        self.n_classes = 4
         odim = 256
-
-        # The encoders
         self.q_sǀm = self.f = nn.Sequential(
             Wavenet(
                 in_channels=1,
@@ -29,6 +25,7 @@ class NWN(BaseModel):
                 skip_channels=width,
                 bias=False,
                 alternative=True,
+                cin_channels=None,
             ),
             nn.Conv1d(odim, 1, 1, bias=False),
         )
@@ -46,8 +43,7 @@ class NWN(BaseModel):
             ŝ_mel = self.mel(ŝ_[:, 0, :])
             log_p_ŝ, _ = self.p_s[0](ŝ_, ŝ_mel)
             log_p_ŝ = log_p_ŝ.detach()[:, None].clamp(-1e5, 1e5)
-
-        self.ℒ.likelihood = -torch.mean(log_p_ŝ)
+            self.ℒ.likelihood = -torch.mean(log_p_ŝ)
 
         return ŝ
 

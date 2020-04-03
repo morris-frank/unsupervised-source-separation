@@ -116,9 +116,9 @@ class Wavenet(nn.Module):
         if alternative:
             self.final = nn.Sequential(
                 nn.ReLU(),
-                nn.Conv1d(last_channels, 2048, 3, bias=bias),
+                nn.Conv1d(last_channels, 2048, 3, bias=bias, padding=1),
                 nn.ReLU(),
-                nn.Conv1d(2048, out_channels, 3, bias=bias),
+                nn.Conv1d(2048, out_channels, 3, bias=bias, padding=1),
             )
         else:
             self.final = nn.Sequential(

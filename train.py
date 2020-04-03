@@ -64,7 +64,7 @@ def train_wn(path, signal):
     k = TOY_SIGNALS.index(signal)
 
     model = WN(width=128)
-    model.name = signal
+    model.name = signal + "_Beta_denoise"
     model.p_s = [load_model(
         get_newest_file("./checkpoints", f"*Flowavenet*{signal}*pt"), "cuda"
     ).to("cuda")]
@@ -79,7 +79,7 @@ def train_nwn(path, signal):
     k = TOY_SIGNALS.index(signal)
 
     model = NWN(width=128)
-    model.name = signal
+    model.name = signal + "_non_prob_denoise"
     model.p_s = [load_model(
         get_newest_file("./checkpoints", f"*Flowavenet*{signal}*pt"), "cuda"
     ).to("cuda")]

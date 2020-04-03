@@ -21,6 +21,7 @@ class q_sǀm(nn.Module):
             residual_channels=dim,
             gate_channels=dim,
             skip_channels=dim,
+            cin_channels=None,
             bias=False,
             alternative=True,
         )
@@ -39,11 +40,7 @@ class WN(BaseModel):
     def __init__(self, width: int = 64):
         super(WN, self).__init__()
         self.params = clean_init_args(locals().copy())
-        self.name = ""
 
-        self.n_classes = 4
-
-        # The encoders
         self.q_sǀm = q_sǀm(width)
 
         # The placeholder for the prior networks
