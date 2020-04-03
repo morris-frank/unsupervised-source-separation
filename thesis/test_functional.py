@@ -35,15 +35,6 @@ def test_split_interleave():
     assert torch.all(interleave(*split(x)) == x)
 
 
-def test_orthonormal():
-    from .functional import orthonormal
-
-    w, h = 32, 32
-    Q = orthonormal(w, h)
-    assert torch.allclose(torch.inverse(Q), Q.t(), atol=1e-5)
-    assert torch.allclose(torch.matrix_power(Q, 0), (Q @ Q.t()), atol=1e-5)
-
-
 def test_destroy_along_channels():
     from .functional import destroy_along_channels
 
