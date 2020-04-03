@@ -83,6 +83,9 @@ def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
         kwargs = save_point["params"]["kwargs"].copy()
         model = model_class(*args, **kwargs)
 
+        for k in filter(lambda x: x.startswith('p_s.'), list(state_dict.keys())):
+            del state_dict[k]
+
         if next(iter(state_dict.keys())).startswith("module."):
             _state_dict = OrderedDict({k[7:]: v for k, v in state_dict.items()})
             state_dict = _state_dict

@@ -15,6 +15,7 @@ from tqdm import trange
 from ..utils import get_func_arguments
 from ..data.toy import ToyData
 
+PRINT_START = 100
 PRINT_LENGTH = 500
 
 
@@ -63,7 +64,7 @@ def squeeze(tensor):
     tensor = tensor.detach().cpu().squeeze()
     if tensor.dim() == 1:
         tensor = tensor.unsqueeze(0)
-    return tensor[:, 100:PRINT_LENGTH].numpy()
+    return tensor[:, PRINT_START:PRINT_START+PRINT_LENGTH].numpy()
 
 
 def reconstruction(*signals: torch.Tensor, sharey: bool = True, ylim = None):

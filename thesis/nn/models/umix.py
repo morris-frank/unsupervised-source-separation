@@ -14,12 +14,12 @@ from ..modules import MelSpectrogram
 
 
 class q_sǀm(nn.Module):
-    def __init__(self, mel_channels, dim):
+    def __init__(self, mel_channels, dim, n_blocks=3):
         super(q_sǀm, self).__init__()
         self.f = Wavenet(
             in_channels=1,
             out_channels=dim,
-            n_blocks=3,
+            n_blocks=n_blocks,
             n_layers=11,
             residual_channels=dim,
             gate_channels=dim,

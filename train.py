@@ -13,7 +13,7 @@ from thesis.train import train
 
 def _load_prior_networks(prefix: str = "", device="cuda"):
     return [
-        load_model(get_newest_file("./checkpoints", f"{prefix}*{s}*pt"), device).to(
+        load_model(get_newest_file("./checkpoints", f"{prefix}*Flowavenet*{s}*pt"), device).to(
             device
         )
         for s in TOY_SIGNALS
@@ -65,12 +65,27 @@ def train_wn(path, signal):
 
     model = WN(width=128)
     model.name = signal
-    model.p_s = load_model(
-        get_newest_file("./checkpoints", f"*{signal}*pt"), "cuda"
-    ).to("cuda")
+    model.p_s = [load_model(
+        get_newest_file("./checkpoints", f"*Flowavenet*{signal}*pt"), "cuda"
+    ).to("cuda")]
 
-    train_set = ToyData(path % "train", source=k, mel_source=True, rand_amplitude=0.1)
-    test_set = ToyData(path % "test", source=k, mel_source=True, rand_amplitude=0.1)
+    train_set = ToyData(path % "train", source=k, rand_amplitude=0.1)
+    test_set = ToyData(path % "test", source=k, rand_amplitude=0.1)
+    return model, train_set, test_set
+
+
+def train_nwn(path, signal):
+    from thesis.nn.models.nwn import NWN
+    k = TOY_SIGNALS.index(signal)
+
+    model = NWN(width=128)
+    model.name = signal
+    model.p_s = [load_model(
+        get_newest_file("./checkpoints", f"*Flowavenet*{signal}*pt"), "cuda"
+    ).to("cuda")]
+
+    train_set = ToyData(path % "train", source=k, rand_amplitude=0.1)
+    test_set = ToyData(path % "test", source=k, rand_amplitude=0.1)
     return model, train_set, test_set
 
 
@@ -106,6 +121,7 @@ EXPERIMENTS = {
     "prior": train_prior,
     "umix": train_umix,
     "wn": train_wn,
+    "nwn": train_nwn,
 }
 
 if __name__ == "__main__":

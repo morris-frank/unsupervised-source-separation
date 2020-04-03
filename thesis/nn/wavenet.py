@@ -19,6 +19,7 @@ class GatedResBlock(nn.Module):
         dilation: int,
         cin_channels: Opt[int] = None,
         causal: bool = False,
+        bias: bool = True,
     ):
         super(GatedResBlock, self).__init__()
         self.causal = causal
@@ -27,26 +28,26 @@ class GatedResBlock(nn.Module):
         self.skip = skip_channels is not None
 
         self.filter_conv = Conv1d(
-            in_channels, out_channels, kernel_size, dilation, causal
+            in_channels, out_channels, kernel_size, dilation, causal, bias=bias
         )
         self.gate_conv = Conv1d(
-            in_channels, out_channels, kernel_size, dilation, causal
+            in_channels, out_channels, kernel_size, dilation, causal, bias=bias
         )
-        self.res_conv = weight_norm(nn.Conv1d(out_channels, in_channels, kernel_size=1))
+        self.res_conv = weight_norm(nn.Conv1d(out_channels, in_channels, kernel_size=1, bias=bias))
         nn.init.kaiming_normal_(self.res_conv.weight)
 
         if self.skip:
             self.skip_conv = weight_norm(
-                nn.Conv1d(out_channels, skip_channels, kernel_size=1)
+                nn.Conv1d(out_channels, skip_channels, kernel_size=1, bias=bias)
             )
             nn.init.kaiming_normal_(self.skip_conv.weight)
 
         if self.conditioned:
             self.filter_conv_c = weight_norm(
-                nn.Conv1d(cin_channels, out_channels, kernel_size=1)
+                nn.Conv1d(cin_channels, out_channels, kernel_size=1, bias=bias)
             )
             self.gate_conv_c = weight_norm(
-                nn.Conv1d(cin_channels, out_channels, kernel_size=1)
+                nn.Conv1d(cin_channels, out_channels, kernel_size=1, bias=bias)
             )
             nn.init.kaiming_normal_(self.filter_conv_c.weight)
             nn.init.kaiming_normal_(self.gate_conv_c.weight)
@@ -78,15 +79,21 @@ class Wavenet(nn.Module):
         skip_channels: int = 256,
         kernel_size: int = 3,
         cin_channels: Opt[int] = 80,
+        bias: bool = True,
         causal: bool = False,
         zero_final: bool = False,
+        alternative: bool = False,
     ):
         super(Wavenet, self).__init__()
 
         self.skip = skip_channels is not None
-        self.init = nn.Sequential(
-            Conv1d(in_channels, residual_channels, 3, causal=causal), nn.ReLU()
-        )
+
+        if alternative:
+            self.init = Conv1d(in_channels, residual_channels, 3, bias=bias)
+        else:
+            self.init = nn.Sequential(
+                Conv1d(in_channels, residual_channels, 3, causal=causal, bias=bias), nn.ReLU()
+            )
 
         self.res_blocks = nn.ModuleList()
         for b in range(n_blocks):
@@ -100,17 +107,26 @@ class Wavenet(nn.Module):
                         dilation=2 ** n,
                         cin_channels=cin_channels,
                         causal=causal,
+                        bias=bias,
                     )
                 )
 
         last_channels = skip_channels if self.skip else residual_channels
-        last_layer = ZeroConv1d if zero_final else partial(nn.Conv1d, kernel_size=1)
-        self.final = nn.Sequential(
-            nn.ReLU(),
-            Conv1d(last_channels, last_channels, 1, causal=causal),
-            nn.ReLU(),
-            last_layer(last_channels, out_channels),
-        )
+        last_layer = ZeroConv1d if zero_final else partial(nn.Conv1d, kernel_size=1, bias=False)
+        if alternative:
+            self.final = nn.Sequential(
+                nn.ReLU(),
+                nn.Conv1d(last_channels, 2048, 3, bias=bias),
+                nn.ReLU(),
+                nn.Conv1d(2048, out_channels, 3, bias=bias),
+            )
+        else:
+            self.final = nn.Sequential(
+                nn.ReLU(),
+                Conv1d(last_channels, last_channels, 1, causal=causal, bias=bias),
+                nn.ReLU(),
+                last_layer(last_channels, out_channels),
+            )
 
     def forward(self, x: torch.Tensor, c: Opt[torch.Tensor] = None):
         h = self.init(x)

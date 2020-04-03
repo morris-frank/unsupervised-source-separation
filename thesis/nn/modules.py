@@ -12,7 +12,7 @@ from ..functional import orthonormal
 
 class Conv1d(nn.Module):
     def __init__(
-        self, in_channels, out_channels, kernel_size=3, dilation=1, causal=False
+        self, in_channels, out_channels, kernel_size=3, dilation=1, causal=False, bias=True
     ):
         super(Conv1d, self).__init__()
 
@@ -27,6 +27,7 @@ class Conv1d(nn.Module):
             kernel_size,
             dilation=dilation,
             padding=self.padding,
+            bias=bias
         )
         self.conv = nn.utils.weight_norm(self.conv)
         nn.init.kaiming_normal_(self.conv.weight)

@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from os import path
 
 import numpy as np
+from torch.nn import functional as F
 import torch
 from matplotlib import pyplot as plt
 
@@ -16,9 +17,11 @@ from thesis.functional import mel_spectrogram
 
 def show_sample(args):
     model = load_model(args.weights, args.device)
-    # model.p_s = _load_prior_networks(prefix="Mar26", device=args.device)
+    model.p_s = _load_prior_networks(prefix="Mar26", device=args.device)
 
-    data = ToyData(f"{args.data}/test/", mix=True, mel=True, source=True, rand_amplitude=0.1)
+    data = ToyData(
+        f"{args.data}/test/", mix=True, mel=True, source=True, rand_amplitude=0.1
+    )
 
     for (m, mel), s in data.loader(1):
         ŝ, m_, log_q_ŝ, p_ŝ, α, β = model.test_forward(m, mel)
@@ -28,6 +31,26 @@ def show_sample(args):
         # plot.toy.reconstruction(m, m_, α, β)
         # μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean
         # _ = plot.toy.reconstruction(s, μ_ŝ, m)
+        plt.show()
+        exit_prompt()
+
+
+def show_sample_wn(args):
+    k = TOY_SIGNALS.index(args.k)
+    model = load_model(args.weights, args.device)
+    model.p_s = load_model(
+        get_newest_file("./checkpoints", f"Mar26*{args.k}*pt"), args.device
+    ).to(args.device)
+
+    data = ToyData(f"{args.data}/test/", source=k, mel_source=True, rand_amplitude=0.1)
+
+    for (s, s_mel) in data.loader(1):
+        s_noised = (s + 0.1 * torch.randn_like(s)).clamp(-1, 1)
+        s_mel_noised = mel_spectrogram(s_noised.squeeze()).unsqueeze(0)
+        ŝ = model.forward(s_noised, s_mel_noised)
+        l1 = F.l1_loss(ŝ, s, reduction='none')
+        mse = F.mse_loss(ŝ, s, reduction='none')
+        plot.toy.reconstruction(s, ŝ, l1, mse)
         plt.show()
         exit_prompt()
 
@@ -51,7 +74,9 @@ def show_prior(args):
     model = load_model(args.weights, args.device).to(args.device)
     model.eval()
 
-    data = ToyData(f"{args.data}/test/", mix=True, mel=True, source=True, mel_source=True)
+    data = ToyData(
+        f"{args.data}/test/", mix=True, mel=True, source=True, mel_source=True
+    )
 
     for (m, m_mel), (s, s_mel) in data:
         rand_s = torch.rand_like(m) * 0.1
@@ -102,6 +127,7 @@ COMMANDS = {
     "posterior": show_posterior,
     "cross-likelihood": show_cross_likelihood,
     "prior": show_prior,
+    "wn": show_sample_wn,
 }
 
 if __name__ == "__main__":
