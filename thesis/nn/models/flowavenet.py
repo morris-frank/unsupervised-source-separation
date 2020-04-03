@@ -45,6 +45,7 @@ class AffineCoupling(nn.Module):
             cin_channels=cin_channel // 2,
             causal=False,
             zero_final=True,
+            bias=False,
         )
 
     def forward(self, x, c=None):
@@ -111,6 +112,7 @@ class Block(nn.Module):
                 cin_channels=squeeze_dim_c,
                 causal=False,
                 zero_final=True,
+                bias=False,
             )
 
     def forward(self, x, c):
@@ -181,7 +183,6 @@ class Flowavenet(BaseModel):
         return log_p_sum, logdet
 
     def test(self, source, mel):
-        B, _, T = source.size()
         log_p, logdet = self.forward(source, mel)
         self.ℒ.log_p, self.ℒ.logdet = -torch.mean(log_p), -torch.mean(logdet)
         ℒ = self.ℒ.log_p + self.ℒ.logdet

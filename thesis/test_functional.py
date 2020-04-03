@@ -2,7 +2,7 @@ import torch
 
 
 def test_μ_law():
-    from .functional import encode_μ_law, decode_μ_law
+    from .audio import encode_μ_law, decode_μ_law
 
     x = torch.tensor([-1, -0.5, 0, 0.5, 1.0], dtype=torch.float)
     y = torch.tensor([0, 16, 127, 238, 254], dtype=torch.uint8)

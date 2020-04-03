@@ -1,5 +1,4 @@
 import random
-from math import log
 from typing import Tuple
 
 import torch
@@ -50,49 +49,10 @@ def shift1d(x: torch.Tensor, shift: int) -> torch.Tensor:
 
 def discretize(x: torch.Tensor, μ: int = 101):
     assert μ & 1
-    assert x.max() <= 1. and x.min() >= -1.
-    μ -= 1
-    hμ = μ // 2
-    out = torch.round(x * hμ) + hμ
-    return out
-
-
-def encode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
-    """
-    Encodes the input tensor element-wise with μ-law encoding
-
-    Args:
-        x: tensor
-        μ: the size of the encoding (number of possible classes)
-
-    Returns:
-        the encoded tensor
-    """
-    assert μ & 1
     assert x.max() <= 1.0 and x.min() >= -1.0
     μ -= 1
     hμ = μ // 2
-    out = torch.sign(x) * torch.log(1 + μ * torch.abs(x)) / log(μ)
-    out = torch.round(out * hμ) + hμ
-    return out
-
-
-def decode_μ_law(x: torch.Tensor, μ: int = 255) -> torch.Tensor:
-    """
-    Applies the element-wise inverse μ-law encoding to the tensor.
-
-    Args:
-        x: input tensor
-        μ: size of the encoding (number of possible classes)
-
-    Returns:
-        the decoded tensor
-    """
-    assert μ & 1
-    μ = μ - 1
-    hμ = μ // 2
-    out = (x.type(torch.float32) - hμ) / hμ
-    out = torch.sign(out) / μ * (torch.pow(μ, torch.abs(out)) - 1)
+    out = torch.round(x * hμ) + hμ
     return out
 
 
@@ -157,8 +117,3 @@ def split_LtoC(x: torch.Tensor) -> torch.Tensor:
 def flip_channels(x: torch.Tensor) -> torch.Tensor:
     x_a, x_b = x.chunk(2, 1)
     return torch.cat([x_b, x_a], 1)
-
-
-def mel_spectrogram(signal):
-    from .nn.modules import MelSpectrogram
-    return MelSpectrogram()(signal)

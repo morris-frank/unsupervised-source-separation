@@ -18,8 +18,12 @@ def main(args):
     p = "gpu_short" if args.short else "gpu_shared"
     t = "0:30:00" if args.short else f"{args.hours}:00:00"
 
+    name = args.experiment
+    if args.k:
+        name += '_' + args.k
+
     c = {
-        "job-name": args.experiment,
+        "job-name": name,
         "cpus-per-task": 2,
         "time": t,
         "mem": "10000M",

@@ -25,10 +25,9 @@ def train_prior(path: str, signal: str):
 
     k = TOY_SIGNALS.index(signal)
 
-    mel_channels = 80
     model = Flowavenet(
         in_channel=1,
-        cin_channel=mel_channels,
+        cin_channel=80,
         n_block=4,
         n_flow=10,
         n_layer=4,
@@ -37,8 +36,8 @@ def train_prior(path: str, signal: str):
         name=signal,
     )
 
-    train_set = ToyData(path % "train", source=k, mel_source=True)
-    test_set = ToyData(path % "test", source=k, mel_source=True)
+    train_set = ToyData(path % "train", source=k, mel_source=True, noise=0.2, rand_noise=True)
+    test_set = ToyData(path % "test", source=k, mel_source=True, noise=0.2, rand_noise=True)
     return model, train_set, test_set
 
 
@@ -65,21 +64,6 @@ def train_wn(path, signal):
 
     model = WN(width=128)
     model.name = signal + "_Beta_denoise"
-    model.p_s = [load_model(
-        get_newest_file("./checkpoints", f"*Flowavenet*{signal}*pt"), "cuda"
-    ).to("cuda")]
-
-    train_set = ToyData(path % "train", source=k, rand_amplitude=0.1)
-    test_set = ToyData(path % "test", source=k, rand_amplitude=0.1)
-    return model, train_set, test_set
-
-
-def train_nwn(path, signal):
-    from thesis.nn.models.nwn import NWN
-    k = TOY_SIGNALS.index(signal)
-
-    model = NWN(width=128)
-    model.name = signal + "_non_prob_denoise"
     model.p_s = [load_model(
         get_newest_file("./checkpoints", f"*Flowavenet*{signal}*pt"), "cuda"
     ).to("cuda")]
@@ -121,7 +105,6 @@ EXPERIMENTS = {
     "prior": train_prior,
     "umix": train_umix,
     "wn": train_wn,
-    "nwn": train_nwn,
 }
 
 if __name__ == "__main__":

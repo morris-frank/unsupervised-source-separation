@@ -158,3 +158,12 @@ class MelSpectrogram(_MelSpectrogram):
             f_min=125,
             f_max=7600,
         )
+        self.reference = 20.
+        self.min_db = -100.
+    
+    def forward(self, waveform):
+        mel_specgram = super(MelSpectrogram, self).forward(waveform)
+        mel_spectrogram = 20 * torch.log10(mel_specgram.clamp(min=1e-4)) - self.reference
+        mel_spectrogram = (mel_spectrogram - self.min_db) / (-self.min_db)
+        # mel_spectrogram = ((mel_spectrogram - self.min_db) / (-self.min_db)).clamp(0, 1)
+        return mel_spectrogram

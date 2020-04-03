@@ -82,18 +82,14 @@ class Wavenet(nn.Module):
         bias: bool = True,
         causal: bool = False,
         zero_final: bool = False,
-        alternative: bool = False,
+        fc_channels: Opt[int] = None,
+        fc_kernel_size: int = 1,
     ):
         super(Wavenet, self).__init__()
 
         self.skip = skip_channels is not None
 
-        if alternative:
-            self.init = Conv1d(in_channels, residual_channels, 3, bias=bias)
-        else:
-            self.init = nn.Sequential(
-                Conv1d(in_channels, residual_channels, 3, causal=causal, bias=bias), nn.ReLU()
-            )
+        self.init = Conv1d(in_channels, residual_channels, 3, bias=bias)
 
         self.res_blocks = nn.ModuleList()
         for b in range(n_blocks):
@@ -112,21 +108,16 @@ class Wavenet(nn.Module):
                 )
 
         last_channels = skip_channels if self.skip else residual_channels
-        last_layer = ZeroConv1d if zero_final else partial(nn.Conv1d, kernel_size=1, bias=False)
-        if alternative:
-            self.final = nn.Sequential(
-                nn.ReLU(),
-                nn.Conv1d(last_channels, 2048, 3, bias=bias, padding=1),
-                nn.ReLU(),
-                nn.Conv1d(2048, out_channels, 3, bias=bias, padding=1),
-            )
-        else:
-            self.final = nn.Sequential(
-                nn.ReLU(),
-                Conv1d(last_channels, last_channels, 1, causal=causal, bias=bias),
-                nn.ReLU(),
-                last_layer(last_channels, out_channels),
-            )
+        fc_channels = last_channels if fc_channels is None else fc_channels
+
+        last_layer = ZeroConv1d if zero_final else partial(Conv1d, kernel_size=fc_kernel_size, bias=bias)
+
+        self.final = nn.Sequential(
+            nn.ReLU(),
+            Conv1d(last_channels, fc_channels, ),
+            nn.ReLU(),
+            last_layer(fc_channels, out_channels),
+        )
 
     def forward(self, x: torch.Tensor, c: Opt[torch.Tensor] = None):
         h = self.init(x)

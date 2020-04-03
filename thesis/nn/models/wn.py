@@ -63,7 +63,7 @@ class WN(BaseModel):
 
         self.ℒ.KL = -torch.mean(log_p_ŝ - log_q_ŝ)
 
-        return ŝ
+        return ŝ, α, β
 
     def test(self, s):
         s_noised = (s + 0.1 * torch.randn_like(s)).clamp(-1, 1)

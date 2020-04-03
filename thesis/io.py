@@ -11,7 +11,8 @@ from torch import nn
 from torch.serialization import SourceChangeWarning
 from colorama import Fore
 
-from .functional import encode_μ_law
+from .audio import encode_μ_law
+from .setup import DEFAULT_CHECKPOINTS
 
 warnings.simplefilter("ignore", SourceChangeWarning)
 
@@ -22,6 +23,14 @@ def get_newest_file(folder: str, match: str = "*pt"):
         f"{Fore.YELLOW}For {Fore.GREEN}{match} {Fore.YELLOW}we using\t{Fore.GREEN}{chosen}{Fore.RESET}"
     )
     return chosen
+
+
+def get_newest_checkpoint(match: str):
+    if '*' not in match:
+        return match
+    if not match.endswith('pt'):
+        match += '*pt'
+    return get_newest_file(DEFAULT_CHECKPOINTS, match)
 
 
 def glob_remove(path: str):
@@ -96,7 +105,7 @@ def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
 
     if not train:
         model.eval()
-        return model
+        return model.to(device)
 
     # TODO implement continue training load
     raise NotImplementedError
