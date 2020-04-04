@@ -11,7 +11,7 @@ from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, IS_HERMES
 from thesis.train import train
 
 
-def _load_prior_networks(prefix: str = "", device="cuda"):
+def _load_prior_networks(prefix: str = "Apr04", device="cuda"):
     return [
         load_model(get_newest_file("./checkpoints", f"{prefix}*Flowavenet*{s}*pt"), device).to(
             device
@@ -41,12 +41,11 @@ def train_prior(path: str, signal: str):
     return model, train_set, test_set
 
 
-def train_umix(path: str):
-    from thesis.nn.models.umix import UMixer
+def train_demixer(path: str):
+    from thesis.nn.models.demixer import Demixer
 
-    model = UMixer(width=128)
-    model.name = "semi-supervised-fix-ampl"
-    model.p_s = _load_prior_networks("Mar26")
+    model = Demixer(width=128, name="semi")
+    model.p_s = _load_prior_networks()
 
     train_set = ToyData(
         path % "train", mix=True, mel=True, source=True, rand_amplitude=0.1
@@ -58,12 +57,11 @@ def train_umix(path: str):
     return model, train_set, test_set
 
 
-def train_wn(path, signal):
-    from thesis.nn.models.wn import WN
+def train_denoiser(path: str, signal: str):
+    from thesis.nn.models.denoiser import Denoiser
     k = TOY_SIGNALS.index(signal)
 
-    model = WN(width=128)
-    model.name = signal + "_Beta_denoise"
+    model = Denoiser(width=128, name=signal)
     model.p_s = [load_model(
         get_newest_file("./checkpoints", f"*Flowavenet*{signal}*pt"), "cuda"
     ).to("cuda")]
@@ -103,8 +101,8 @@ def main(args):
 
 EXPERIMENTS = {
     "prior": train_prior,
-    "umix": train_umix,
-    "wn": train_wn,
+    "demixer": train_demixer,
+    "denoiser": train_denoiser,
 }
 
 if __name__ == "__main__":

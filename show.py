@@ -19,7 +19,7 @@ from train import _load_prior_networks
 
 def show_sample(args):
     model = load_model(args.weights, args.device)
-    model.p_s = _load_prior_networks(prefix="Mar26", device=args.device)
+    model.p_s = _load_prior_networks(device=args.device)
 
     data = ToyData(
         f"{args.data}/test/", mix=True, mel=True, source=True, rand_amplitude=0.1
@@ -37,7 +37,7 @@ def show_sample(args):
         exit_prompt()
 
 
-def show_sample_wn(args):
+def show_sample_denoiser(args):
     k = TOY_SIGNALS.index(args.k)
     model = load_model(args.weights, args.device)
     model.p_s = [
@@ -162,7 +162,7 @@ COMMANDS = {
     "posterior": show_posterior,
     "cross-likelihood": show_cross_likelihood,
     "prior": show_prior,
-    "wn": show_sample_wn,
+    "denoiser": show_sample_denoiser,
     "noise": show_noise_plot,
     "mel": show_mel,
 }

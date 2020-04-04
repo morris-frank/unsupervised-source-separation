@@ -7,28 +7,31 @@ from torch.nn import functional as F
 from torchaudio.transforms import MelSpectrogram
 
 from . import BaseModel
+from ..modules import MelSpectrogram
 from ..wavenet import Wavenet
 from ...dist import AffineBeta
 from ...utils import clean_init_args
-from ..modules import MelSpectrogram
 
 
 class q_sǀm(nn.Module):
-    def __init__(self, mel_channels, dim, n_blocks=3):
+    def __init__(self, width, mel_channels):
         super(q_sǀm, self).__init__()
         self.f = Wavenet(
             in_channels=1,
-            out_channels=dim,
-            n_blocks=n_blocks,
+            out_channels=256,
+            n_blocks=3,
             n_layers=11,
-            residual_channels=dim,
-            gate_channels=dim,
-            skip_channels=dim,
+            residual_channels=width,
+            gate_channels=width,
+            skip_channels=width,
             cin_channels=mel_channels,
+            bias=False,
+            fc_kernel_size=3,
+            fc_channels=2048,
         )
 
-        self.f_α = nn.Sequential(nn.Conv1d(dim, 1, 1), nn.Softplus())
-        self.f_β = nn.Sequential(nn.Conv1d(dim, 1, 1), nn.Softplus())
+        self.f_α = nn.Sequential(nn.Conv1d(256, 1, 1, bias=False), nn.Softplus())
+        self.f_β = nn.Sequential(nn.Conv1d(256, 1, 1, bias=False), nn.Softplus())
 
     def forward(self, m: torch.Tensor, m_mel: torch.Tensor):
         f = self.f(m, m_mel)
@@ -37,13 +40,13 @@ class q_sǀm(nn.Module):
         return α, β
 
 
-class UMixer(BaseModel):
-    def __init__(self, mel_channels: int = 80, width: int = 64):
-        super(UMixer, self).__init__()
+class Demixer(BaseModel):
+    def __init__(
+        self, n_classes: int = 4, mel_channels: int = 80, width: int = 64, **kwargs
+    ):
+        super(Demixer, self).__init__(**kwargs)
         self.params = clean_init_args(locals().copy())
-        self.name = ""
-
-        self.n_classes = 4
+        self.n_classes = n_classes
 
         # The encoders
         self.q_sǀm = nn.ModuleList()
@@ -80,7 +83,7 @@ class UMixer(BaseModel):
         ŝ = q_s.mean
         log_q_ŝ = q_s.log_prob(ŝ)
 
-        ŝ = F.normalize(ŝ, p=float('inf'), dim=-1)
+        ŝ = F.normalize(ŝ, p=float("inf"), dim=-1)
 
         p_ŝ = []
         for k in range(self.n_classes):
@@ -91,23 +94,22 @@ class UMixer(BaseModel):
         m_ = ŝ.mean(dim=1)
         return ŝ, m_, log_q_ŝ, torch.cat(p_ŝ, dim=1), q_s.α, q_s.β
 
-    def forward(
-        self, m: torch.Tensor, m_mel: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def forward(self, m, m_mel):
         q_s = self.q_s(m, m_mel)
         ŝ = q_s.rsample()
         log_q_ŝ = q_s.log_prob(ŝ).clamp(-1e5, 1e5)
 
-        # Scale the posterior samples so they fill range [-1, 1].
-        # This is necessary as we start around zero with the values and the
-        # prior distributions assign too high likelihoods around zero!
-        ŝ = F.normalize(ŝ, p=float('inf'), dim=-1)
+        with torch.no_grad():
+            # Scale the posterior samples so they fill range [-1, 1].
+            # This is necessary as we start around zero with the values and the
+            # prior distributions assign too high likelihoods around zero!
+            scaled_ŝ = F.normalize(ŝ, p=float("inf"), dim=-1)
 
         for k in range(self.n_classes):
             # Get Log likelihood under prior
             with torch.no_grad():
-                ŝ_mel = self.mel(ŝ[:, k, :])
-                log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
+                ŝ_mel = self.mel(scaled_ŝ[:, k, :])
+                log_p_ŝ, _ = self.p_s[k](scaled_ŝ[:, None, k, :], ŝ_mel)
                 log_p_ŝ = log_p_ŝ.detach()[:, None].clamp(-1e5, 1e5)
 
             # Kullback Leibler for this k'th source
@@ -129,7 +131,7 @@ class UMixer(BaseModel):
         for k in range(self.n_classes):
             ℒ += 1.0 * getattr(self.ℒ, f"KL_{k}")
 
-        if random() < .3:
+        if random() < 0.3:
             self.ℒ.supervised_mse = F.mse_loss(ŝ, s)
             ℒ += self.ℒ.supervised_mse
 
