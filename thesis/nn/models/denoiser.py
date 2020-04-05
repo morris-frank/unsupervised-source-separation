@@ -49,7 +49,9 @@ class Denoiser(BaseModel):
         ℒ = self.ℒ.l1_s + self.ℒ.l1_z
         return ℒ
 
-    def test_gan(self, s):
+
+class GAN(Denoiser):
+    def test(self, s):
         z = torch.randn_like(s).clamp(-1, 1)
         _ = self.forward(z)
         ℒ = self.ℒ.KL

@@ -6,7 +6,7 @@ import torch
 from torch import autograd
 
 from thesis.data.toy import ToyData
-from thesis.io import load_model, get_newest_file, get_newest_checkpoint
+from thesis.io import load_model, get_newest_checkpoint
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, IS_HERMES
 from thesis.train import train
 
@@ -35,10 +35,10 @@ def train_prior(path: str, signal: str):
     )
 
     train_set = ToyData(
-        path % "train", source=k, mel_source=True, noise=0.05, rand_noise=True
+        path % "train", source=k, mel_source=True, noise=0.03, rand_noise=True
     )
     test_set = ToyData(
-        path % "test", source=k, mel_source=True, noise=0.05, rand_noise=True
+        path % "test", source=k, mel_source=True, noise=0.03, rand_noise=True
     )
     return model, train_set, test_set
 
@@ -65,6 +65,21 @@ def train_denoiser(path: str, signal: str):
     k = TOY_SIGNALS.index(signal)
 
     model = Denoiser(width=128, name=signal)
+    model.p_s = [
+        load_model(get_newest_checkpoint(f"*Flowavenet*{signal}"), "cuda").to("cuda")
+    ]
+
+    train_set = ToyData(path % "train", source=k, rand_amplitude=0.1)
+    test_set = ToyData(path % "test", source=k, rand_amplitude=0.1)
+    return model, train_set, test_set
+
+
+def train_gan(path: str, signal: str):
+    from thesis.nn.models.denoiser import GAN
+
+    k = TOY_SIGNALS.index(signal)
+
+    model = GAN(width=128, name=signal)
     model.p_s = [
         load_model(get_newest_checkpoint(f"*Flowavenet*{signal}"), "cuda").to("cuda")
     ]
@@ -106,6 +121,7 @@ EXPERIMENTS = {
     "prior": train_prior,
     "demixer": train_demixer,
     "denoiser": train_denoiser,
+    "gan": train_gan,
 }
 
 if __name__ == "__main__":
