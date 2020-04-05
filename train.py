@@ -33,11 +33,11 @@ def train_prior(path: str, signal: str):
         n_layer=4,
         block_per_split=2,
         width=48,
-        name=signal,
+        name=signal + '_little_noise',
     )
 
-    train_set = ToyData(path % "train", source=k, mel_source=True, noise=0.2, rand_noise=True)
-    test_set = ToyData(path % "test", source=k, mel_source=True, noise=0.2, rand_noise=True)
+    train_set = ToyData(path % "train", source=k, mel_source=True, noise=0.05, rand_noise=True)
+    test_set = ToyData(path % "test", source=k, mel_source=True, noise=0.05, rand_noise=True)
     return model, train_set, test_set
 
 

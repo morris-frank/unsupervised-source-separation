@@ -61,8 +61,8 @@ def show_sample_denoiser(args):
         exit_prompt()
 
 
-def show_cross_likelihood():
-    log_p = np.load("./figures/cross_likelihood.npy")
+def show_cross_likelihood(args):
+    log_p = np.load(get_newest_file('./figures', '*_cross_likelihood.npy'))
 
     fig = plot.toy.plot_signal_heatmap((log_p.mean(-1)), TOY_SIGNALS)
     fig.suptitle(r"mean of likelihood log p(s)")

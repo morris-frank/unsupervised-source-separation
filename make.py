@@ -6,7 +6,6 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from colorama import Fore
 from tqdm import tqdm, trange
 
 from thesis import plot
@@ -40,27 +39,25 @@ def make_noise_likelihood_plot(args):
 
 
 def make_cross_likelihood_plot(args):
-    fp = f"./figures/prior_cross_likelihood.npy"
     K = len(TOY_SIGNALS)
-    k = TOY_SIGNALS.index(args.k)
+    results = None
+    for k, signal in enumerate(TOY_SIGNALS):
+        weights = get_newest_checkpoint(f"*Flowavenet*{signal}*pt")
+        fp = f"./figures/{path.basename(weights).split('-')[0]}_prior_cross_likelihood.npy"
 
-    model = load_model(args.weights, args.device)
+        model = load_model(weights, args.device)
 
-    data = ToyData(f"{args.data}/test/", source=True, mel_source=True)
-    results = np.zeros((K, K, len(data)))
+        data = ToyData(f"{args.data}/test/", source=True, mel_source=True)
 
-    for i, (s, m) in enumerate(tqdm(data)):
-        s, m = s.unsqueeze(1).to(args.device), m.to(args.device)
-        logp = model(s, m)[0]
-        results[k, :, i] = logp.mean(-1).squeeze().cpu().numpy()
+        if results is None:
+            results = np.zeros((K, K, len(data)))
 
-    if path.exists(fp):
-        patch = results
-        results = np.load(fp)
-        results[k, ...] = patch[k, ...]
+        for i, (s, m) in enumerate(tqdm(data)):
+            s, m = s.unsqueeze(1).to(args.device), m.to(args.device)
+            logp = model(s, m)[0]
+            results[k, :, i] = logp.mean(-1).squeeze().cpu().numpy()
 
-    np.save(fp, results)
-    print(f"{Fore.YELLOW}Saved {Fore.GREEN}{fp}{Fore.RESET}")
+        np.save(fp, results)
 
 
 def make_separation_examples(args):

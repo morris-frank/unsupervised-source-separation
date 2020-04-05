@@ -38,17 +38,17 @@ def main(args):
         "export LD_LIBRARY_PATH="
         "/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH\n\n"
         "export LC_ALL=en_US.utf8\n"
-        "export LANG=\"$LC_ALL\""
+        "export LANG=\"$LC_ALL\"\n"
     )
     f += "cd /home/frankm/thesis\n"
 
     f += (
         f"srun /home/frankm/.pyenv/shims/python3.7 {args.file}.py "
-        f"{args.experiment} --data=/home/frankm/data/toy/ --gpu 0"
+        f"{args.experiment} --data=/home/frankm/data/toy/"
     )
 
     if args.file == "train":
-        f += f" --batch_size={args.batch_size} -wandb"
+        f += f" --batch_size={args.batch_size} -wandb --gpu 0"
 
     if args.debug:
         f += " -debug"
