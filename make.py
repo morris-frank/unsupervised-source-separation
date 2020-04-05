@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from tqdm import tqdm, trange
-
+from colorama import Fore
 from thesis import plot
 from thesis.data.toy import ToyData, generate_toy
 from thesis.io import load_model, save_append, get_newest_checkpoint
@@ -57,6 +57,7 @@ def make_cross_likelihood_plot(args):
             logp = model(s, m)[0]
             results[k, :, i] = logp.mean(-1).squeeze().cpu().numpy()
 
+        print(Fore.YELLOW + "Saving to " + fp + Fore.RESET)
         np.save(fp, results)
 
 
