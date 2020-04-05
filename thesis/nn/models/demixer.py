@@ -33,7 +33,7 @@ class q_sǀm(nn.Module):
         self.f_α = nn.Sequential(nn.Conv1d(256, 1, 1, bias=False), nn.Softplus())
         self.f_β = nn.Sequential(nn.Conv1d(256, 1, 1, bias=False), nn.Softplus())
 
-    def forward(self, m: torch.Tensor, m_mel: torch.Tensor):
+    def forward(self, m, m_mel=None):
         f = self.f(m, m_mel)
         α = self.f_α(f) + 1e-4
         β = self.f_β(f) + 1e-4
