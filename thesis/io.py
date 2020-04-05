@@ -27,7 +27,9 @@ def get_newest_checkpoint(match: str):
     if "*" not in match:
         return match
     if not match.endswith("pt"):
-        match += "*pt"
+        if not match.endswith("*"):
+            match += '*'
+        match += "pt"
     return get_newest_file(DEFAULT_CHECKPOINTS, match)
 
 

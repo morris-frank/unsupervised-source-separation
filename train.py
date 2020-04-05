@@ -6,16 +6,14 @@ import torch
 from torch import autograd
 
 from thesis.data.toy import ToyData
-from thesis.io import load_model, get_newest_file
+from thesis.io import load_model, get_newest_file, get_newest_checkpoint
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, IS_HERMES
 from thesis.train import train
 
 
 def _load_prior_networks(prefix: str = "Apr04", device="cuda"):
     return [
-        load_model(get_newest_file("./checkpoints", f"{prefix}*Flowavenet*{s}*pt"), device).to(
-            device
-        )
+        load_model(get_newest_checkpoint(f"{prefix}*Flowavenet*{s}"), device).to(device)
         for s in TOY_SIGNALS
     ]
 
@@ -33,11 +31,15 @@ def train_prior(path: str, signal: str):
         n_layer=4,
         block_per_split=2,
         width=48,
-        name=signal + '_little_noise',
+        name=signal + "_little_noise",
     )
 
-    train_set = ToyData(path % "train", source=k, mel_source=True, noise=0.05, rand_noise=True)
-    test_set = ToyData(path % "test", source=k, mel_source=True, noise=0.05, rand_noise=True)
+    train_set = ToyData(
+        path % "train", source=k, mel_source=True, noise=0.05, rand_noise=True
+    )
+    test_set = ToyData(
+        path % "test", source=k, mel_source=True, noise=0.05, rand_noise=True
+    )
     return model, train_set, test_set
 
 
@@ -59,12 +61,13 @@ def train_demixer(path: str):
 
 def train_denoiser(path: str, signal: str):
     from thesis.nn.models.denoiser import Denoiser
+
     k = TOY_SIGNALS.index(signal)
 
     model = Denoiser(width=128, name=signal)
-    model.p_s = [load_model(
-        get_newest_file("./checkpoints", f"*Flowavenet*{signal}*pt"), "cuda"
-    ).to("cuda")]
+    model.p_s = [
+        load_model(get_newest_checkpoint(f"*Flowavenet*{signal}"), "cuda").to("cuda")
+    ]
 
     train_set = ToyData(path % "train", source=k, rand_amplitude=0.1)
     test_set = ToyData(path % "test", source=k, rand_amplitude=0.1)

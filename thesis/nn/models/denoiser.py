@@ -37,7 +37,7 @@ class Denoiser(BaseModel):
         return ŝ
 
     def test(self, s):
-        s_noised = (s + 0.1 * torch.randn_like(s)).clamp(-1, 1)
+        s_noised = (s + 0.3 * torch.randn_like(s)).clamp(-1, 1)
         z = s_noised - s
 
         ŝ = self.forward(s_noised)
