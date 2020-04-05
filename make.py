@@ -24,7 +24,7 @@ def make_noise_likelihood_plot(args):
     data = ToyData(f"{args.data}/test/", source=k, mel_source=True)
 
     results = {}
-    for σ in [0.0, 0.001, 0.01, 0.05, 0.1, 0.2]:
+    for σ in [0.0, 0.001, 0.01, 0.05, 0.1, 0.2, 0.3]:
         results[σ] = np.zeros((len(data)))
         for i, (s, m) in enumerate(tqdm(data.loader(1))):
             s = (s + σ * torch.randn_like(s)).clamp(-1, 1)

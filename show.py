@@ -41,7 +41,7 @@ def show_sample_denoiser(args):
     k = TOY_SIGNALS.index(args.k)
     model = load_model(args.weights, args.device)
     model.p_s = [
-        load_model(get_newest_checkpoint(f"Mar26*{args.k}*pt"), args.device).to(
+        load_model(get_newest_checkpoint(f"Apr04*{args.k}*pt"), args.device).to(
             args.device
         )
     ]
@@ -49,13 +49,9 @@ def show_sample_denoiser(args):
     data = ToyData(f"{args.data}/test/", source=k, rand_amplitude=0.1)
 
     for s in data.loader(1):
-        s_noised = (s + 0.1 * torch.randn_like(s)).clamp(-1, 1)
-        z = s_noised - s
-        ŝ, α, β = model.forward(s_noised)
-        ẑ = s_noised - ŝ
+        s_noised = (s + 0.01 * torch.randn_like(s)).clamp(-1, 1)
+        ŝ = model.forward(s_noised)
 
-        l1 = F.l1_loss(ŝ, s, reduction="none")
-        l2 = F.l1_loss(ẑ, z, reduction="none")
         plot.toy.reconstruction(s_noised, s, ŝ)
         plt.show()
         exit_prompt()
