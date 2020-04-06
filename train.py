@@ -1,10 +1,13 @@
+
 #!/usr/bin/env python
+from functools import partial
 import os
 from argparse import ArgumentParser
 
 import torch
 from torch import autograd
 
+from thesis.nn.models.denoiser import Denoiser,GAN,Denoiser_Semi
 from thesis.data.toy import ToyData
 from thesis.io import load_model, get_newest_checkpoint
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, IS_HERMES
@@ -59,27 +62,10 @@ def train_demixer(path: str):
     return model, train_set, test_set
 
 
-def train_denoiser(path: str, signal: str):
-    from thesis.nn.models.denoiser import Denoiser
-
+def train_denoiser(path: str, signal: str, modelclass):
     k = TOY_SIGNALS.index(signal)
 
-    model = Denoiser(width=128, name=signal)
-    model.p_s = [
-        load_model(get_newest_checkpoint(f"*Flowavenet*{signal}"), "cuda").to("cuda")
-    ]
-
-    train_set = ToyData(path % "train", source=k, rand_amplitude=0.1)
-    test_set = ToyData(path % "test", source=k, rand_amplitude=0.1)
-    return model, train_set, test_set
-
-
-def train_gan(path: str, signal: str):
-    from thesis.nn.models.denoiser import GAN
-
-    k = TOY_SIGNALS.index(signal)
-
-    model = GAN(width=128, name=signal)
+    model = modelclass(width=128, name=signal)
     model.p_s = [
         load_model(get_newest_checkpoint(f"*Flowavenet*{signal}"), "cuda").to("cuda")
     ]
@@ -120,8 +106,9 @@ def main(args):
 EXPERIMENTS = {
     "prior": train_prior,
     "demixer": train_demixer,
-    "denoiser": train_denoiser,
-    "gan": train_gan,
+    "denoiser": partial(train_denoiser, modelclass=Denoiser),
+    "denoiser_semi": partial(train_denoiser, modelclass=Denoiser_Semi),
+    "gan": partial(train_denoiser, modelclass=GAN),
 }
 
 if __name__ == "__main__":
