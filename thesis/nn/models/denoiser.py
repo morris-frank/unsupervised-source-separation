@@ -36,7 +36,8 @@ class Denoiser(BaseModel):
 
         self.ℒ.log_p = log_p_ŝ.mean()
         self.ℒ.log_q = log_q_ŝ.mean()
-        self.ℒ.KL = -torch.mean(log_p_ŝ - log_q_ŝ)
+        self.ℒ.KL = - torch.mean(log_p_ŝ.mean() - log_q_ŝ)
+        #self.ℒ.KL = -torch.mean(log_p_ŝ - log_q_ŝ)
 
         return ŝ
 
@@ -66,7 +67,7 @@ class Denoiser_Semi(Denoiser):
         self.ℒ.l1_s = F.l1_loss(ŝ, s)
         self.ℒ.l1_z = F.l1_loss(ẑ, z)
 
-        if self.iteration < 200:
+        if self.iteration < 50:
             ℒ += self.ℒ.l1_s + self.ℒ.l1_z
         self.iteration += 1
         return ℒ
