@@ -7,7 +7,6 @@ import pandas as pd
 import seaborn as sns
 import torch
 from matplotlib import pyplot as plt
-from torch.nn import functional as F
 
 from thesis import plot
 from thesis.data.toy import ToyData
@@ -121,9 +120,11 @@ def show_noise_plot(args):
             allow_pickle=True,
         ).item()
     )
-    df = df.melt(var_name="noise", value_name="likelihood")
+    df = df.melt(var_name="amount of noise", value_name="log-likelihood under prior")
 
-    sns.boxplot(x="noise", y="likelihood", data=df)
+    _, ax = plt.subplots()
+    plot.toy.add_plot_tick(ax, symbol=args.k, size=0.1)
+    sns.boxplot(x="amount of noise", y="log-likelihood under prior", data=df, ax=ax)
     plt.show()
 
 

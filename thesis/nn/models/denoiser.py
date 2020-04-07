@@ -1,5 +1,3 @@
-from random import random
-
 import torch
 from torch.nn import functional as F
 
@@ -14,6 +12,8 @@ class Denoiser(BaseModel):
     def __init__(self, width: int = 64, **kwargs):
         super(Denoiser, self).__init__(**kwargs)
         self.params = clean_init_args(locals().copy())
+
+        self.iteration = 0
 
         self.q_sǀm = q_sǀm(width, None)
 
@@ -66,8 +66,9 @@ class Denoiser_Semi(Denoiser):
         self.ℒ.l1_s = F.l1_loss(ŝ, s)
         self.ℒ.l1_z = F.l1_loss(ẑ, z)
 
-        if random() < 0.1:
+        if self.iteration < 20:
             ℒ += self.ℒ.l1_s + self.ℒ.l1_z
+        self.iteration += 1
         return ℒ
 
 
