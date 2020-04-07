@@ -67,6 +67,7 @@ class Denoiser_Semi(Denoiser):
         self.ℒ.l1_s = F.l1_loss(ŝ, s)
         self.ℒ.l1_z = F.l1_loss(ẑ, z)
 
+        ℒ = -self.ℒ.log_p
         # if self.iteration < 20:
         #     ℒ += self.ℒ.l1_s + self.ℒ.l1_z
         self.iteration += 1
