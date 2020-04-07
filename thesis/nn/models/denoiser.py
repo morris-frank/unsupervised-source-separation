@@ -28,15 +28,15 @@ class Denoiser(BaseModel):
         ŝ = q_s.rsample()
         log_q_ŝ = q_s.log_prob(ŝ).clamp(-1e5, 1e5)
 
-        with torch.no_grad():
-            scaled_ŝ = F.normalize(ŝ, p=float("inf"), dim=-1)
-            scaled_ŝ_mel = self.mel(scaled_ŝ[:, 0, :])
-            log_p_ŝ, _ = self.p_s[0](scaled_ŝ, scaled_ŝ_mel)
-            log_p_ŝ = log_p_ŝ.detach()[:, None].clamp(-1e5, 1e5)
+        # with torch.no_grad():
+        scaled_ŝ = F.normalize(ŝ, p=float("inf"), dim=-1)
+        scaled_ŝ_mel = self.mel(scaled_ŝ[:, 0, :])
+        log_p_ŝ, _ = self.p_s[0](scaled_ŝ, scaled_ŝ_mel)
+        log_p_ŝ = log_p_ŝ[:, None].clamp(-1e5, 1e5)
 
         self.ℒ.log_p = log_p_ŝ.mean()
         self.ℒ.log_q = log_q_ŝ.mean()
-        self.ℒ.KL = - torch.mean(log_p_ŝ.mean() - log_q_ŝ)
+        self.ℒ.KL = - torch.mean(log_p_ŝ - log_q_ŝ)
         #self.ℒ.KL = -torch.mean(log_p_ŝ - log_q_ŝ)
 
         return ŝ
@@ -67,8 +67,8 @@ class Denoiser_Semi(Denoiser):
         self.ℒ.l1_s = F.l1_loss(ŝ, s)
         self.ℒ.l1_z = F.l1_loss(ẑ, z)
 
-        if self.iteration < 50:
-            ℒ += self.ℒ.l1_s + self.ℒ.l1_z
+        # if self.iteration < 20:
+        #     ℒ += self.ℒ.l1_s + self.ℒ.l1_z
         self.iteration += 1
         return ℒ
 
