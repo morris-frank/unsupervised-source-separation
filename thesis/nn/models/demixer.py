@@ -1,4 +1,3 @@
-from random import random
 from typing import Tuple
 
 import torch
@@ -10,8 +9,8 @@ from . import BaseModel
 from ..modules import MelSpectrogram
 from ..wavenet import Wavenet
 from ...dist import AffineBeta
-from ...utils import clean_init_args
 from ...functional import normalize
+from ...utils import clean_init_args
 
 
 class q_sǀm(nn.Module):
@@ -107,10 +106,9 @@ class Demixer(BaseModel):
 
         for k in range(self.n_classes):
             # Get Log likelihood under prior
-            with torch.no_grad():
-                ŝ_mel = self.mel(scaled_ŝ[:, k, :])
-                log_p_ŝ, _ = self.p_s[k](scaled_ŝ[:, None, k, :], ŝ_mel)
-                log_p_ŝ = log_p_ŝ.detach()[:, None].clamp(-1e5, 1e5)
+            ŝ_mel = self.mel(scaled_ŝ[:, k, :])
+            log_p_ŝ, _ = self.p_s[k](scaled_ŝ[:, None, k, :], ŝ_mel)
+            log_p_ŝ = log_p_ŝ[:, None].clamp(-1e5, 1e5)
 
             # Kullback Leibler for this k'th source
             KL_k = -torch.mean(log_p_ŝ - log_q_ŝ[:, k, :])
@@ -131,8 +129,7 @@ class Demixer(BaseModel):
         for k in range(self.n_classes):
             ℒ += getattr(self.ℒ, f"KL_{k}")
 
-        # if random() < 0.3:
         self.ℒ.l1_s = F.l1_loss(ŝ, s)
-        #     ℒ += self.ℒ.supervised_mse
+        # ℒ += self.ℒ.l1_s
 
         return ℒ

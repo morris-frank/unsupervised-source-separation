@@ -83,6 +83,18 @@ class ToyData(Dataset):
             return sources
 
 
+class ToyDataAndNoise(ToyData):
+    def __getitem__(self, idx):
+        if idx % 20 == 0:
+            print('noise')
+            σ = uniform(0, 0.1)
+            s = σ * torch.randn(1, 3072)
+            m = self.melspec(s.squeeze())
+            return (s, m), -1
+        else:
+            return super(ToyDataAndNoise, self).__getitem__(idx), 1
+
+
 def generate_toy(length: int, ns: int) -> Dict:
     signals = []
     shapes = [

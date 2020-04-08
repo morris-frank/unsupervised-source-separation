@@ -182,8 +182,10 @@ class Flowavenet(BaseModel):
         logdet = logdet / (B * T)
         return log_p_sum, logdet
 
-    def test(self, source, mel):
-        log_p, logdet = self.forward(source, mel)
-        self.ℒ.log_p, self.ℒ.logdet = -torch.mean(log_p), -torch.mean(logdet)
+    def test(self, x, label):
+        s, m = x
+        log_p, logdet = self.forward(s, m)
+        self.ℒ.log_p = -torch.mean(label * log_p.mean(-1).squeeze())
+        self.ℒ.logdet = -torch.mean(logdet)
         ℒ = self.ℒ.log_p + self.ℒ.logdet
         return ℒ

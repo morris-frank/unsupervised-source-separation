@@ -25,13 +25,8 @@ def show_sample(args):
     )
 
     for (m, mel), s in data.loader(1):
-        ŝ, m_, log_q_ŝ, p_ŝ, α, β = model.test_forward(m, mel)
+        ŝ, m_ = model.forward(m, mel)
         plot.toy.reconstruction(s, ŝ, m, m_)
-        plot.toy.reconstruction(m, m_, p_ŝ, ylim=(-500, 1))
-        # plot.toy.reconstruction(m, m_, log_q_ŝ)
-        # plot.toy.reconstruction(m, m_, α, β)
-        # μ_ŝ = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean
-        # _ = plot.toy.reconstruction(s, μ_ŝ, m)
         plt.show()
         exit_prompt()
 
