@@ -16,6 +16,7 @@ class Conv1d(nn.Module):
         dilation=1,
         causal=False,
         bias=True,
+        groups=1,
     ):
         super(Conv1d, self).__init__()
 
@@ -31,6 +32,7 @@ class Conv1d(nn.Module):
             dilation=dilation,
             padding=self.padding,
             bias=bias,
+            groups=groups,
         )
         self.conv = nn.utils.weight_norm(self.conv)
         nn.init.kaiming_normal_(self.conv.weight)
@@ -43,10 +45,10 @@ class Conv1d(nn.Module):
 
 
 class ZeroConv1d(nn.Module):
-    def __init__(self, in_channel, out_channel):
-        super().__init__()
+    def __init__(self, in_channel, out_channel, groups=1):
+        super(ZeroConv1d, self).__init__()
 
-        self.conv = nn.Conv1d(in_channel, out_channel, 1, padding=0)
+        self.conv = nn.Conv1d(in_channel, out_channel, 1, padding=0, groups=groups)
         self.conv.weight.data.zero_()
         self.conv.bias.data.zero_()
         self.scale = nn.Parameter(torch.zeros(1, out_channel, 1), requires_grad=True)

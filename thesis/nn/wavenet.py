@@ -20,6 +20,7 @@ class GatedResBlock(nn.Module):
         cin_channels: Opt[int] = None,
         causal: bool = False,
         bias: bool = True,
+        groups=1,
     ):
         super(GatedResBlock, self).__init__()
         self.causal = causal
@@ -28,26 +29,26 @@ class GatedResBlock(nn.Module):
         self.skip = skip_channels is not None
 
         self.filter_conv = Conv1d(
-            in_channels, out_channels, kernel_size, dilation, causal, bias=bias
+            in_channels, out_channels, kernel_size, dilation, causal, bias=bias, groups=groups
         )
         self.gate_conv = Conv1d(
-            in_channels, out_channels, kernel_size, dilation, causal, bias=bias
+            in_channels, out_channels, kernel_size, dilation, causal, bias=bias, groups=groups
         )
-        self.res_conv = weight_norm(nn.Conv1d(out_channels, in_channels, kernel_size=1, bias=bias))
+        self.res_conv = weight_norm(nn.Conv1d(out_channels, in_channels, kernel_size=1, bias=bias, groups=groups))
         nn.init.kaiming_normal_(self.res_conv.weight)
 
         if self.skip:
             self.skip_conv = weight_norm(
-                nn.Conv1d(out_channels, skip_channels, kernel_size=1, bias=bias)
+                nn.Conv1d(out_channels, skip_channels, kernel_size=1, bias=bias, groups=groups)
             )
             nn.init.kaiming_normal_(self.skip_conv.weight)
 
         if self.conditioned:
             self.filter_conv_c = weight_norm(
-                nn.Conv1d(cin_channels, out_channels, kernel_size=1, bias=bias)
+                nn.Conv1d(cin_channels, out_channels, kernel_size=1, bias=bias, groups=groups)
             )
             self.gate_conv_c = weight_norm(
-                nn.Conv1d(cin_channels, out_channels, kernel_size=1, bias=bias)
+                nn.Conv1d(cin_channels, out_channels, kernel_size=1, bias=bias, groups=groups)
             )
             nn.init.kaiming_normal_(self.filter_conv_c.weight)
             nn.init.kaiming_normal_(self.gate_conv_c.weight)
@@ -84,12 +85,13 @@ class Wavenet(nn.Module):
         zero_final: bool = False,
         fc_channels: Opt[int] = None,
         fc_kernel_size: int = 1,
+        groups=1,
     ):
         super(Wavenet, self).__init__()
 
         self.skip = skip_channels is not None
 
-        self.init = Conv1d(in_channels, residual_channels, 3, bias=bias)
+        self.init = Conv1d(in_channels, residual_channels, 3, bias=bias, groups=groups)
 
         self.res_blocks = nn.ModuleList()
         for b in range(n_blocks):
@@ -104,6 +106,7 @@ class Wavenet(nn.Module):
                         cin_channels=cin_channels,
                         causal=causal,
                         bias=bias,
+                        groups=groups,
                     )
                 )
 
@@ -114,9 +117,9 @@ class Wavenet(nn.Module):
 
         self.final = nn.Sequential(
             nn.ReLU(),
-            Conv1d(last_channels, fc_channels, ),
+            Conv1d(last_channels, fc_channels, groups=groups),
             nn.ReLU(),
-            last_layer(fc_channels, out_channels),
+            last_layer(fc_channels, out_channels, groups=groups),
         )
 
     def forward(self, x: torch.Tensor, c: Opt[torch.Tensor] = None):

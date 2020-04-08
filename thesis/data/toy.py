@@ -89,7 +89,7 @@ class ToyDataAndNoise(ToyData):
             σ = uniform(0, 0.1)
             s = σ * torch.randn(1, 3072)
             m = self.melspec(s.squeeze())
-            return (s, m), -1
+            return (s, m), -0.01
         else:
             return super(ToyDataAndNoise, self).__getitem__(idx), 1
 

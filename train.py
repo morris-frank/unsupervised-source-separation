@@ -33,7 +33,7 @@ def train_prior(path: str, signal: str):
         n_layer=4,
         block_per_split=2,
         width=48,
-        name=signal + "_little_noise",
+        name=signal,
     )
 
     train_set = ToyDataAndNoise(
