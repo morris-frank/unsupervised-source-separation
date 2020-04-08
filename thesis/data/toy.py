@@ -86,7 +86,6 @@ class ToyData(Dataset):
 class ToyDataAndNoise(ToyData):
     def __getitem__(self, idx):
         if idx % 20 == 0:
-            print('noise')
             σ = uniform(0, 0.1)
             s = σ * torch.randn(1, 3072)
             m = self.melspec(s.squeeze())
