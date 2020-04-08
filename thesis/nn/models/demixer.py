@@ -11,6 +11,7 @@ from ..modules import MelSpectrogram
 from ..wavenet import Wavenet
 from ...dist import AffineBeta
 from ...utils import clean_init_args
+from ...functional import normalize
 
 
 class q_sǀm(nn.Module):
@@ -99,11 +100,10 @@ class Demixer(BaseModel):
         ŝ = q_s.rsample()
         log_q_ŝ = q_s.log_prob(ŝ).clamp(-1e5, 1e5)
 
-        with torch.no_grad():
-            # Scale the posterior samples so they fill range [-1, 1].
-            # This is necessary as we start around zero with the values and the
-            # prior distributions assign too high likelihoods around zero!
-            scaled_ŝ = F.normalize(ŝ, p=float("inf"), dim=-1)
+        # Scale the posterior samples so they fill range [-1, 1].
+        # This is necessary as we start around zero with the values and the
+        # prior distributions assign too high likelihoods around zero!
+        scaled_ŝ = normalize(ŝ)
 
         for k in range(self.n_classes):
             # Get Log likelihood under prior
@@ -116,10 +116,10 @@ class Demixer(BaseModel):
             KL_k = -torch.mean(log_p_ŝ - log_q_ŝ[:, k, :])
             setattr(self.ℒ, f"KL_{k}", KL_k)
 
-        m_ = ŝ.mean(dim=1, keepdim=True)
+        m_ = scaled_ŝ.mean(dim=1, keepdim=True)
         self.ℒ.reconstruction = F.mse_loss(m_, m)
 
-        return ŝ, m_
+        return scaled_ŝ, m_
 
     def test(
         self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor

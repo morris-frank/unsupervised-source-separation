@@ -64,13 +64,13 @@ class ToyData(Dataset):
                 1.0 - self.rand_amplitude
             )
             sources = A * sources
-            mix = sources.mean(1, keepdim=True)
+            mix = sources.mean(0, keepdim=True)
 
         if self.noise > 0:
             σ = uniform(0, self.noise) if self.rand_noise else self.noise
             noise = σ * torch.randn_like(sources)
             sources = (sources + noise).clamp(-1, 1)
-            mix = sources.mean(1, keepdim=True)
+            mix = sources.mean(0, keepdim=True)
 
         mix = self._mel_get(mix, self.mel)
         sources = self._mel_get(sources, self.mel_source)
