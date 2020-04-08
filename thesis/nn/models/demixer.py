@@ -129,10 +129,10 @@ class Demixer(BaseModel):
 
         ℒ = self.ℒ.reconstruction
         for k in range(self.n_classes):
-            ℒ += 1.0 * getattr(self.ℒ, f"KL_{k}")
+            ℒ += getattr(self.ℒ, f"KL_{k}")
 
-        if random() < 0.3:
-            self.ℒ.supervised_mse = F.mse_loss(ŝ, s)
-            ℒ += self.ℒ.supervised_mse
+        # if random() < 0.3:
+        self.ℒ.l1_s = F.l1_loss(ŝ, s)
+        #     ℒ += self.ℒ.supervised_mse
 
         return ℒ
