@@ -66,7 +66,7 @@ def normalize(waveform: torch.Tensor):
     Returns:
         scaled waveform
     """
-    waveform = waveform - waveform.mean(dim=-1)
+    waveform = waveform - waveform.mean(dim=-1, keepdim=True)
     waveform = F.normalize(waveform, p=float("inf"), dim=-1)
     return waveform
 
