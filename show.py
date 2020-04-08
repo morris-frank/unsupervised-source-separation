@@ -128,6 +128,23 @@ def show_noise_plot(args):
     plt.show()
 
 
+def show_gan(args):
+    model = load_model(args.weights, args.device)
+    model.p_s = [
+        load_model(get_newest_checkpoint(f"Apr06*{args.k}*pt"), args.device).to(
+            args.device
+        )
+    ]
+
+    while True:
+        z = torch.randn((1, 1, 3072))
+        ŝ, log_p = model.forward(z)
+        plot.toy.reconstruction(z, ŝ, log_p)
+        plt.show()
+        exit_prompt()
+        plt.close()
+
+
 def show_mel(args):
     """
     Shows the Mel-spectrograms as they are gonna be computed for the toy data set.
@@ -162,6 +179,7 @@ COMMANDS = {
     "denoiser": show_sample_denoiser,
     "noise": show_noise_plot,
     "mel": show_mel,
+    "gan": show_gan,
 }
 
 if __name__ == "__main__":

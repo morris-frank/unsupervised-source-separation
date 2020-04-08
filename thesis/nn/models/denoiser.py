@@ -5,6 +5,7 @@ from . import BaseModel
 from .demixer import q_sǀm
 from ..modules import MelSpectrogram
 from ...dist import AffineBeta
+from ...functional import normalize
 from ...utils import clean_init_args
 
 
@@ -29,7 +30,7 @@ class Denoiser(BaseModel):
         log_q_ŝ = q_s.log_prob(ŝ).clamp(-1e5, 1e5)
 
         # with torch.no_grad():
-        scaled_ŝ = F.normalize(ŝ, p=float("inf"), dim=-1)
+        scaled_ŝ = normalize(ŝ)
         scaled_ŝ_mel = self.mel(scaled_ŝ[:, 0, :])
         log_p_ŝ, _ = self.p_s[0](scaled_ŝ, scaled_ŝ_mel)
         log_p_ŝ = log_p_ŝ[:, None].clamp(-1e5, 1e5)
@@ -39,7 +40,7 @@ class Denoiser(BaseModel):
         self.ℒ.KL = - torch.mean(log_p_ŝ - log_q_ŝ)
         #self.ℒ.KL = -torch.mean(log_p_ŝ - log_q_ŝ)
 
-        return ŝ
+        return scaled_ŝ, log_p_ŝ
 
     def test(self, s):
         s_noised = (s + 0.3 * torch.randn_like(s)).clamp(-1, 1)
@@ -78,5 +79,5 @@ class GAN(Denoiser):
     def test(self, s):
         z = torch.randn_like(s).clamp(-1, 1)
         _ = self.forward(z)
-        ℒ = -self.ℒ.log_p
+        ℒ = -self.ℒ.KL
         return ℒ

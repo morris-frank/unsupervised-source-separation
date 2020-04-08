@@ -56,6 +56,21 @@ def destroy_along_channels(x: torch.Tensor, amount: float) -> torch.Tensor:
     return x
 
 
+def normalize(waveform: torch.Tensor):
+    """
+    Removes any DC offset and scales to range [-1, 1]
+
+    Args:
+        waveform:
+
+    Returns:
+        scaled waveform
+    """
+    waveform = waveform - waveform.mean(dim=-1)
+    waveform = F.normalize(waveform, p=float("inf"), dim=-1)
+    return waveform
+
+
 def split(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     return x[:, :, ::2].contiguous(), x[:, :, 1::2].contiguous()
 
