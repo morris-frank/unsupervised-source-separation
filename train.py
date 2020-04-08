@@ -13,7 +13,7 @@ from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, IS_HERMES
 from thesis.train import train
 
 
-def _load_prior_networks(prefix: str = "Apr04", device="cuda"):
+def _load_prior_networks(prefix: str = "Apr06", device="cuda"):
     return [
         load_model(get_newest_checkpoint(f"{prefix}*Flowavenet*{s}"), device).to(device)
         for s in TOY_SIGNALS
