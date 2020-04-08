@@ -43,7 +43,7 @@ class q_sǀm(nn.Module):
 
 class Demixer(BaseModel):
     def __init__(
-        self, n_classes: int = 4, mel_channels: int = 80, width: int = 64, **kwargs
+        self, n_classes: int = 4, width: int = 64, mel_channels: int = 80, **kwargs
     ):
         super(Demixer, self).__init__(**kwargs)
         self.params = clean_init_args(locals().copy())
@@ -52,7 +52,7 @@ class Demixer(BaseModel):
         # The encoders
         self.q_sǀm = nn.ModuleList()
         for k in range(self.n_classes):
-            self.q_sǀm.append(q_sǀm(mel_channels, width))
+            self.q_sǀm.append(q_sǀm(width, mel_channels))
 
         # The placeholder for the prior networks
         self.p_s = None
