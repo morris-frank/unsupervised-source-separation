@@ -1,14 +1,14 @@
 #!/usr/bin/env python
-from functools import partial
 import os
 from argparse import ArgumentParser
+from functools import partial
 
 import torch
 from torch import autograd
 
-from thesis.nn.models.denoiser import Denoiser,GAN,Denoiser_Semi
-from thesis.data.toy import ToyData
+from thesis.data.toy import ToyData, ToyDataAndNoise
 from thesis.io import load_model, get_newest_checkpoint
+from thesis.nn.models.denoiser import Denoiser, GAN, Denoiser_Semi
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, IS_HERMES
 from thesis.train import train
 
@@ -36,10 +36,10 @@ def train_prior(path: str, signal: str):
         name=signal + "_little_noise",
     )
 
-    train_set = ToyData(
+    train_set = ToyDataAndNoise(
         path % "train", source=k, mel_source=True, noise=0.03, rand_noise=True
     )
-    test_set = ToyData(
+    test_set = ToyDataAndNoise(
         path % "test", source=k, mel_source=True, noise=0.03, rand_noise=True
     )
     return model, train_set, test_set
