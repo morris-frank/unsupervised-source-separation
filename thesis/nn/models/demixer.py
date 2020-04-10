@@ -130,6 +130,6 @@ class Demixer(BaseModel):
             ℒ += getattr(self.ℒ, f"KL_{k}")
 
         self.ℒ.l1_s = F.l1_loss(ŝ, s)
-        # ℒ += self.ℒ.l1_s
+        ℒ += self.ℒ.l1_s
 
         return ℒ

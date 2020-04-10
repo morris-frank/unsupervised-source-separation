@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+from functools import partial
 from argparse import ArgumentParser
 from os import path
 
@@ -74,12 +75,41 @@ def show_prior(args):
     )
     mel_spectr = MelSpectrogram()
 
+    # while True:
+    #     sh = (1, 3072)
+    #     _rand = torch.rand(sh)
+    #     rand = lambda: 2*_rand-1
+    #     rand_s = [
+    #         rand(),
+    #         0.5*rand(),
+    #         0.3*rand(),
+    #         0.1*rand(),
+    #         0.05*rand(),
+    #         0.01*rand(),
+    #         0.*rand()
+    #     ]
+    #     rand_mel = [mel_spectr(s.clamp(-1, 1)) for s in rand_s]
+    # 
+    #     sig = torch.cat(rand_s, dim=0).unsqueeze(1).clamp(-1, 1)
+    #     mel = torch.cat(rand_mel, dim=0)
+    # 
+    #     log_p, _ = model(sig, mel)
+    # 
+    #     plot.toy.reconstruction(sig, sharey=True)
+    #     plot.toy.reconstruction(log_p, sharey=False)
+    # 
+    #     plt.show()
+    #     exit_prompt()
+
     for (m, m_mel), (s, s_mel) in data:
         rand_s = torch.rand_like(m) * 0.1
         rand_mel = mel_spectr(rand_s)
 
         sig = torch.cat((s, m, rand_s), dim=0).unsqueeze(1)
         mel = torch.cat((s_mel, m_mel.unsqueeze(0), rand_mel), dim=0)
+
+        for siggi in sig:
+            print(siggi.var())
 
         log_p, _ = model(sig, mel)
 
