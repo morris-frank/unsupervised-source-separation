@@ -125,7 +125,7 @@ class Demixer(BaseModel):
     ) -> torch.Tensor:
         m, m_mel = x
         ŝ, _ = self.forward(m, m_mel)
-        self.ℒ.β = max(1., self.iteration/2000)
+        self.ℒ.β = min(1., self.iteration/2000)
 
         ℒ = self.ℒ.reconstruction
         for k in range(self.n_classes):
