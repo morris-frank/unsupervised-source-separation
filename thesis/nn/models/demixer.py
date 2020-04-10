@@ -69,6 +69,7 @@ class Demixer(BaseModel):
         # )
 
         self.mel = MelSpectrogram()
+        self.iteration = 0
 
     def q_s(self, m, m_mel):
         m_mel = F.interpolate(m_mel, m.shape[-1], mode="linear", align_corners=False)
@@ -124,12 +125,15 @@ class Demixer(BaseModel):
     ) -> torch.Tensor:
         m, m_mel = x
         ŝ, _ = self.forward(m, m_mel)
+        self.ℒ.β = max(1., self.iteration/2000)
 
         ℒ = self.ℒ.reconstruction
         for k in range(self.n_classes):
-            ℒ += getattr(self.ℒ, f"KL_{k}")
+            ℒ += self.ℒ.β * getattr(self.ℒ, f"KL_{k}")
 
         self.ℒ.l1_s = F.l1_loss(ŝ, s)
-        ℒ += self.ℒ.l1_s
+        # ℒ += self.ℒ.l1_s
+
+        self.iteration += 1
 
         return ℒ

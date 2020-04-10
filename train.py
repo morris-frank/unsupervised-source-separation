@@ -48,7 +48,7 @@ def train_prior(path: str, signal: str):
 def train_demixer(path: str):
     from thesis.nn.models.demixer import Demixer
 
-    model = Demixer(width=128, name="super")
+    model = Demixer(width=128, name="annil")
     model.p_s = _load_prior_networks()
 
     train_set = ToyData(
