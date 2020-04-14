@@ -109,7 +109,9 @@ class Demixer(BaseModel):
         # for k in range(self.n_classes):
         #     setattr(self.ℒ, f"variance/{k}", ((ŝ[:, k, :].var(-1) - sigmas[k])**2).mean())
 
-        ℒ = self.ℒ.reconstruction + self.ℒ.KL
+        ℒ = self.ℒ.reconstruction
+        if self.iteration > 500:
+            ℒ += self.ℒ.KL
         # for k in range(self.n_classes):
         #     ℒ += β * getattr(self.ℒ, f"KL/{k}")
             # ℒ += getattr(self.ℒ, f"variance/{k}")
