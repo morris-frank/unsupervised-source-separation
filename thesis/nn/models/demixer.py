@@ -14,30 +14,36 @@ from ...utils import clean_init_args
 
 
 class q_sǀm(nn.Module):
-    def __init__(self, width, mel_channels):
+    def __init__(self, n_classes, width, mel_channels):
         super(q_sǀm, self).__init__()
+        out_channels = 256
+
         self.f = Wavenet(
-            in_channels=1,
-            out_channels=256,
+            in_channels=n_classes,
+            out_channels=out_channels * n_classes,
             n_blocks=3,
             n_layers=11,
-            residual_channels=width,
-            gate_channels=width,
-            skip_channels=width,
+            residual_channels=width * n_classes,
+            gate_channels=width * n_classes,
+            skip_channels=width * n_classes,
             cin_channels=mel_channels,
             bias=False,
             fc_kernel_size=3,
             fc_channels=2048,
+            groups=n_classes
         )
 
-        self.f_α = nn.Sequential(nn.Conv1d(256, 1, 1, bias=False), nn.Softplus())
-        self.f_β = nn.Sequential(nn.Conv1d(256, 1, 1, bias=False), nn.Softplus())
+        self.f_α = nn.Sequential(nn.Conv1d(out_channels * n_classes, 1, 1, bias=False, groups=n_classes), nn.Softplus())
+        self.f_β = nn.Sequential(nn.Conv1d(out_channels * n_classes, 1, 1, bias=False, groups=n_classes), nn.Softplus())
 
     def forward(self, m, m_mel=None):
+        m_mel = F.interpolate(m_mel, m.shape[-1], mode="linear",
+                              align_corners=False)
         f = self.f(m, m_mel)
         α = self.f_α(f) + 1e-4
         β = self.f_β(f) + 1e-4
-        return α, β
+        q_s = AffineBeta(α, β)
+        return q_s
 
 
 class Demixer(BaseModel):
@@ -49,54 +55,16 @@ class Demixer(BaseModel):
         self.n_classes = n_classes
 
         # The encoders
-        self.q_sǀm = nn.ModuleList()
-        for k in range(self.n_classes):
-            self.q_sǀm.append(q_sǀm(width, mel_channels))
+        self.q_sǀm = q_sǀm(n_classes, width, mel_channels)
 
         # The placeholder for the prior networks
         self.p_s = None
 
-        # the decoder
-        # self.p_mǀs = Wavenet(
-        #     in_channels=self.n_classes,
-        #     out_channels=1,
-        #     n_blocks=1,
-        #     n_layers=8,
-        #     residual_channels=32,
-        #     gate_channels=32,
-        #     skip_channels=32,
-        #     cin_channels=None,
-        # )
-
         self.mel = MelSpectrogram()
         self.iteration = 0
 
-    def q_s(self, m, m_mel):
-        m_mel = F.interpolate(m_mel, m.shape[-1], mode="linear", align_corners=False)
-
-        α, β = zip(*[q(m, m_mel) for q in self.q_sǀm])
-        α, β = torch.cat(α, dim=1), torch.cat(β, dim=1)
-        q_s = AffineBeta(α, β)
-        return q_s
-
-    def test_forward(self, m, m_mel):
-        q_s = self.q_s(m, m_mel)
-        ŝ = q_s.mean
-        log_q_ŝ = q_s.log_prob(ŝ)
-
-        ŝ = F.normalize(ŝ, p=float("inf"), dim=-1)
-
-        p_ŝ = []
-        for k in range(self.n_classes):
-            ŝ_mel = self.mel(ŝ[:, k, :])
-            log_p_ŝ, _ = self.p_s[k](ŝ[:, None, k, :], ŝ_mel)
-            p_ŝ.append(log_p_ŝ)
-
-        m_ = ŝ.mean(dim=1)
-        return ŝ, m_, log_q_ŝ, torch.cat(p_ŝ, dim=1), q_s.α, q_s.β
-
     def forward(self, m, m_mel):
-        q_s = self.q_s(m, m_mel)
+        q_s = self.q_sǀm(m, m_mel)
         ŝ = q_s.rsample()
         log_q_ŝ = q_s.log_prob(ŝ).clamp(-1e5, 1e5)
 
@@ -116,22 +84,26 @@ class Demixer(BaseModel):
             setattr(self.ℒ, f"KL_{k}", KL_k)
 
         m_ = scaled_ŝ.mean(dim=1, keepdim=True)
-        self.ℒ.reconstruction = F.mse_loss(m_, m)
 
         return scaled_ŝ, m_
 
     def test(
         self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor
     ) -> torch.Tensor:
+        sigmas = [0.5000822, 1.00011822, 0.33878675, 0.3480723]
         m, m_mel = x
-        ŝ, _ = self.forward(m, m_mel)
-        self.ℒ.β = min(1., self.iteration/2000)
+
+        ŝ, m_ = self.forward(m, m_mel)
+        self.ℒ.reconstruction = F.mse_loss(m_, m)
+
+        sigmas = torch.tensor(sigmas, device=m.device).repeat(m.shape[0], 1)
+        self.ℒ.variance = F.mse_loss(ŝ.var(-1), sigmas)
 
         ℒ = self.ℒ.reconstruction
         for k in range(self.n_classes):
-            ℒ += self.ℒ.β * getattr(self.ℒ, f"KL_{k}")
+            ℒ += getattr(self.ℒ, f"KL_{k}")
 
-        self.ℒ.l1_s = F.l1_loss(ŝ, s)
+        # self.ℒ.l1_s = F.l1_loss(ŝ, s)
         # ℒ += self.ℒ.l1_s
 
         self.iteration += 1
