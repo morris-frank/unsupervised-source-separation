@@ -19,15 +19,17 @@ from train import _load_prior_networks
 
 def show_sample(args):
     model = load_model(args.weights, args.device)
-    model.p_s = _load_prior_networks(device=args.device)
+    # model.p_s = _load_prior_networks(device=args.device)
+    model.p_s = [load_model(get_newest_checkpoint('*Discr*'), args.device).to(args.device)]
 
     data = ToyData(
         f"{args.data}/test/", mix=True, mel=True, source=True, rand_amplitude=0.1
     )
 
     for (m, mel), s in data.loader(1):
-        ŝ, m_ = model.forward(m, mel)
-        plot.toy.reconstruction(s, ŝ, m, m_)
+        ŝ = model.forward(m, mel)
+        plot.toy.reconstruction(s, ŝ, m, ŝ.mean(dim=1))
+
         plt.show()
         exit_prompt()
 
