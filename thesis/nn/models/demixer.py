@@ -12,6 +12,7 @@ from ...dist import AffineBeta
 from ...functional import normalize
 from ...utils import clean_init_args
 
+from random import random
 
 class q_sǀm(nn.Module):
     def __init__(self, n_classes, width, mel_channels):
@@ -125,8 +126,9 @@ class Demixer(BaseModel):
         #     ℒ += β * getattr(self.ℒ, f"KL/{k}")
         # ℒ += getattr(self.ℒ, f"variance/{k}")
 
-        # self.ℒ.l1_s = F.l1_loss(ŝ, s)
-        # ℒ += self.ℒ.l1_s
+        self.ℒ.l1_s = F.mse_loss(ŝ, s)
+        if random() < 0.05:
+            ℒ += self.ℒ.l1_s
 
         self.iteration += 1
 
