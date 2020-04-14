@@ -9,7 +9,7 @@ from ..audio import rand_period_phase, oscillator
 from ..data import Dataset
 from ..nn.modules import MelSpectrogram
 
-from random import uniform
+from random import uniform, randint
 
 
 class ToyData(Dataset):
@@ -92,6 +92,21 @@ class ToyDataAndNoise(ToyData):
             return (s, m), -0.01
         else:
             return super(ToyDataAndNoise, self).__getitem__(idx), 1
+
+
+class RandToyData(ToyData):
+    def __getitem__(self, idx):
+        if idx % 20 == 0:
+            σ = uniform(0, 0.1)
+            s = σ * torch.randn(1, 3072)
+            m = self.melspec(s.squeeze())
+            return (s, m), -1
+        else:
+            s, m = super(RandToyData, self).__getitem__(idx)
+            k = randint(0, 3)
+            s = s[None, k, :]
+            m = m[k, :]
+            return (s, m), k
 
 
 def generate_toy(length: int, ns: int) -> Dict:
