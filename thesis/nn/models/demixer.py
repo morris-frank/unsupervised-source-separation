@@ -92,9 +92,9 @@ class Demixer(BaseModel):
         #     KL_k = -torch.mean(log_p_ŝ - log_q_ŝ[:, k, :])
         #     setattr(self.ℒ, f"KL/{k}", KL_k)
 
-        m_ = scaled_ŝ.mean(dim=1, keepdim=True)
+        m_ = ŝ.mean(dim=1, keepdim=True)
 
-        return scaled_ŝ, m_
+        return ŝ, m_
 
     def test(
         self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor
