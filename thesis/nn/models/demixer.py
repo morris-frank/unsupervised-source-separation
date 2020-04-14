@@ -33,8 +33,8 @@ class q_sǀm(nn.Module):
             groups=n_classes
         )
 
-        self.f_α = nn.Sequential(nn.Conv1d(out_channels * n_classes, 1, 1, bias=False, groups=n_classes), nn.Softplus())
-        self.f_β = nn.Sequential(nn.Conv1d(out_channels * n_classes, 1, 1, bias=False, groups=n_classes), nn.Softplus())
+        self.f_α = nn.Sequential(nn.Conv1d(out_channels * n_classes, n_classes, 1, bias=False, groups=n_classes), nn.Softplus())
+        self.f_β = nn.Sequential(nn.Conv1d(out_channels * n_classes, n_classes, 1, bias=False, groups=n_classes), nn.Softplus())
 
     def forward(self, m, m_mel=None):
         m_mel = F.interpolate(m_mel, m.shape[-1], mode="linear",
@@ -81,7 +81,7 @@ class Demixer(BaseModel):
 
             # Kullback Leibler for this k'th source
             KL_k = -torch.mean(log_p_ŝ - log_q_ŝ[:, k, :])
-            setattr(self.ℒ, f"KL_{k}", KL_k)
+            setattr(self.ℒ, f"KL/{k}", KL_k)
 
         m_ = scaled_ŝ.mean(dim=1, keepdim=True)
 
@@ -92,16 +92,18 @@ class Demixer(BaseModel):
     ) -> torch.Tensor:
         sigmas = [0.5000822, 1.00011822, 0.33878675, 0.3480723]
         m, m_mel = x
+        β = min(self.iteration/500, 1)
 
-        ŝ, m_ = self.forward(m, m_mel)
+        ŝ, m_ = self.forward(m.repeat(1, 4, 1), m_mel)
         self.ℒ.reconstruction = F.mse_loss(m_, m)
 
-        sigmas = torch.tensor(sigmas, device=m.device).repeat(m.shape[0], 1)
-        self.ℒ.variance = F.mse_loss(ŝ.var(-1), sigmas)
+        for k in range(self.n_classes):
+            setattr(self.ℒ, f"variance/{k}", ((ŝ[:, k, :].var(-1) - sigmas[k])**2).mean())
 
         ℒ = self.ℒ.reconstruction
         for k in range(self.n_classes):
-            ℒ += getattr(self.ℒ, f"KL_{k}")
+            ℒ += β * getattr(self.ℒ, f"KL/{k}")
+            ℒ += getattr(self.ℒ, f"variance/{k}")
 
         # self.ℒ.l1_s = F.l1_loss(ŝ, s)
         # ℒ += self.ℒ.l1_s

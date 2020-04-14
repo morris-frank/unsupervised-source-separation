@@ -50,7 +50,9 @@ class _LossLogger(object):
         super(_LossLogger, self).__setattr__(key, value)
         if key != "log":
             if isinstance(value, torch.Tensor):
-                value = value.detach().mean().item()
+                value = value.detach().cpu().squeeze()
+                if value.numel() == 1:
+                    value = value.item()
             self.log[key].append(value)
 
     def clear(self):
@@ -83,5 +85,5 @@ def any_invalid_grad(parameters):
 
 def max_grad(parameters):
     parameters = list(filter(lambda x: x.grad is not None, parameters))
-    max_value = max(p.grad.data.abs().max() for p in parameters)
+    max_value = max(p.grad.data.abs().max().item() for p in parameters)
     return max_value

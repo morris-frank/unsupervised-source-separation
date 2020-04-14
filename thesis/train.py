@@ -11,6 +11,8 @@ from torch import optim
 from torch.nn.utils import clip_grad_value_
 from torch.utils import data
 
+from functools import reduce
+from operator import add
 from .io import glob_remove
 from .nn.models import BaseModel
 from .utils import max_grad, any_invalid_grad
@@ -45,19 +47,20 @@ def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = N
     if hasattr(model, "L"):
         for k, v in model.ℒ.log.items():
             if len(v):
-                log[f"{k}/{cat}"] = mean(v)
+                log[f"{k}/{cat}"] = reduce(add, v) / len(v)
                 model.ℒ.log[k] = []
 
     # Print to console
     _step = step if step is not None else "---"
     print(f"step {_step:>9} {Fore.YELLOW}[{cat}]", end=" ")
     for k, v in log.items():
+        print(f"{Fore.RESET}{'/'.join(k.split('/')[:-1])}=", end="")
         col = (
             Fore.CYAN
             if v == LAST_LOG[k] or LAST_LOG["start"]
             else (Fore.GREEN if v < LAST_LOG[k] else Fore.RED)
         )
-        print(f"{Fore.RESET}{k.split('/')[0]}={col}{v:.3e}{Fore.RESET}, ", end="")
+        print(f"{col}{v:.3e}", end=f"{Fore.RESET}, ")
         LAST_LOG[k] = v
     print()
     LAST_LOG["start"] = False
@@ -151,11 +154,7 @@ def train(
                 Fore.RED + "NaN Loss ℒ.\n"
                 "Try Again. I'm gonna try to continue…" + Fore.RESET
             )
-            model.zero_grad()
-            model.ℒ.clear()
-            del ℒ
             exit()
-            continue
         else:
             ℒ.backward()
             clip_grad_value_(model.parameters(), 100)
@@ -187,7 +186,7 @@ def train(
             log = {
                 "Loss/train": mean(losses),
                 "Time/train": mean(it_times),
-                "LR": optimizer.param_groups[0]["lr"],
+                "LR/train": optimizer.param_groups[0]["lr"],
                 "MaxGrad/train": max_grad(model.parameters()),
             }
             print_log(model, log, "train", step=it)
