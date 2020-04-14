@@ -73,15 +73,24 @@ class Demixer(BaseModel):
         # prior distributions assign too high likelihoods around zero!
         scaled_ŝ = normalize(ŝ)
 
-        for k in range(self.n_classes):
-            # Get Log likelihood under prior
-            ŝ_mel = self.mel(scaled_ŝ[:, k, :])
-            log_p_ŝ, _ = self.p_s[k](scaled_ŝ[:, None, k, :], ŝ_mel)
-            log_p_ŝ = log_p_ŝ[:, None].clamp(-1e5, 1e5)
+        ŝ_mel = self.mel(scaled_ŝ)
+        N, C, MC, L = ŝ_mel.shape
+        ŝ_mel = ŝ_mel.view(N, C*MC, L)
 
-            # Kullback Leibler for this k'th source
-            KL_k = -torch.mean(log_p_ŝ - log_q_ŝ[:, k, :])
-            setattr(self.ℒ, f"KL/{k}", KL_k)
+        p_ŝ = self.p_s(scaled_ŝ, ŝ_mel)
+        log_p_ŝ = p_ŝ.clamp(min=1e-12).log()
+
+        self.ℒ.KL = -torch.mean(log_p_ŝ - log_q_ŝ)
+
+        # for k in range(self.n_classes):
+        #     # Get Log likelihood under prior
+        #     ŝ_mel = self.mel(scaled_ŝ[:, k, :])
+        #     log_p_ŝ, _ = self.p_s[k](scaled_ŝ[:, None, k, :], ŝ_mel)
+        #     log_p_ŝ = log_p_ŝ[:, None].clamp(-1e5, 1e5)
+        #
+        #     # Kullback Leibler for this k'th source
+        #     KL_k = -torch.mean(log_p_ŝ - log_q_ŝ[:, k, :])
+        #     setattr(self.ℒ, f"KL/{k}", KL_k)
 
         m_ = scaled_ŝ.mean(dim=1, keepdim=True)
 
@@ -90,20 +99,20 @@ class Demixer(BaseModel):
     def test(
         self, x: Tuple[torch.Tensor, torch.Tensor], s: torch.Tensor
     ) -> torch.Tensor:
-        sigmas = [0.5000822, 1.00011822, 0.33878675, 0.3480723]
+        # sigmas = [0.5000822, 1.00011822, 0.33878675, 0.3480723]
         m, m_mel = x
-        β = min(self.iteration/500, 1)
+        # β = min(self.iteration/500, 1)
 
         ŝ, m_ = self.forward(m.repeat(1, 4, 1), m_mel)
         self.ℒ.reconstruction = F.mse_loss(m_, m)
 
-        for k in range(self.n_classes):
-            setattr(self.ℒ, f"variance/{k}", ((ŝ[:, k, :].var(-1) - sigmas[k])**2).mean())
+        # for k in range(self.n_classes):
+        #     setattr(self.ℒ, f"variance/{k}", ((ŝ[:, k, :].var(-1) - sigmas[k])**2).mean())
 
-        ℒ = self.ℒ.reconstruction
-        for k in range(self.n_classes):
-            ℒ += β * getattr(self.ℒ, f"KL/{k}")
-            ℒ += getattr(self.ℒ, f"variance/{k}")
+        ℒ = self.ℒ.reconstruction + self.ℒ.KL
+        # for k in range(self.n_classes):
+        #     ℒ += β * getattr(self.ℒ, f"KL/{k}")
+            # ℒ += getattr(self.ℒ, f"variance/{k}")
 
         # self.ℒ.l1_s = F.l1_loss(ŝ, s)
         # ℒ += self.ℒ.l1_s

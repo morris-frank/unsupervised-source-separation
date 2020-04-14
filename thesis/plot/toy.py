@@ -15,35 +15,32 @@ PRINT_LENGTH = 500
 
 def squeeze(tensor):
     tensor = tensor.detach().cpu().squeeze()
-    if tensor.dim() == 1:
+    while tensor.dim() < 3:
         tensor = tensor.unsqueeze(0)
-    return tensor[:, PRINT_START : PRINT_START + PRINT_LENGTH].numpy()
+    return tensor[:, :, PRINT_START : PRINT_START + PRINT_LENGTH].numpy()
 
 
 def reconstruction(*signals: torch.Tensor, sharey: bool = True, ylim=None):
     arguments = get_func_arguments()
     colores = ["k", "n", "y", "g", "r"]
     signals = list(map(squeeze, signals))
-    ch = set(s.shape[0] for s in signals)
-    N, hasM = max(ch), len(ch) >= 2
+    ch = set(s.shape[1] for s in signals)
+    C, hasM = max(ch), len(ch) >= 2
+    N = max(s.shape[0] for s in signals)
     if not ylim:
         ylim = (min(map(np.min, signals)), max(map(np.max, signals)))
 
-    fig, axs = plt.subplots(N + hasM, sharex="all", sharey="none", squeeze=False)
-    if not isinstance(axs, np.ndarray):
-        axs = list(axs)
+    fig, axs = plt.subplots(C + hasM, N, sharex="all", sharey="none", squeeze=False)
     for k, (signal, name) in enumerate(zip(signals, arguments)):
-        if signal.shape[0] < N:
-            axs[-1, 0].plot(signal[0, :], c="k", label=name)
-        else:
-            c = colores[k % len(colores)]
-            for i in range(N):
-                axs[i, 0].plot(signal[i, :], f"{c}-", label=name)
-                if sharey:
-                    axs[i, 0].set_ylim(ylim)
-                # else:
-                #     axs[i, 0].relim()
-                #     axs[i, 0].autoscale_view()
+        for n in range(signal.shape[0]):
+            if signal.shape[1] < C:
+                axs[-1, n].plot(signal[n, 0, :], c="k", label=name)
+            else:
+                c = colores[k % len(colores)]
+                for i in range(C):
+                    axs[i, n].plot(signal[n, i, :], f"{c}-", label=name)
+                    if sharey:
+                        axs[i, n].set_ylim(ylim)
     for ax in axs.flatten().tolist():
         ax.legend()
     return fig

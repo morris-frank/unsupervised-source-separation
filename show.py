@@ -74,47 +74,20 @@ def show_prior(args):
         f"{args.data}/test/", mix=True, mel=True, source=True, mel_source=True
     )
     mel_spectr = MelSpectrogram()
-
-    # while True:
-    #     sh = (1, 3072)
-    #     _rand = torch.rand(sh)
-    #     rand = lambda: 2*_rand-1
-    #     rand_s = [
-    #         rand(),
-    #         0.5*rand(),
-    #         0.3*rand(),
-    #         0.1*rand(),
-    #         0.05*rand(),
-    #         0.01*rand(),
-    #         0.*rand()
-    #     ]
-    #     rand_mel = [mel_spectr(s.clamp(-1, 1)) for s in rand_s]
-    # 
-    #     sig = torch.cat(rand_s, dim=0).unsqueeze(1).clamp(-1, 1)
-    #     mel = torch.cat(rand_mel, dim=0)
-    # 
-    #     log_p, _ = model(sig, mel)
-    # 
-    #     plot.toy.reconstruction(sig, sharey=True)
-    #     plot.toy.reconstruction(log_p, sharey=False)
-    # 
-    #     plt.show()
-    #     exit_prompt()
+    _rand = torch.rand((1, 3072))
+    rand = lambda: 2*_rand-1
 
     for (m, m_mel), (s, s_mel) in data:
-        rand_s = torch.rand_like(m) * 0.1
+        rand_s = 0.1 * rand()
         rand_mel = mel_spectr(rand_s)
 
-        sig = torch.cat((s, m, rand_s), dim=0).unsqueeze(1)
-        mel = torch.cat((s_mel, m_mel.unsqueeze(0), rand_mel), dim=0)
+        sig = torch.cat((s, m, rand_s), dim=0).unsqueeze(1).repeat(1, 4, 1)
+        mel = torch.cat((s_mel, m_mel.unsqueeze(0), rand_mel), dim=0).repeat(1, 4, 1)
 
-        for siggi in sig:
-            print(siggi.var())
+        t_s = model(sig, mel)
+        s, y = sig.transpose(0, 1), t_s.transpose(0, 1)
+        plot.toy.reconstruction(s, y, sharey=False)
 
-        log_p, _ = model(sig, mel)
-
-        plot.toy.reconstruction(sig, sharey=False)
-        plot.toy.reconstruction(log_p, sharey=False)
         plt.show()
         exit_prompt()
 

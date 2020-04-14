@@ -63,7 +63,8 @@ def train_demixer(path: str):
     from thesis.nn.models.demixer import Demixer
 
     model = Demixer(width=128, name="annil")
-    model.p_s = _load_prior_networks()
+    # model.p_s = _load_prior_networks()
+    model.p_s = load_model(get_newest_checkpoint('*Discrim*'), device="cpu")
 
     train_set = ToyData(
         path % "train", mix=True, mel=True, source=True, rand_amplitude=0.1
