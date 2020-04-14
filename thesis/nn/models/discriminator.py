@@ -19,7 +19,7 @@ class Discriminator(BaseModel):
             residual_channels=width * n_classes,
             gate_channels=width * n_classes,
             skip_channels=width * n_classes,
-            cin_channels=mel_channels,
+            cin_channels=mel_channels * n_classes,
             bias=False,
             fc_kernel_size=3,
             fc_channels=2048,
@@ -34,9 +34,12 @@ class Discriminator(BaseModel):
         s, s_mel = x
         n, _, l = s.shape
 
-        ik = torch.tensor([0, 1, 2, 3]).repeat(n, 1)
+        ik = torch.tensor([0, 1, 2, 3], device=s.device).repeat(n, 1)
         t = t.repeat(4, 1).T
-        tgt = (ik == t).long().unsqueeze(-1).repeat(1, 1, l).to(s.device)
+        tgt = (ik == t).float().unsqueeze(-1).repeat(1, 1, l)
+
+        s = s.repeat(1, 4, 1)
+        s_mel = s_mel.repeat(1, 4, 1)
 
         t_s = self.forward(s, s_mel)
 
