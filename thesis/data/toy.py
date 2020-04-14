@@ -101,6 +101,11 @@ class RandToyData(ToyData):
             s = σ * torch.randn(1, 3072)
             m = self.melspec(s.squeeze())
             return (s, m), -1
+        elif idx % 21 == 0:
+            s, m = super(RandToyData, self).__getitem__(idx)
+            s = s.mean(0, keepdim=True)
+            m = self.melspec(s.squeeze())
+            return (s, m), -1
         else:
             s, m = super(RandToyData, self).__getitem__(idx)
             k = randint(0, 3)
