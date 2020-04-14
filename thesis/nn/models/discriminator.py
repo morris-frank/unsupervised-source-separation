@@ -6,9 +6,9 @@ from thesis.nn.wavenet import Wavenet
 from thesis.utils import clean_init_args
 
 
-class Decriminator(BaseModel):
+class Discriminator(BaseModel):
     def __init__(self, n_classes, width, mel_channels, **kwargs):
-        super(Decriminator, self).__init__(**kwargs)
+        super(Discriminator, self).__init__(**kwargs)
         self.params = clean_init_args(locals().copy())
 
         self.wn = Wavenet(
