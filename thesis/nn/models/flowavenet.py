@@ -230,7 +230,8 @@ class Flowavenet(BaseModel):
                     cin_channel=cin_channel,
                 )
             )
-            cin_channel *= 2
+            if cin_channel is not None:
+                cin_channel *= 2
             if not split:
                 in_channel *= 2
 
