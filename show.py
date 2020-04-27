@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from functools import partial
 from argparse import ArgumentParser
 from os import path
 
@@ -14,7 +13,6 @@ from thesis.data.toy import ToyData
 from thesis.io import load_model, exit_prompt, get_newest_checkpoint, get_newest_file
 from thesis.nn.modules import MelSpectrogram
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA
-from train import _load_prior_networks
 
 
 def show_sample(args):

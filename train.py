@@ -6,7 +6,7 @@ from functools import partial
 import torch
 from torch import autograd
 
-from thesis.data.toy import ToyData, ToyDataAndNoise, RandToyData
+from thesis.data.toy import ToyData
 from thesis.io import load_model, get_newest_checkpoint
 from thesis.nn.models.denoiser import Denoiser, GAN, Denoiser_Semi
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, IS_HERMES
@@ -42,19 +42,6 @@ def train_prior(path: str, signal: str):
     test_set = ToyData(
         path % "test", source=k, mel_source=True, noise=0.03, rand_noise=True
     )
-    return model, train_set, test_set
-
-
-def train_discriminator(path: str):
-    from thesis.nn.models.discriminator import Discriminator
-
-    model = Discriminator(n_classes=4, width=48, mel_channels=80)
-
-    train_set = RandToyData(path % "train", source=True, mel_source=True,
-                            noise=0.03, rand_noise=True)
-    test_set = RandToyData(path % "test", source=True, mel_source=True,
-                           noise=0.03, rand_noise=True)
-
     return model, train_set, test_set
 
 
@@ -123,7 +110,6 @@ EXPERIMENTS = {
     "denoiser": partial(train_denoiser, modelclass=Denoiser),
     "denoiser_semi": partial(train_denoiser, modelclass=Denoiser_Semi),
     "gan": partial(train_denoiser, modelclass=GAN),
-    "discr": train_discriminator,
 }
 
 if __name__ == "__main__":
