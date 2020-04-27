@@ -39,10 +39,12 @@ class ActNorm(nn.Module):
 
 
 class AffineCoupling(nn.Module):
-    def __init__(self, in_channel, cin_channel, width=256, num_layer=6, groups=1):
+    def __init__(self, in_channel, width=256, num_layer=6, groups=1, cin_channel=None):
         super().__init__()
 
         self.groups = groups
+        if cin_channel is not None:
+            cin_channel = cin_channel // 2 * groups
 
         self.net = Wavenet(
             in_channels=in_channel // 2 * groups,
@@ -53,7 +55,7 @@ class AffineCoupling(nn.Module):
             gate_channels=width * groups,
             skip_channels=width * groups,
             kernel_size=3,
-            cin_channels=cin_channel // 2 * groups,
+            cin_channels=cin_channel,
             groups=groups,
             causal=False,
             zero_final=True,
@@ -87,13 +89,17 @@ class AffineCoupling(nn.Module):
 
 class Flow(nn.Module):
     def __init__(
-        self, in_channel, cin_channel, width, num_layer, groups,
+        self, in_channel, width, num_layer, groups=1, cin_channel=None,
     ):
         super().__init__()
 
         self.actnorm = ActNorm(in_channel)
         self.coupling = AffineCoupling(
-            in_channel, cin_channel, width=width, num_layer=num_layer, groups=groups
+            in_channel,
+            width=width,
+            num_layer=num_layer,
+            groups=groups,
+            cin_channel=cin_channel,
         )
 
     def forward(self, x, c=None):
@@ -122,18 +128,21 @@ class Flow(nn.Module):
 
 class Block(nn.Module):
     def __init__(
-        self, in_channel, cin_channel, n_flow, n_layer, width, split=False,
+        self, in_channel, n_flow, n_layer, width, split=False, cin_channel=None,
     ):
         super().__init__()
 
         self.split = split
         squeeze_dim = in_channel * 2
-        squeeze_dim_c = cin_channel * 2
+        if cin_channel is not None:
+            cin_channel = cin_channel * 2
 
         self.flows = nn.ModuleList()
         for i in range(n_flow):
             self.flows.append(
-                Flow(squeeze_dim, squeeze_dim_c, width=width, num_layer=n_layer,)
+                Flow(
+                    squeeze_dim, width=width, num_layer=n_layer, cin_channel=cin_channel
+                )
             )
 
         if self.split:
@@ -146,7 +155,7 @@ class Block(nn.Module):
                 gate_channels=width,
                 skip_channels=width,
                 kernel_size=3,
-                cin_channels=squeeze_dim_c,
+                cin_channels=cin_channel,
                 causal=False,
                 zero_final=True,
                 bias=False,
@@ -193,12 +202,12 @@ class Flowavenet(BaseModel):
     def __init__(
         self,
         in_channel,
-        cin_channel,
         n_block,
         n_flow,
         n_layer,
         width,
         block_per_split,
+        cin_channel=None,
         **kwargs
     ):
         super(Flowavenet, self).__init__(**kwargs)
@@ -213,7 +222,12 @@ class Flowavenet(BaseModel):
 
             self.blocks.append(
                 Block(
-                    in_channel, cin_channel, n_flow, n_layer, split=split, width=width
+                    in_channel,
+                    n_flow,
+                    n_layer,
+                    split=split,
+                    width=width,
+                    cin_channel=cin_channel,
                 )
             )
             cin_channel *= 2
