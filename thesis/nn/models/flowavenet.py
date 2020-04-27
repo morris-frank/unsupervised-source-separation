@@ -238,9 +238,9 @@ class Flowavenet(BaseModel):
     def forward(self, x, c=None):
         B, _, T = x.size()
         logdet, log_p_sum = 0, 0
+        out = x
 
         if c is not None:
-            out = x
             c = self.c_up(c, T)
 
         for k, block in enumerate(self.blocks):
