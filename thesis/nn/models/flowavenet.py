@@ -8,7 +8,7 @@ from . import BaseModel
 from ..modules import STFTUpsample
 from ..wavenet import Wavenet
 from ...dist import likelihood_normal
-from ...functional import split_LtoC, flip_channels
+from ...functional import split_LtoC, flip_channels, split_CtoL
 from ...utils import clean_init_args
 
 
@@ -27,6 +27,9 @@ class ActNorm(nn.Module):
         logdet = torch.sum(log_abs) * B * T
 
         return self.scale * (x + self.loc), logdet
+
+    def reverse(self, output):
+        return output / self.scale - self.loc
 
 
 class AffineCoupling(nn.Module):
@@ -59,6 +62,15 @@ class AffineCoupling(nn.Module):
 
         return torch.cat([in_a, out_b], 1), logdet
 
+    def reverse(self, output, c=None):
+        out_a, out_b = output.chunk(2, 1)
+        c_a, c_b = c.chunk(2, 1)
+
+        log_s, t = self.net(out_a, c_a).chunk(2, 1)
+        in_b = out_b * torch.exp(log_s) + t
+
+        return torch.cat([out_a, in_b], 1)
+
 
 class Flow(nn.Module):
     def __init__(
@@ -81,6 +93,14 @@ class Flow(nn.Module):
             logdet = logdet + det
 
         return out, c, logdet
+
+    def reverse(self, out, c=None):
+        out = flip_channels(out)
+        c = flip_channels(c)
+
+        x = self.coupling.reverse(out, c)
+        x = self.actnorm.reverse(x)
+        return x, c
 
 
 class Block(nn.Module):
@@ -132,6 +152,23 @@ class Block(nn.Module):
 
         return x, c, logdet, log_p
 
+    def reverse(self, output, c, eps=None):
+        if self.split:
+            mean, log_sd = self.prior(output, c).chunk(2, 1)
+            z_new = mean + log_sd.exp() * eps
+
+            x = torch.cat([output, z_new], 1)
+        else:
+            x = output
+
+        for i, flow in enumerate(self.flows[::-1]):
+            x, c = flow.reverse(x, c)
+
+        unsqueezed_x = split_CtoL(x)
+        unsqueezed_c = split_CtoL(c)
+
+        return unsqueezed_x, unsqueezed_c
+
 
 class Flowavenet(BaseModel):
     def __init__(
@@ -171,6 +208,7 @@ class Flowavenet(BaseModel):
         c = self.c_up(c, T)
 
         for k, block in enumerate(self.blocks):
+            print(f'{k}: out: {out.shape}, c: {c.shape}')
             out, c, logdet_new, logp_new = block(out, c)
             logdet = logdet + logdet_new
             if isinstance(logp_new, torch.Tensor):
@@ -181,6 +219,31 @@ class Flowavenet(BaseModel):
         log_p_sum += -0.5 * (log(2.0 * pi) + out.pow(2)).sum(1, keepdim=True)
         logdet = logdet / (B * T)
         return log_p_sum, logdet
+
+    def reverse(self, z, c):
+        _, _, T = z.size()
+        _, _, t_c = c.size()
+        if T != t_c:
+            c = self.c_up(c, T)
+        z_list = []
+        x = z
+        for i in range(self.n_block):
+            b_size, _, T = x.size()
+            squeezed_x = x.view(b_size, -1, T // 2, 2).permute(0, 1, 3, 2)
+            x = squeezed_x.contiguous().view(b_size, -1, T // 2)
+            squeezed_c = c.view(b_size, -1, T // 2, 2).permute(0, 1, 3, 2)
+            c = squeezed_c.contiguous().view(b_size, -1, T // 2)
+            if not ((i + 1) % self.block_per_split or i == self.n_block - 1):
+                x, z = x.chunk(2, 1)
+                z_list.append(z)
+
+        for i, block in enumerate(self.blocks[::-1]):
+            index = self.n_block - i
+            if not (index % self.block_per_split or index == self.n_block):
+                x, c = block.reverse(x, c, z_list[index // self.block_per_split - 1])
+            else:
+                x, c = block.reverse(x, c)
+        return x
 
     def test(self, x, label):
         s, m = x

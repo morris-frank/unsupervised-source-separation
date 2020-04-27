@@ -28,7 +28,7 @@ class Discriminator(BaseModel):
 
     def forward(self, s, s_mel=None):
         s_mel = F.interpolate(s_mel, s.shape[-1], mode="linear", align_corners=False)
-        return F.sigmoid(self.wn(s, s_mel))
+        return torch.sigmoid(self.wn(s, s_mel))
 
     def test(self, x, t):
         s, s_mel = x

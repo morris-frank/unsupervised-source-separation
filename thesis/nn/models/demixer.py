@@ -1,3 +1,4 @@
+from random import random
 from typing import Tuple
 
 import torch
@@ -12,7 +13,6 @@ from ...dist import AffineBeta
 from ...functional import normalize
 from ...utils import clean_init_args
 
-from random import random
 
 class q_sǀm(nn.Module):
     def __init__(self, n_classes, width, mel_channels):

@@ -76,11 +76,9 @@ def show_prior(args):
         f"{args.data}/test/", mix=True, mel=True, source=True, mel_source=True
     )
     mel_spectr = MelSpectrogram()
-    _rand = torch.rand((1, 3072))
-    rand = lambda: 2*_rand-1
 
     for (m, m_mel), (s, s_mel) in data:
-        rand_s = 0.1 * rand()
+        rand_s = 0. * 2*torch.rand((1, 3072))-1
         rand_mel = mel_spectr(rand_s)
 
         sig = torch.cat((s, m, rand_s), dim=0).unsqueeze(1).repeat(1, 4, 1)
@@ -90,6 +88,21 @@ def show_prior(args):
         s, y = sig.transpose(0, 1), t_s.transpose(0, 1)
         plot.toy.reconstruction(s, y, sharey=False)
 
+        plt.show()
+        exit_prompt()
+
+
+def show_prior_z(args):
+    model = load_model(args.weights, args.device)
+
+    mel_spectr = MelSpectrogram()
+
+    while True:
+        z = torch.rand((1, 1, 3072))
+        m_z = mel_spectr(z.squeeze(0))
+        out = model.reverse(z, m_z)
+        
+        plot.toy.reconstruction(z, out)
         plt.show()
         exit_prompt()
 
@@ -176,6 +189,7 @@ COMMANDS = {
     "posterior": show_posterior,
     "cross-likelihood": show_cross_likelihood,
     "prior": show_prior,
+    "prior-z": show_prior_z,
     "denoiser": show_sample_denoiser,
     "noise": show_noise_plot,
     "mel": show_mel,

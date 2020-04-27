@@ -88,6 +88,13 @@ def split_LtoC(x: torch.Tensor) -> torch.Tensor:
     return out
 
 
+def split_CtoL(x: torch.Tensor) -> torch.Tensor:
+    N, C, L = x.shape
+    out = x.view(N, C // 2, 2, L).permute(0, 1, 3, 2)
+    out = out.contiguous().view(N, C // 2, L * 2)
+    return out
+
+
 def flip_channels(x: torch.Tensor) -> torch.Tensor:
     x_a, x_b = x.chunk(2, 1)
     return torch.cat([x_b, x_a], 1)
