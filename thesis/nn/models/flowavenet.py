@@ -208,7 +208,7 @@ class Flowavenet(BaseModel):
         width,
         block_per_split,
         cin_channel=None,
-        **kwargs
+        **kwargs,
     ):
         super(Flowavenet, self).__init__(**kwargs)
         self.params = clean_init_args(locals().copy())
@@ -238,9 +238,9 @@ class Flowavenet(BaseModel):
     def forward(self, x, c=None):
         B, _, T = x.size()
         logdet, log_p_sum = 0, 0
-        out = x
 
         if c is not None:
+            out = x
             c = self.c_up(c, T)
 
         for k, block in enumerate(self.blocks):
@@ -281,8 +281,9 @@ class Flowavenet(BaseModel):
         return x
 
     def test(self, s, m):
+        m = F.interpolate(m, s.shape[-1], mode="linear", align_corners=False)
         log_p, logdet = self.forward(m)
-        self.ℒ.log_p = -torch.mean(log_p.mean(-1).squeeze())
+        self.ℒ.log_p = -torch.mean(log_p)
         self.ℒ.logdet = -torch.mean(logdet)
         ℒ = self.ℒ.log_p + self.ℒ.logdet
         return ℒ
