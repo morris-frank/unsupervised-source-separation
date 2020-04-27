@@ -27,8 +27,7 @@ def train_prior(path: str, signal: str):
     k = TOY_SIGNALS.index(signal)
 
     model = Flowavenet(
-        in_channel=1,
-        cin_channel=80,
+        in_channel=80,
         n_block=4,
         n_flow=10,
         n_layer=4,
@@ -37,10 +36,10 @@ def train_prior(path: str, signal: str):
         name=signal,
     )
 
-    train_set = ToyDataAndNoise(
+    train_set = ToyData(
         path % "train", source=k, mel_source=True, noise=0.03, rand_noise=True
     )
-    test_set = ToyDataAndNoise(
+    test_set = ToyData(
         path % "test", source=k, mel_source=True, noise=0.03, rand_noise=True
     )
     return model, train_set, test_set

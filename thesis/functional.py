@@ -1,3 +1,4 @@
+from itertools import chain
 import random
 from typing import Tuple
 
@@ -75,10 +76,17 @@ def split(x: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     return x[:, :, ::2].contiguous(), x[:, :, 1::2].contiguous()
 
 
-def interleave(left: torch.Tensor, right: torch.Tensor) -> torch.Tensor:
-    assert left.shape == right.shape
-    bs, c, l = left.shape
-    return torch.stack((left, right), dim=3).view(bs, c, 2 * l)
+def interleave(tensors: Tuple[torch.Tensor], groups: int, dim: int = 1):
+    cs = tensors[0].shape[dim] // groups
+    splits = map(lambda x: torch.split(x, cs, dim=dim), tensors)
+    return torch.cat(list(chain.from_iterable(zip(*splits))), dim=dim)
+
+
+def chunk_grouped(tensor: torch.Tensor, groups: int, dim: int = 1):
+    #  Right now only outputs 2 chunks!
+    cs = tensor.shape[dim] // (groups * 2)  # Size of one chunk
+    chunks = tensor.split(cs, dim=dim)
+    return torch.cat(chunks[::2], dim=dim), torch.cat(chunks[1::2], dim=dim)
 
 
 def split_LtoC(x: torch.Tensor) -> torch.Tensor:
