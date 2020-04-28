@@ -13,6 +13,7 @@ from thesis.data.toy import ToyData, generate_toy
 from thesis.io import load_model, save_append, get_newest_checkpoint
 from thesis.nn.modules import MelSpectrogram
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA
+from torch.nn import functional as F
 
 mpl.use("agg")
 
@@ -39,7 +40,9 @@ def make_noise_likelihood_plot(args):
 
 
 def make_cross_likelihood_plot(args):
+    # TOY_SIGNALS = ['triangle']
     K = len(TOY_SIGNALS)
+    # K = 4
     results = None
     for k, signal in enumerate(TOY_SIGNALS):
         weights = get_newest_checkpoint(f"*Flowavenet*{signal}*pt")
@@ -53,8 +56,10 @@ def make_cross_likelihood_plot(args):
             results = np.zeros((K, K, len(data)))
 
         for i, (s, m) in enumerate(tqdm(data)):
-            s, m = s.unsqueeze(1).to(args.device), m.to(args.device)
-            logp = model(s, m)[0]
+            m = m.to(args.device)
+            m = F.interpolate(m, s.shape[-1], mode="linear",
+                              align_corners=False)
+            logp = model(m)[0]
             results[k, :, i] = logp.mean(-1).squeeze().cpu().numpy()
 
         print(Fore.YELLOW + "Saving to " + fp + Fore.RESET)
@@ -103,7 +108,6 @@ def main(args):
     args.basename = path.basename(args.weights)[:-3]
     makedirs(f"./figures/{args.basename}/", exist_ok=True)
     args.device = "cpu" if args.cpu else "cuda"
-
     with torch.no_grad():
         COMMANDS[args.command](args)
 

@@ -38,7 +38,6 @@ class Denoiser(BaseModel):
         self.ℒ.log_p = log_p_ŝ.mean()
         self.ℒ.log_q = log_q_ŝ.mean()
         self.ℒ.KL = - torch.mean(log_p_ŝ - log_q_ŝ)
-        #self.ℒ.KL = -torch.mean(log_p_ŝ - log_q_ŝ)
 
         return scaled_ŝ, log_p_ŝ
 
@@ -72,12 +71,4 @@ class Denoiser_Semi(Denoiser):
         # if self.iteration < 20:
         #     ℒ += self.ℒ.l1_s + self.ℒ.l1_z
         self.iteration += 1
-        return ℒ
-
-
-class GAN(Denoiser):
-    def test(self, s):
-        z = torch.randn_like(s).clamp(-1, 1)
-        _ = self.forward(z)
-        ℒ = self.ℒ.KL
         return ℒ

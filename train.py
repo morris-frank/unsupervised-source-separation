@@ -8,7 +8,7 @@ from torch import autograd
 
 from thesis.data.toy import ToyData
 from thesis.io import load_model, get_newest_checkpoint
-from thesis.nn.models.denoiser import Denoiser, GAN, Denoiser_Semi
+from thesis.nn.models.denoiser import Denoiser, Denoiser_Semi
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, IS_HERMES
 from thesis.train import train
 
@@ -21,10 +21,18 @@ def _load_prior_networks(prefix: str = "Apr06", device="cuda"):
     ]
 
 
-def train_prior(path: str, signal: str):
+def train_prior(path: str, signal: str = None):
     from thesis.nn.models.flowavenet import Flowavenet
 
-    k = TOY_SIGNALS.index(signal)
+    if signal is None:
+        name = 'all'
+        source = True
+        groups = len(TOY_SIGNALS)
+    else:
+        name = signal
+        k = TOY_SIGNALS.index(signal)
+        source = k
+        groups = 1
 
     model = Flowavenet(
         in_channel=80,
@@ -33,14 +41,15 @@ def train_prior(path: str, signal: str):
         n_layer=4,
         block_per_split=2,
         width=48,
-        name=signal,
+        name=name,
+        groups=groups
     )
 
     train_set = ToyData(
-        path % "train", source=k, mel_source=True, noise=0.03, rand_noise=True
+        path % "train", source=source, mel_source=True, noise=0.03, rand_noise=True
     )
     test_set = ToyData(
-        path % "test", source=k, mel_source=True, noise=0.03, rand_noise=True
+        path % "test", source=source, mel_source=True, noise=0.03, rand_noise=True
     )
     return model, train_set, test_set
 
@@ -109,7 +118,6 @@ EXPERIMENTS = {
     "demixer": train_demixer,
     "denoiser": partial(train_denoiser, modelclass=Denoiser),
     "denoiser_semi": partial(train_denoiser, modelclass=Denoiser_Semi),
-    "gan": partial(train_denoiser, modelclass=GAN),
 }
 
 if __name__ == "__main__":

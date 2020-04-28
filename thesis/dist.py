@@ -4,6 +4,7 @@ from math import sqrt, log
 import torch
 from torch import distributions as dist
 from torch.distributions import constraints
+from torch import Tensor as T
 
 
 class AffineBeta(dist.Beta):
@@ -15,41 +16,47 @@ class AffineBeta(dist.Beta):
         self.s, self.t, self.ε = s, t, ε
 
     @property
-    def α(self):
+    def α(self) -> float:
         return self.concentration1
 
     @property
-    def β(self):
+    def β(self) -> float:
         return self.concentration0
 
     @property
-    def mean(self):
+    def mean(self) -> T:
         return self.s * super(AffineBeta, self).mean + self.t
 
-    def rsample(self, sample_shape=()):
+    def rsample(self, sample_shape=()) -> T:
         samp = self.s * super(AffineBeta, self).rsample(sample_shape) + self.t
         return samp.clamp(self.t + self.ε, self.s + self.t - self.ε)
 
-    def log_prob(self, value):
-        value = (value - self.t) / self.s
-        return super(AffineBeta, self).log_prob(value)
+    def log_prob(self, samples: T) -> T:
+        samples = (samples - self.t) / self.s
+        return super(AffineBeta, self).log_prob(samples)
 
 
-def norm_cdf(x: torch.Tensor):
+def norm_cdf(samples: T) -> T:
     """
     Element-wise cumulative value for tensor x under a normal distribution.
 
     Args:
-        x: the tensor
+        samples: the tensor
 
     Returns:
         the norm cdfs
     """
-    return (1.0 + torch.erf(x / sqrt(2.0))) / 2.0
+    return (1. + torch.erf(samples / sqrt(2.))) / 2.
 
 
-def rsample_truncated_normal(
-    μ: torch.Tensor, σ: torch.Tensor, ll: bool = False, a: float = -1.0, b: float = 1.0
+def norm_log_prob(samples: T, μ: T, log_σ: T) -> T:
+    return (
+        -0.5 * log(2.0 * π) - log_σ - 0.5 * (samples - μ) ** 2 / torch.exp(2.0 * log_σ)
+    )
+
+
+def norm_truncate_rsample(
+    μ: T, σ: T, ll: bool = False, a: float = -1.0, b: float = 1.0
 ):
     """
     Takes an rsample from a truncated normal distribution given the mean μ and
@@ -87,7 +94,3 @@ def rsample_truncated_normal(
         return tensor, log_l
     else:
         return tensor
-
-
-def likelihood_normal(x, μ, log_σ):
-    return -0.5 * log(2.0 * π) - log_σ - 0.5 * (x - μ) ** 2 / torch.exp(2.0 * log_σ)

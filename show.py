@@ -93,14 +93,11 @@ def show_prior(args):
 def show_prior_z(args):
     model = load_model(args.weights, args.device)
 
-    mel_spectr = MelSpectrogram()
-
     while True:
-        z = torch.rand((1, 1, 3072))
-        m_z = mel_spectr(z.squeeze(0))
-        out = model.reverse(z, m_z)
-        
-        plot.toy.reconstruction(z, out)
+        z = torch.rand((1, 80, 3072))
+        out = model.reverse(z)
+
+        plt.imshow(out.squeeze()[:, ::10])
         plt.show()
         exit_prompt()
 
@@ -139,23 +136,6 @@ def show_noise_plot(args):
     plt.show()
 
 
-def show_gan(args):
-    model = load_model(args.weights, args.device)
-    model.p_s = [
-        load_model(get_newest_checkpoint(f"Apr06*{args.k}*pt"), args.device).to(
-            args.device
-        )
-    ]
-
-    while True:
-        z = torch.randn((1, 1, 3072))
-        ŝ, log_p = model.forward(z)
-        plot.toy.reconstruction(z, ŝ, log_p)
-        plt.show()
-        exit_prompt()
-        plt.close()
-
-
 def show_mel(args):
     """
     Shows the Mel-spectrograms as they are gonna be computed for the toy data set.
@@ -167,6 +147,7 @@ def show_mel(args):
         axs = axs.flatten()
         for i in range(4):
             axs[i].imshow(m[i, ...])
+            axs[i].set_title(TOY_SIGNALS[i])
         plt.show()
         exit_prompt()
         plt.close(fig)
@@ -191,7 +172,6 @@ COMMANDS = {
     "denoiser": show_sample_denoiser,
     "noise": show_noise_plot,
     "mel": show_mel,
-    "gan": show_gan,
 }
 
 if __name__ == "__main__":

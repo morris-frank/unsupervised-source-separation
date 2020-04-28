@@ -25,20 +25,3 @@ def test_shift1d():
         assert y.shape == x.shape
         assert torch.all(y[:, :, : length - shift] == x[:, :, shift:])
         assert y.is_contiguous()
-
-
-def test_split_interleave():
-    from .functional import split, interleave
-
-    n_batch, n_channel, length = 8, 2, 32
-    x = torch.rand((n_batch, n_channel, length))
-    assert torch.all(interleave(*split(x)) == x)
-
-
-def test_destroy_along_channels():
-    from .functional import destroy_along_channels
-
-    bs, c, l = 4, 16, 128
-    x = torch.rand(bs, c, l)
-    _x = destroy_along_channels(x, 0.5)
-    assert (_x == 0.0).sum() == c // 2 * bs * l
