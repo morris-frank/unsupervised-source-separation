@@ -3,6 +3,7 @@ import musdb
 
 from ..data import Dataset
 from ..nn.modules import MelSpectrogram
+from ..functional import normalize
 
 
 class MusDB(Dataset):
@@ -18,4 +19,6 @@ class MusDB(Dataset):
     def __getitem__(self, idx: int):
         track = self.db[idx]
         signals = torch.tensor(track.stems.mean(-1), dtype=torch.float32)
+        for i in range(5):
+            signals[i, :] = normalize(signals[i, :])
         return signals

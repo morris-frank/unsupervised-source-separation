@@ -195,7 +195,7 @@ class Block(nn.Module):
             # WaveNet prior
             μ, σ = chunk(self.prior(x, c), groups=self.groups)
             N, _, L = μ.shape
-            log_p = norm_log_prob(z, μ, σ).view(N, self.groups, -1, L).sum(2)
+            log_p = norm_log_prob(z, μ, σ).view(N, self.groups, -1, L).mean(2)
 
         return x, c, logdet, log_p
 
@@ -260,12 +260,11 @@ class Flowavenet(BaseModel):
                 in_channel *= 2
 
     def forward(self, x, c=None):
-        N, _, L = x.size()
-        logdet, log_p_sum = 0, 0
+        N, C, L = x.size()
         out = x
-
         if c is not None:
             c = self.c_up(c, L)
+        logdet, log_p_sum = 0, 0
 
         for k, block in enumerate(self.blocks):
             out, c, logdet_new, logp_new = block(out, c)
@@ -275,10 +274,11 @@ class Flowavenet(BaseModel):
             log_p_sum = logp_new + log_p_sum
 
         log_p_out = -0.5 * (log(2.0 * pi) + out.pow(2))
-        log_p_out = log_p_out.view(N, self.groups, -1, L).sum(2)
+        log_p_out = log_p_out.view(N, self.groups, -1, L).mean(2)
         log_p_out = F.interpolate(log_p_out, size=L)
         log_p = log_p_sum + log_p_out
-        logdet = logdet / (N * L)
+
+        logdet = logdet / (N * C * L)
         return log_p, logdet
 
     def reverse(self, z, c=None):
