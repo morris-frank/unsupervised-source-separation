@@ -6,14 +6,15 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
-from tqdm import tqdm, trange
 from colorama import Fore
+from torch.nn import functional as F
+from tqdm import tqdm, trange
+
 from thesis import plot
 from thesis.data.toy import ToyData, generate_toy
 from thesis.io import load_model, save_append, get_newest_checkpoint
 from thesis.nn.modules import MelSpectrogram
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA
-from torch.nn import functional as F
 
 mpl.use("agg")
 
@@ -57,8 +58,7 @@ def make_cross_likelihood_plot(args):
 
         for i, (s, m) in enumerate(tqdm(data)):
             m = m.to(args.device)
-            m = F.interpolate(m, s.shape[-1], mode="linear",
-                              align_corners=False)
+            m = F.interpolate(m, s.shape[-1], mode="linear", align_corners=False)
             logp = model(m)[0]
             results[k, :, i] = logp.mean(-1).squeeze().cpu().numpy()
 
@@ -101,6 +101,19 @@ def make_toy_dataset(args):
             np.save(f"{args.data}/{name}/{name}_{i:05}.npy", item)
 
 
+def make_data_distribution(args):
+    from thesis.data.musdb import MusDB
+
+    data = MusDB(f"{args.data}", subsets="train")
+
+    bins = np.linspace(-1, 1, 101)
+    hists = np.zeros((5, 100))
+    for track in tqdm(data):
+        for i in range(5):
+            hists[i, :] += np.histogram(track[i, :], bins=bins)[0] / len(data)
+    np.save(f"musdb_histograms.npy", hists)
+
+
 def main(args):
     makedirs("./figures", exist_ok=True)
     if args.weights is None:
@@ -118,6 +131,7 @@ COMMANDS = {
     "noise": make_noise_likelihood_plot,
     "posterior": make_posterior_examples,
     "toy-data": make_toy_dataset,
+    "dist": make_data_distribution,
 }
 
 

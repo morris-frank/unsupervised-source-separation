@@ -10,7 +10,8 @@ from matplotlib import pyplot as plt
 
 from thesis import plot
 from thesis.data.toy import ToyData
-from thesis.io import load_model, exit_prompt, get_newest_checkpoint, get_newest_file
+from thesis.io import load_model, exit_prompt, get_newest_checkpoint, \
+    get_newest_file
 from thesis.nn.modules import MelSpectrogram
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA
 
@@ -18,7 +19,9 @@ from thesis.setup import TOY_SIGNALS, DEFAULT_DATA
 def show_sample(args):
     model = load_model(args.weights, args.device)
     # model.p_s = _load_prior_networks(device=args.device)
-    model.p_s = [load_model(get_newest_checkpoint('*Discr*'), args.device).to(args.device)]
+    model.p_s = [
+        load_model(get_newest_checkpoint("*Discr*"), args.device).to(args.device)
+    ]
 
     data = ToyData(
         f"{args.data}/test/", mix=True, mel=True, source=True, rand_amplitude=0.1
@@ -53,7 +56,7 @@ def show_sample_denoiser(args):
 
 
 def show_cross_likelihood(args):
-    log_p = np.load(get_newest_file('./figures', '*_cross_likelihood.npy'))
+    log_p = np.load(get_newest_file("./figures", "*_cross_likelihood.npy"))
 
     fig = plot.toy.plot_signal_heatmap((log_p.mean(-1)), TOY_SIGNALS)
     fig.suptitle(r"mean of likelihood log p(s)")
@@ -76,7 +79,7 @@ def show_prior(args):
     mel_spectr = MelSpectrogram()
 
     for (m, m_mel), (s, s_mel) in data:
-        rand_s = 0. * 2*torch.rand((1, 3072))-1
+        rand_s = 0.0 * 2 * torch.rand((1, 3072)) - 1
         rand_mel = mel_spectr(rand_s)
 
         sig = torch.cat((s, m, rand_s), dim=0).unsqueeze(1).repeat(1, 4, 1)

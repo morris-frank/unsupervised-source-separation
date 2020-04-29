@@ -38,7 +38,7 @@ class ToyData(Dataset):
         self.mel_source = mel_source
 
         if mel_source or mel:
-            self.melspec = MelSpectrogram()
+            self.spectrograph = MelSpectrogram()
 
         assert mix or self.source
         assert mix or not mel
@@ -49,7 +49,7 @@ class ToyData(Dataset):
 
     def _mel_get(self, signal, compute_mel):
         if compute_mel:
-            mel = self.melspec(signal.squeeze())
+            mel = self.spectrograph(signal.squeeze())
             if self.interpolate:
                 mel = F.interpolate(mel, signal.shape[-1], mode="linear", align_corners=False)
             return signal, mel
@@ -93,7 +93,7 @@ class ToyDataAndNoise(ToyData):
         if idx % 20 == 0:
             σ = uniform(0, 0.1)
             s = σ * torch.randn(1, 3072)
-            m = self.melspec(s.squeeze())
+            m = self.spectrograph(s.squeeze())
             return (s, m), -0.01
         else:
             return super(ToyDataAndNoise, self).__getitem__(idx), 1
@@ -104,12 +104,12 @@ class RandToyData(ToyData):
         if idx % 20 == 0:
             σ = uniform(0, 0.1)
             s = σ * torch.randn(1, 3072)
-            m = self.melspec(s.squeeze())
+            m = self.spectrograph(s.squeeze())
             return (s, m), -1
         elif idx % 21 == 0:
             s, m = super(RandToyData, self).__getitem__(idx)
             s = s.mean(0, keepdim=True)
-            m = self.melspec(s.squeeze())
+            m = self.spectrograph(s.squeeze())
             return (s, m), -1
         else:
             s, m = super(RandToyData, self).__getitem__(idx)
