@@ -49,8 +49,7 @@ def make_cross_likelihood_plot(args):
     results = np.zeros((K, K, len(data)))
 
     for i, (_, m) in enumerate(tqdm(data)):
-        m = m.view(1, K*m.shape[1], -1).repeat(K, 1, 1)
-        m = m.to(args.device)
+        m = m.repeat(1, K, 1).to(args.device)
         logp = model(m)[0]
         results[:, :, i] = logp.mean(-1).squeeze().cpu().numpy()
 
