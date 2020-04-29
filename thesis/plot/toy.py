@@ -1,5 +1,7 @@
+from itertools import product
 from math import tau as τ
 
+from matplotlib import rcParams
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -66,29 +68,43 @@ def add_plot_tick(ax, symbol, pos=0.5, where="tensor", size=0.05):
     x = np.linspace(0, τ)
 
     if "sin" in symbol:
-        _ax.plot(x, np.sin(x), c="k")
+        y = np.sin(x)
     elif "tri" in symbol:
-        _ax.plot(x, sawtooth(x, width=0.5), c="k")
+        y = sawtooth(x, width=0.5)
     elif "saw" in symbol:
-        _ax.plot(x, sawtooth(x, width=1.0), c="k")
+        y = sawtooth(x, width=1.0)
     elif "sq" in symbol:
-        _ax.plot(x, square(x), c="k")
+        y = square(x)
     else:
         raise ValueError("unknown symbol")
+
+    _ax.plot(x, y, linewidth=3, c="k")
 
 
 def plot_signal_heatmap(data, symbols):
     n = len(symbols)
     assert data.shape[0] == n == data.shape[1]
 
-    fig, ax = plt.subplots()
-    ax.axison = False
-    ax.imshow(data, norm=colors.SymLogNorm(linthresh=0.03))
+    fig = plt.figure()
+    ax = fig.add_axes((0.15, 0.15, 0.7, 0.7))
+    ax.imshow(data, norm=colors.SymLogNorm(linthresh=0.03, base=np.e))
+
+    for edge, spine in ax.spines.items():
+        spine.set_visible(False)
+    ax.set_xticks(np.arange(data.shape[1]+1)-.5)
+    ax.set_yticks(np.arange(data.shape[0]+1)-.5)
+    ax.grid(which="major", color=ax.get_facecolor(), linestyle='-', linewidth=5)
+    ax.tick_params(bottom=False, top=False, left=False, right=False, labelbottom=False, labeltop=False, labelleft=False, labelright=False)
+
+    for i, j in product(range(n), repeat=2):
+        col = "black" if data[i, j] > 0 else "white"
+        ax.text(j, i, f"{data[i, j]:.3}", ha="center", va="center", color=col)
 
     pos_tick = np.linspace(0, 1, 2 * n + 1)[1::2]
-    size = 1 / n * 2.5
+    size = 1 / n * 1.75
 
     for i in range(n):
         add_plot_tick(ax, symbols[i], pos=pos_tick[i], where="tensor", size=size)
         add_plot_tick(ax, symbols[i], pos=pos_tick[-i - 1], where="y", size=size)
+
     return fig

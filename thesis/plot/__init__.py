@@ -3,7 +3,7 @@ import matplotlib as mpl
 
 from . import toy
 
-mpl.use("TkAgg")
+mpl.use("TkCairo")
 mpl.style.use(f"{Path(__file__).parent.absolute()}/mpl.style")
 mpl.colors._colors_full_map["r"] = (0.80, 0.14, 0.11)
 mpl.colors._colors_full_map["g"] = (0.60, 0.59, 0.10)
