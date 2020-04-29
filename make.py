@@ -109,7 +109,8 @@ def make_data_distribution(args):
     hists = np.zeros((5, 100))
     for track in tqdm(data):
         for i in range(5):
-            hists[i, :] += np.histogram(track[i, :], bins=bins)[0] / len(data)
+            _track = track[i, :][track[i, :].abs() > 0.05]
+            hists[i, :] += np.histogram(_track, bins=bins)[0] / len(data)
     np.save(f"musdb_histograms.npy", hists)
 
 

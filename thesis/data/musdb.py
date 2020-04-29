@@ -6,7 +6,7 @@ from ..functional import normalize
 
 
 class MusDB(Dataset):
-    def __init__(self, path: str, subsets: str, mel: bool = True, **kwargs):
+    def __init__(self, path: str, subsets: str, mel: bool = False, **kwargs):
         super(MusDB, self).__init__(sr=44100, **kwargs)
 
         self.mel = mel
