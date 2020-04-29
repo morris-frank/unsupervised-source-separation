@@ -7,14 +7,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from colorama import Fore
-from torch.nn import functional as F
 from tqdm import tqdm, trange
 
 from thesis import plot
 from thesis.data.toy import ToyData, generate_toy
 from thesis.io import load_model, save_append, get_newest_checkpoint
 from thesis.nn.modules import MelSpectrogram
-from thesis.setup import TOY_SIGNALS, DEFAULT_DATA
+from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, DEFAULT_MUSDB
 
 mpl.use("agg")
 
@@ -97,7 +96,7 @@ def make_toy_dataset(args):
 def make_data_distribution(args):
     from thesis.data.musdb import MusDB
 
-    data = MusDB(f"{args.data}", subsets="train")
+    data = MusDB(DEFAULT_MUSDB, subsets="train")
 
     # _, axs = plt.subplots(5)
     # for i, ax in zip(range(5), axs):
