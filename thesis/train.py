@@ -176,7 +176,7 @@ def train(
                 )
                 exit()
             optimizer.step()
-            scheduler.step(it)
+            scheduler.step()
 
         losses.append(ℒ.detach().item())
         it_times.append(time.time() - it_start_time)

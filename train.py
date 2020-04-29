@@ -15,8 +15,7 @@ from thesis.train import train
 
 def _load_prior_networks(prefix: str = "Apr06", device="cuda"):
     return [
-        load_model(get_newest_checkpoint(f"{prefix}*Flowavenet*{s}"),
-                   device).to(device)
+        load_model(get_newest_checkpoint(f"{prefix}*Flowavenet*{s}"), device).to(device)
         for s in TOY_SIGNALS
     ]
 
@@ -25,7 +24,7 @@ def train_prior(path: str, signal: str = None):
     from thesis.nn.models.flowavenet import Flowavenet
 
     if signal is None:
-        name = 'all'
+        name = "all"
         source = True
         groups = len(TOY_SIGNALS)
     else:
@@ -42,15 +41,14 @@ def train_prior(path: str, signal: str = None):
         block_per_split=2,
         width=48,
         name=name,
-        groups=groups
+        groups=groups,
     )
 
-    train_set = ToyData(
-        path % "train", source=source, mel_source=True, noise=0.03, rand_noise=True
+    set_opt = dict(
+        source=source, mel_source=True, noise=0.03, rand_noise=True, interpolate=True
     )
-    test_set = ToyData(
-        path % "test", source=source, mel_source=True, noise=0.03, rand_noise=True
-    )
+    train_set = ToyData(path % "train", **set_opt)
+    test_set = ToyData(path % "test", **set_opt)
     return model, train_set, test_set
 
 
@@ -59,15 +57,13 @@ def train_demixer(path: str):
 
     model = Demixer(width=128, name="annil")
     # model.p_s = _load_prior_networks()
-    model.p_s = [load_model(get_newest_checkpoint('*Discrim*'), device="cuda").to("cuda")]
+    model.p_s = [
+        load_model(get_newest_checkpoint("*Discrim*"), device="cuda").to("cuda")
+    ]
 
-    train_set = ToyData(
-        path % "train", mix=True, mel=True, source=True, rand_amplitude=0.1
-    )
-    test_set = ToyData(
-        path % "test", mix=True, mel=True, source=True, rand_amplitude=0.1
-    )
-
+    set_opt = dict(mix=True, mel=True, source=True, rand_amplitude=0.1)
+    train_set = ToyData(path % "train", **set_opt)
+    test_set = ToyData(path % "test", **set_opt)
     return model, train_set, test_set
 
 
@@ -76,8 +72,7 @@ def train_denoiser(path: str, signal: str, modelclass):
 
     model = modelclass(width=128, name=signal)
     model.p_s = [
-        load_model(get_newest_checkpoint(f"*Flowavenet*{signal}"), "cuda").to(
-            "cuda")
+        load_model(get_newest_checkpoint(f"*Flowavenet*{signal}"), "cuda").to("cuda")
     ]
 
     train_set = ToyData(path % "train", source=k, rand_amplitude=0.1)

@@ -250,7 +250,7 @@ class Flowavenet(BaseModel):
                     split=split,
                     width=width,
                     cin_channel=cin_channel,
-                    groups=groups
+                    groups=groups,
                 )
             )
             if cin_channel is not None:
@@ -273,9 +273,10 @@ class Flowavenet(BaseModel):
                 logp_new = F.interpolate(logp_new, size=L)
             log_p_sum = logp_new + log_p_sum
 
-        out = F.interpolate(out, size=L)
         log_p_out = -0.5 * (log(2.0 * pi) + out.pow(2))
-        log_p = log_p_sum + log_p_out.view(N, self.groups, -1, L).sum(2)
+        log_p_out = log_p_out.view(N, self.groups, -1, L).sum(2)
+        log_p_out = F.interpolate(log_p_out, size=L)
+        log_p = log_p_sum + log_p_out
         logdet = logdet / (N * L)
         return log_p, logdet
 
@@ -307,7 +308,6 @@ class Flowavenet(BaseModel):
         C = s.shape[1]
         if m.dim() > 3:
             m = m.flatten(1, 2)
-        m = F.interpolate(m, s.shape[-1], mode="linear", align_corners=False)
         log_p, logdet = self.forward(m)
 
         self.ℒ.logdet = -torch.mean(logdet)
@@ -315,6 +315,6 @@ class Flowavenet(BaseModel):
 
         log_p = -log_p.mean(-1).mean(0)
         for c in range(C):
-            setattr(self.ℒ, f'log_p/{c}', log_p[c])
-            ℒ += getattr(self.ℒ, f'log_p/{c}')
+            setattr(self.ℒ, f"log_p/{c}", log_p[c])
+            ℒ += getattr(self.ℒ, f"log_p/{c}")
         return ℒ
