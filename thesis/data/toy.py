@@ -4,7 +4,6 @@ from typing import Union
 
 import numpy as np
 import torch
-from torch.nn import functional as F
 
 from ..audio import rand_period_phase, oscillator
 from ..data import Dataset
@@ -24,21 +23,17 @@ class ToyData(Dataset):
         rand_amplitude: float = 0.0,
         noise: float = 0.0,
         rand_noise: bool = False,
-        interpolate: bool = False,
+        **kwargs
     ):
-        super(ToyData, self).__init__()
+        super(ToyData, self).__init__(**kwargs)
         self.files = glob(f"{path}/*npy")
         self.mix, self.mel = mix, mel
         self.rand_amplitude = rand_amplitude
         self.noise, self.rand_noise = noise, rand_noise
-        self.interpolate = interpolate
 
         self.k = "all" if isinstance(source, bool) else source
         self.source = source is not False
         self.mel_source = mel_source
-
-        if mel_source or mel:
-            self.spectrograph = MelSpectrogram()
 
         assert mix or self.source
         assert mix or not mel
@@ -46,15 +41,6 @@ class ToyData(Dataset):
 
     def __len__(self):
         return len(self.files)
-
-    def _mel_get(self, signal, compute_mel):
-        if compute_mel:
-            mel = self.spectrograph(signal.squeeze())
-            if self.interpolate:
-                mel = F.interpolate(mel, signal.shape[-1], mode="linear", align_corners=False)
-            return signal, mel
-        else:
-            return signal
 
     def __getitem__(self, idx: int):
         datum = np.load(self.files[idx], allow_pickle=True).item()

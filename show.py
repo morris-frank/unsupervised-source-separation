@@ -143,14 +143,16 @@ def show_mel(args):
     """
     Shows the Mel-spectrograms as they are gonna be computed for the toy data set.
     """
-    data = ToyData(f"{args.data}/test/", source=True, mel_source=True)
+    from thesis.data.musdb import MusDB
+    # data = ToyData(f"{args.data}/test/", source=True, mel_source=True)
+    data = MusDB(f"/home/morris/var/data/musdb18", subsets='train', mel=True)
+    signals = ["mix", "drums", "bass", "other", "vocals"]
 
-    for s, m in data:
-        fig, axs = plt.subplots(2, 2)
-        axs = axs.flatten()
-        for i in range(4):
-            axs[i].imshow(m[i, ...])
-            axs[i].set_title(TOY_SIGNALS[i])
+    for _, m in data:
+        fig, axs = plt.subplots(5)
+        for i, ax in enumerate(axs):
+            ax.imshow(m[i, :, ::30])
+            ax.set_title(signals[i])
         plt.show()
         exit_prompt()
         plt.close(fig)

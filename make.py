@@ -41,29 +41,22 @@ def make_noise_likelihood_plot(args):
 
 
 def make_cross_likelihood_plot(args):
-    # TOY_SIGNALS = ['triangle']
+    weights = get_newest_checkpoint(f"*Flowavenet*pt")
+    fp = f"./figures/{path.basename(weights).split('-')[0]}_prior_cross_likelihood.npy"
+
+    model = load_model(weights, args.device)
+    data = ToyData(f"{args.data}/test/", source=True, mel_source=True, interpolate=True)
     K = len(TOY_SIGNALS)
-    # K = 4
-    results = None
-    for k, signal in enumerate(TOY_SIGNALS):
-        weights = get_newest_checkpoint(f"*Flowavenet*{signal}*pt")
-        fp = f"./figures/{path.basename(weights).split('-')[0]}_prior_cross_likelihood.npy"
+    results = np.zeros((K, K, len(data)))
 
-        model = load_model(weights, args.device)
+    for i, (_, m) in enumerate(tqdm(data)):
+        m = m.view(1, K*m.shape[1], -1).repeat(K, 1, 1)
+        m = m.to(args.device)
+        logp = model(m)[0]
+        results[:, :, i] = logp.mean(-1).squeeze().cpu().numpy()
 
-        data = ToyData(f"{args.data}/test/", source=True, mel_source=True)
-
-        if results is None:
-            results = np.zeros((K, K, len(data)))
-
-        for i, (s, m) in enumerate(tqdm(data)):
-            m = m.to(args.device)
-            m = F.interpolate(m, s.shape[-1], mode="linear", align_corners=False)
-            logp = model(m)[0]
-            results[k, :, i] = logp.mean(-1).squeeze().cpu().numpy()
-
-        print(Fore.YELLOW + "Saving to " + fp + Fore.RESET)
-        np.save(fp, results)
+    print(Fore.YELLOW + "Saving to " + fp + Fore.RESET)
+    np.save(fp, results)
 
 
 def make_separation_examples(args):
@@ -108,7 +101,8 @@ def make_data_distribution(args):
 
     # _, axs = plt.subplots(5)
     # for i, ax in zip(range(5), axs):
-    #     ax.bar((bins + 0.01)[:-1], histi[i, :])
+    #     # ax.bar((bins + 0.01)[:-1], histi[i, :])
+    #     ax.plot(histi[i, :])
     # plt.show()
 
     bins = np.linspace(-1, 1, 101)

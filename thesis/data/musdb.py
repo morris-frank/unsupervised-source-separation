@@ -2,16 +2,15 @@ import torch
 import musdb
 
 from ..data import Dataset
-from ..nn.modules import MelSpectrogram
 from ..functional import normalize
 
 
 class MusDB(Dataset):
-    def __init__(self, path: str, subsets: str):
-        super(MusDB, self).__init__()
+    def __init__(self, path: str, subsets: str, mel: bool = True, **kwargs):
+        super(MusDB, self).__init__(sr=44100, **kwargs)
 
+        self.mel = mel
         self.db = musdb.DB(root=path, subsets=subsets)
-        self.spectrograph = MelSpectrogram()
 
     def __len__(self):
         return len(self.db)
@@ -21,4 +20,5 @@ class MusDB(Dataset):
         signals = torch.tensor(track.stems.mean(-1), dtype=torch.float32)
         for i in range(5):
             signals[i, :] = normalize(signals[i, :])
+        signals = self._mel_get(signals, self.mel)
         return signals
