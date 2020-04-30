@@ -28,7 +28,7 @@ def train_prior(args):
 
     model = Flowavenet(
         in_channel=80,
-        n_block=4 if args.musdb else 4,
+        n_block=8 if args.musdb else 4,
         n_flow=10 if args.musdb else 10,
         n_layer=4 if args.musdb else 4,
         block_per_split=2 if args.musdb else 2,
