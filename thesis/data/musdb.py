@@ -1,9 +1,10 @@
-import torch
+from random import randint
+
 import musdb
+import torch
 
 from ..data import Dataset
 from ..functional import normalize
-from random import randint
 
 
 class MusDB(Dataset):
@@ -12,7 +13,7 @@ class MusDB(Dataset):
 
         self.mel = mel
         self.db = musdb.DB(root=path, subsets=subsets)
-        self.L = 3 * 2**10
+        self.L = 3 * 2 ** 10
 
     def __len__(self):
         return len(self.db)
@@ -22,7 +23,7 @@ class MusDB(Dataset):
 
         stems = track.stems[1:, ::3, :]
         ν = randint(0, stems.shape[1] - self.L)
-        stems = stems[:, None, ν:ν+self.L, :].mean(-1)
+        stems = stems[:, None, ν : ν + self.L, :].mean(-1)
 
         signals = torch.tensor(stems, dtype=torch.float32)
         for i in range(4):

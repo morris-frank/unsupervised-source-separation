@@ -39,12 +39,17 @@ def train_prior(args):
 
     if args.musdb:
         from thesis.data.musdb import MusDB
+
         set_opt = dict(mel=True, interpolate=True)
         train_set = MusDB(args.data, "train", **set_opt)
         test_set = MusDB(args.data, "test", **set_opt)
     else:
         set_opt = dict(
-            source=source, mel_source=True, noise=0.03, rand_noise=True, interpolate=True
+            source=source,
+            mel_source=True,
+            noise=0.03,
+            rand_noise=True,
+            interpolate=True,
         )
         train_set = ToyData(args.data, "train", **set_opt)
         test_set = ToyData(args.data, "test", **set_opt)
@@ -88,6 +93,7 @@ def main(args):
 
     model, train_set, test_set = EXPERIMENTS[args.experiment](args)
 
+    print(f"pid is: {os.getpid()}")
     train_loader = train_set.loader(args.batch_size)
     test_loader = test_set.loader(args.batch_size)
 

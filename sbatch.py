@@ -17,6 +17,8 @@ def main(args):
 
     p = "gpu_short" if args.short else "gpu_shared"
     t = "0:30:00" if args.short else f"{args.hours}:00:00"
+    if args.short:
+        args.batch_size = 2
 
     name = args.experiment
     if args.k:
@@ -24,9 +26,8 @@ def main(args):
 
     c = {
         "job-name": name,
-        "cpus-per-task": 2,
         "time": t,
-        "mem": "10000M",
+        "mem": "16000M",
         "partition": p,
         "gres": "gpu:1",
         "output": f"./log/{datetime.today():%b%d-%H%M}_%x_{p}.out",
@@ -44,8 +45,7 @@ def main(args):
     f += "cd /home/frankm/thesis\n"
 
     f += (
-        f"srun /home/frankm/.pyenv/shims/python3.7 {args.file}.py "
-        f"{args.experiment} --data=/home/frankm/data/toy/"
+        f"srun /home/frankm/.pyenv/shims/python3.7 {args.file}.py " f"{args.experiment}"
     )
 
     if args.file == "train":
@@ -74,11 +74,11 @@ def main(args):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("experiment", type=str)
-    parser.add_argument("--short", action="store_true")
     parser.add_argument("-t", type=int, default=5, dest="hours")
-    parser.add_argument("--batch_size", type=int)
     parser.add_argument("-f", type=str, default="train", dest="file")
     parser.add_argument("-k", type=str, required=False)
+    parser.add_argument("--batch_size", type=int)
+    parser.add_argument("-short", action="store_true")
     parser.add_argument("-debug", action="store_true")
     parser.add_argument("-musdb", action="store_true")
     main(parser.parse_args())
