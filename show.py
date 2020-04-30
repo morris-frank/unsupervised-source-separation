@@ -2,6 +2,7 @@
 from argparse import ArgumentParser
 from os import path
 
+import matplotlib as mpl
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -10,10 +11,11 @@ from matplotlib import pyplot as plt
 
 from thesis import plot
 from thesis.data.toy import ToyData
-from thesis.io import load_model, exit_prompt, get_newest_checkpoint, \
-    get_newest_file
+from thesis.io import load_model, exit_prompt, get_newest_checkpoint, get_newest_file
 from thesis.nn.modules import MelSpectrogram
 from thesis.setup import TOY_SIGNALS, DEFAULT_DATA
+
+mpl.use("TkCairo")
 
 
 def show_sample(args):
@@ -59,14 +61,21 @@ def show_cross_likelihood(args):
     log_p = np.load(get_newest_file("./figures", "*_cross_likelihood.npy"))
     log_p[log_p == -np.inf] = -1e3
     log_p = np.maximum(log_p, -1e3)
+    log_p = log_p.swapaxes(0, 1)
 
-    fig = plot.toy.plot_signal_heatmap(log_p.mean(-1), TOY_SIGNALS)
-    fig.suptitle(r"mean of likelihood log p(s)")
-    fig.show()
-    exit_prompt()
+    # fig = plt.figure()
+    fig, (ax1, ax2) = plt.subplots(
+        1, 2, gridspec_kw=dict(left=0.1, right=0.95, top=0.9, bottom=0.05, wspace=0.2)
+    )
 
-    fig = plot.toy.plot_signal_heatmap(log_p.var(-1), TOY_SIGNALS)
-    fig.suptitle("var of likelihood log p(s)")
+    # ax = fig.add_axes((0.15, 0.15, 0.7, 0.7))
+    plot.toy.plot_signal_heatmap(ax1, log_p.mean(-1), TOY_SIGNALS)
+    ax1.set_title(r"mean of likelihood log p(s)")
+
+    # ax = fig.add_axes((0.15, 0.15, 0.7, 0.7))
+    plot.toy.plot_signal_heatmap(ax2, log_p.var(-1), TOY_SIGNALS)
+    ax2.set_title("var of likelihood log p(s)")
+
     fig.show()
     exit_prompt()
     plt.close()
@@ -146,8 +155,9 @@ def show_mel(args):
     Shows the Mel-spectrograms as they are gonna be computed for the toy data set.
     """
     from thesis.data.musdb import MusDB
+
     # data = ToyData(f"{args.data}/test/", source=True, mel_source=True)
-    data = MusDB(f"/home/morris/var/data/musdb18", subsets='train', mel=True)
+    data = MusDB(f"/home/morris/var/data/musdb18", subsets="train", mel=True)
     signals = ["mix", "drums", "bass", "other", "vocals"]
 
     for _, m in data:

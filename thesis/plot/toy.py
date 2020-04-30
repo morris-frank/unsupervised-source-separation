@@ -81,12 +81,10 @@ def add_plot_tick(ax, symbol, pos=0.5, where="tensor", size=0.05):
     _ax.plot(x, y, linewidth=3, c="k")
 
 
-def plot_signal_heatmap(data, symbols):
+def plot_signal_heatmap(ax, data, symbols):
     n = len(symbols)
     assert data.shape[0] == n == data.shape[1]
 
-    fig = plt.figure()
-    ax = fig.add_axes((0.15, 0.15, 0.7, 0.7))
     ax.imshow(data, norm=colors.SymLogNorm(linthresh=0.03, base=np.e))
 
     for edge, spine in ax.spines.items():
@@ -106,5 +104,3 @@ def plot_signal_heatmap(data, symbols):
     for i in range(n):
         add_plot_tick(ax, symbols[i], pos=pos_tick[i], where="tensor", size=size)
         add_plot_tick(ax, symbols[i], pos=pos_tick[-i - 1], where="y", size=size)
-
-    return fig
