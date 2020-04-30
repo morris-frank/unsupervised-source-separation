@@ -19,7 +19,7 @@ def train_prior(args):
     if args.signal is None:
         name = "all"
         source = True
-        groups = DEFAULT.signals
+        groups = len(DEFAULT.signals)
     else:
         name = args.signal
         k = DEFAULT.signals(args.signal)
@@ -28,7 +28,7 @@ def train_prior(args):
 
     model = Flowavenet(
         in_channel=80,
-        n_block=8 if args.musdb else 4,
+        n_block=4 if args.musdb else 4,
         n_flow=10 if args.musdb else 10,
         n_layer=4 if args.musdb else 4,
         block_per_split=2 if args.musdb else 2,
@@ -39,7 +39,7 @@ def train_prior(args):
 
     if args.musdb:
         from thesis.data.musdb import MusDB
-        set_opt = dict()
+        set_opt = dict(mel=True, interpolate=True)
         train_set = MusDB(args.data, "train", **set_opt)
         test_set = MusDB(args.data, "test", **set_opt)
     else:

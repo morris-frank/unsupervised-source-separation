@@ -100,7 +100,7 @@ def make_data_distribution(args):
     # _, axs = plt.subplots(5)
     # for i, ax in zip(range(5), axs):
     #     # ax.bar((bins + 0.01)[:-1], histi[i, :])
-    #     ax.plot(histi[i, :])
+    #     ax.plot(log_p[i, :])
     # plt.show()
 
     bins = np.linspace(-1, 1, 101)
