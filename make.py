@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
-from os import path, makedirs
+from os import path, makedirs, environ
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -119,6 +119,9 @@ def main(args):
     args.basename = path.basename(args.weights)[:-3]
     makedirs(f"./figures/{args.basename}/", exist_ok=True)
     args.device = "cpu" if args.cpu else "cuda"
+
+    print(f"{'PATH IS'.center(80, '-')}:\n\n{environ['PATH']}\n\n{' '.center(80, '-')}")
+
     with torch.no_grad():
         COMMANDS[args.command](args)
 

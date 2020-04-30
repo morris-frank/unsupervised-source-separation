@@ -84,8 +84,6 @@ def main(args):
     if IS_HERMES:
         args.batch_size = 2
 
-    print(f"{'PATH IS'.center(80, '-')}:\n\n{os.environ['PATH']}\n\n{' '.center(80, '-')}")
-
     fa = {"path": f"{args.data}/%s/"}
     if args.signal is not None:
         fa["signal"] = args.signal
