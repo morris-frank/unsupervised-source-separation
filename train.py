@@ -123,7 +123,7 @@ if __name__ == "__main__":
     )
     parser.add_argument("--data", type=os.path.abspath, default=None)
     parser.add_argument("-wandb", action="store_true", help="Logs to WandB.")
-    parser.add_argument("--iterations", default=21_000, type=int)
+    parser.add_argument("--iterations", default=50_000, type=int)
     parser.add_argument("--batch_size", type=int, default=None)
     parser.add_argument("-debug", action="store_true")
     parser.add_argument("-musdb", action="store_true")
