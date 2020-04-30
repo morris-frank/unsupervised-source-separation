@@ -13,7 +13,7 @@ from thesis import plot
 from thesis.data.toy import ToyData, generate_toy
 from thesis.io import load_model, save_append, get_newest_checkpoint
 from thesis.nn.modules import MelSpectrogram
-from thesis.setup import TOY_SIGNALS, DEFAULT_DATA, DEFAULT_MUSDB
+from thesis.setup import TOY_SIGNALS, DEFAULT_TOY, DEFAULT_MUSDB
 
 mpl.use("agg")
 
@@ -22,7 +22,7 @@ def make_noise_likelihood_plot(args):
     k = TOY_SIGNALS.index(args.k)
     model = load_model(args.weights, args.device)
     mel = MelSpectrogram()
-    data = ToyData(f"{args.data}/test/", source=k, mel_source=True)
+    data = ToyData(args.data, "test", source=k, mel_source=True)
 
     results = {}
     for σ in [0.0, 0.001, 0.01, 0.05, 0.1, 0.2, 0.3]:
@@ -44,7 +44,7 @@ def make_cross_likelihood_plot(args):
     fp = f"./figures/{path.basename(weights).split('-')[0]}_prior_cross_likelihood.npy"
 
     model = load_model(weights, args.device)
-    data = ToyData(f"{args.data}/test/", source=True, mel_source=True, interpolate=True)
+    data = ToyData(args.data, "test", source=True, mel_source=True, interpolate=True)
     K = len(TOY_SIGNALS)
     results = np.zeros((K, K, len(data)))
 
@@ -59,7 +59,7 @@ def make_cross_likelihood_plot(args):
 
 def make_separation_examples(args):
     model = load_model(args.weights, args.device)
-    data = ToyData(f"{args.data}/test/", mix=True, mel=True, source=True)
+    data = ToyData(args.data, "test", mix=True, mel=True, source=True)
     for i, ((mix, mel), sources) in enumerate(tqdm(data.loader(1))):
         mix, mel = mix.to(args.device), mel.to(args.device)
         ŝ = model.umix(mix, mel)[0]
@@ -70,7 +70,7 @@ def make_separation_examples(args):
 
 def make_posterior_examples(args):
     model = load_model(args.weights, args.device)
-    dset = ToyData(path=f"{args.data}/test/", mix=True, mel=True, source=True)
+    dset = ToyData(args.data, "test", mix=True, mel=True, source=True)
 
     for (m, mel), s in tqdm(dset):
         (ŝ,) = model.q_s(m.unsqueeze(0), mel.unsqueeze(0)).mean
@@ -120,8 +120,6 @@ def main(args):
     makedirs(f"./figures/{args.basename}/", exist_ok=True)
     args.device = "cpu" if args.cpu else "cuda"
 
-    print(f"{'PATH IS'.center(80, '-')}:\n\n{environ['PATH']}\n\n{' '.center(80, '-')}")
-
     with torch.no_grad():
         COMMANDS[args.command](args)
 
@@ -141,6 +139,6 @@ if __name__ == "__main__":
     parser.add_argument("command", choices=COMMANDS.keys())
     parser.add_argument("--weights", type=get_newest_checkpoint)
     parser.add_argument("-k", choices=TOY_SIGNALS)
-    parser.add_argument("--data", type=path.abspath, default=DEFAULT_DATA)
+    parser.add_argument("--data", type=path.abspath, default=DEFAULT_TOY)
     parser.add_argument("-cpu", action="store_true")
     main(parser.parse_args())

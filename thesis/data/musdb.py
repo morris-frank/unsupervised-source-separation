@@ -17,7 +17,8 @@ class MusDB(Dataset):
 
     def __getitem__(self, idx: int):
         track = self.db[idx]
-        signals = torch.tensor(track.stems.mean(-1), dtype=torch.float32)
+
+        signals = torch.tensor(track.stems[1:, ...].mean(-1), dtype=torch.float32)
         for i in range(5):
             signals[i, :] = normalize(signals[i, :])
         signals = self._mel_get(signals, self.mel)

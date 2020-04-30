@@ -7,7 +7,6 @@ import torch
 
 from ..audio import rand_period_phase, oscillator
 from ..data import Dataset
-from ..nn.modules import MelSpectrogram
 
 from random import uniform, randint
 
@@ -16,6 +15,7 @@ class ToyData(Dataset):
     def __init__(
         self,
         path: str,
+        subset: str,
         mix: bool = False,
         mel: bool = False,
         source: Union[bool, int] = False,
@@ -26,7 +26,7 @@ class ToyData(Dataset):
         **kwargs
     ):
         super(ToyData, self).__init__(**kwargs)
-        self.files = glob(f"{path}/*npy")
+        self.files = glob(f"{path}/{subset}/*npy")
         self.mix, self.mel = mix, mel
         self.rand_amplitude = rand_amplitude
         self.noise, self.rand_noise = noise, rand_noise

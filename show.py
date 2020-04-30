@@ -13,20 +13,19 @@ from thesis import plot
 from thesis.data.toy import ToyData
 from thesis.io import load_model, exit_prompt, get_newest_checkpoint, get_newest_file
 from thesis.nn.modules import MelSpectrogram
-from thesis.setup import TOY_SIGNALS, DEFAULT_DATA
+from thesis.setup import TOY_SIGNALS, DEFAULT_TOY
 
 mpl.use("TkCairo")
 
 
 def show_sample(args):
     model = load_model(args.weights, args.device)
-    # model.p_s = _load_prior_networks(device=args.device)
     model.p_s = [
         load_model(get_newest_checkpoint("*Discr*"), args.device).to(args.device)
     ]
 
     data = ToyData(
-        f"{args.data}/test/", mix=True, mel=True, source=True, rand_amplitude=0.1
+        args.data, "test", mix=True, mel=True, source=True, rand_amplitude=0.1
     )
 
     for (m, mel), s in data.loader(1):
@@ -46,7 +45,7 @@ def show_sample_denoiser(args):
         )
     ]
 
-    data = ToyData(f"{args.data}/test/", source=k, rand_amplitude=0.1)
+    data = ToyData(args.data, "test", source=k, rand_amplitude=0.1)
 
     for s in data.loader(1):
         s_noised = (s + 0.01 * torch.randn_like(s)).clamp(-1, 1)
@@ -85,7 +84,7 @@ def show_prior(args):
     model = load_model(args.weights, args.device)
 
     data = ToyData(
-        f"{args.data}/test/", mix=True, mel=True, source=True, mel_source=True
+        args.data, "test", mix=True, mel=True, source=True, mel_source=True
     )
     mel_spectr = MelSpectrogram()
 
@@ -195,7 +194,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("command", choices=COMMANDS.keys())
     parser.add_argument("--weights", type=get_newest_checkpoint)
-    parser.add_argument("--data", type=path.abspath, default=DEFAULT_DATA)
+    parser.add_argument("--data", type=path.abspath, default=DEFAULT_TOY)
     parser.add_argument("-k", choices=TOY_SIGNALS)
     parser.add_argument("-gpu", action="store_true")
     main(parser.parse_args())

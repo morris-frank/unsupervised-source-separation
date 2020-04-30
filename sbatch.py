@@ -20,7 +20,7 @@ def main(args):
 
     name = args.experiment
     if args.k:
-        name += '_' + args.k
+        name += "_" + args.k
 
     c = {
         "job-name": name,
@@ -39,7 +39,7 @@ def main(args):
         "export LD_LIBRARY_PATH="
         "/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH\n\n"
         "export LC_ALL=en_US.utf8\n"
-        "export LANG=\"$LC_ALL\"\n"
+        'export LANG="$LC_ALL"\n'
     )
     f += "cd /home/frankm/thesis\n"
 
@@ -53,6 +53,9 @@ def main(args):
 
     if args.debug:
         f += " -debug"
+
+    if args.musdb:
+        f += " -musdb"
 
     if args.k:
         f += f" -k {args.k}"
@@ -74,7 +77,8 @@ if __name__ == "__main__":
     parser.add_argument("--short", action="store_true")
     parser.add_argument("-t", type=int, default=5, dest="hours")
     parser.add_argument("--batch_size", type=int)
-    parser.add_argument("-f", type=str, default='train', dest="file")
+    parser.add_argument("-f", type=str, default="train", dest="file")
     parser.add_argument("-k", type=str, required=False)
     parser.add_argument("-debug", action="store_true")
+    parser.add_argument("-musdb", action="store_true")
     main(parser.parse_args())
