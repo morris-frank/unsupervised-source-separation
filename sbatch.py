@@ -35,6 +35,7 @@ def main(args):
     f = f"#!/usr/bin/env bash\n\n"
     f += "\n".join(f"#SBATCH --{k}={v}" for k, v in c.items()) + "\n"
     f += (
+        'PATH="/home/frankm/.local/bin:$PATH"'
         "export LD_LIBRARY_PATH="
         "/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH\n\n"
         "export LC_ALL=en_US.utf8\n"
