@@ -1,3 +1,4 @@
+from glob import glob
 import os
 from os import path
 from random import randint
@@ -41,3 +42,16 @@ class MusDB(Dataset):
         for j, i in tqdm(product(range(n), range(len(self)))):
             signals = self[i]
             torch.save(signals, f"{fp}/{i:03}_{j:03}_{os.getpid()}.pt")
+
+
+class MusDBSamples(Dataset):
+    def __init__(self, path: str, subsets: str, **kwargs):
+        super(MusDBSamples, self).__init__(**kwargs)
+        path = path + '_samples/' + subsets + '/*pt'
+        self.files = glob(path)
+
+    def __len__(self):
+        return len(self.files)
+
+    def __getitem__(self, idx: int):
+        return torch.load(self.files[idx])

@@ -96,7 +96,7 @@ def make_musdb_pre_save(args):
     from thesis.data.musdb import MusDB
     n = 100
 
-    data = MusDB(DEFAULT_MUSDB, subsets="train")
+    data = MusDB(DEFAULT_MUSDB, subsets="train", mel=True)
     data.pre_save(n)
 
 

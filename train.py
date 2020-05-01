@@ -38,11 +38,10 @@ def train_prior(args):
     )
 
     if args.musdb:
-        from thesis.data.musdb import MusDB
+        from thesis.data.musdb import MusDBSamples
 
-        set_opt = dict(mel=True, interpolate=True)
-        train_set = MusDB(args.data, "train", **set_opt)
-        test_set = MusDB(args.data, "test", **set_opt)
+        train_set = MusDBSamples(args.data, "train")
+        test_set = MusDBSamples(args.data, "test")
     else:
         set_opt = dict(
             source=source,
