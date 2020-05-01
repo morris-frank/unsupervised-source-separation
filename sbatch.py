@@ -36,11 +36,11 @@ def main(args):
     f = f"#!/usr/bin/env bash\n\n"
     f += "\n".join(f"#SBATCH --{k}={v}" for k, v in c.items()) + "\n"
     f += (
-        'export PATH="/home/frankm/.local/bin:$PATH"\n'
+        '\nexport PATH="/home/frankm/.local/bin:$PATH"\n'
         "export LD_LIBRARY_PATH="
-        "/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH\n\n"
+        "/hpc/eb/Debian/cuDNN/7.4.2-CUDA-10.0.130/lib64:$LD_LIBRARY_PATH\n"
         "export LC_ALL=en_US.utf8\n"
-        'export LANG="$LC_ALL"\n'
+        'export LANG="$LC_ALL"\n\n'
     )
     f += "cd /home/frankm/thesis\n"
 
@@ -65,10 +65,11 @@ def main(args):
         fp.write(f + "\n")
     os.makedirs("./log/", exist_ok=True)
     print(Fore.YELLOW + f"Written job file ./{fn}")
-    rc = subprocess.call(["sbatch", fn])
-    if rc == 0:
-        os.remove(fn)
-    exit(rc)
+    if not args.test:
+        rc = subprocess.call(["sbatch", fn])
+        if rc == 0:
+            os.remove(fn)
+        exit(rc)
 
 
 if __name__ == "__main__":
@@ -81,4 +82,5 @@ if __name__ == "__main__":
     parser.add_argument("-short", action="store_true")
     parser.add_argument("-debug", action="store_true")
     parser.add_argument("-musdb", action="store_true")
+    parser.add_argument("-test", action="store_true", help="Just print the file")
     main(parser.parse_args())
