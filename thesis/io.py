@@ -1,9 +1,11 @@
+import time
 import os
 import warnings
 from collections import OrderedDict
 from glob import glob
 from os import path
 from typing import Any
+from pathlib import Path
 
 import torch
 from colorama import Fore
@@ -92,6 +94,20 @@ def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
 
     # TODO implement continue training load
     raise NotImplementedError
+
+
+class FileLock(object):
+    def __init__(self, file_name):
+        self.path = Path(path.normpath(file_name) + '.lock')
+
+    def __enter__(self):
+        while self.path.exists():
+            print('There is a lock mennno')
+            time.sleep(1)
+        self.path.touch()
+
+    def __exit__(self, *args):
+        self.path.unlink()
 
 
 def exit_prompt():

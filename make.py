@@ -11,7 +11,7 @@ from tqdm import tqdm, trange
 
 from thesis import plot
 from thesis.data.toy import ToyData, generate_toy
-from thesis.io import load_model, save_append, get_newest_checkpoint
+from thesis.io import load_model, save_append, get_newest_checkpoint, FileLock
 from thesis.nn.modules import MelSpectrogram
 from thesis.setup import TOY_SIGNALS, DEFAULT_TOY, DEFAULT_MUSDB
 
@@ -100,19 +100,19 @@ def make_data_distribution(args):
     #     ax.plot(log_p[i, :])
     # plt.show()
 
-    fp = "musdb_histograms.npy"
-    hists = np.zeros((1, 4, 100))
+    fp = "musdb_histograms.pt"
+    hists = np.zeros((4, 100))
     bins = np.linspace(-1, 1, 101)
     data = MusDB(DEFAULT_MUSDB, subsets="train")
-    for track in tqdm(data, leave=False):
-        for i in range(4):
-            # _track = track[i, :][track[i, :].abs() > 0.05]
-            hists[:, i, :] += np.histogram(track, bins=bins)[0] / (E * len(data))
-    if path.exists(fp):
-        _h = np.load(fp)
-        np.save(fp, np.vstack((_h, hists)))
-    else:
-        np.save(fp, hists)
+    n = 10
+    for i, track in enumerate(tqdm(data, leave=False)):
+        for k in range(4):
+            hists[k, :] += np.histogram(track, bins=bins)[0] / n
+
+        if i % 10 == 0:
+            with FileLock(fp):
+                save_append(fp, hists)
+            hists = np.zeros((4, 100))
 
 
 def main(args):
