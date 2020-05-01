@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
-from os import path, makedirs, environ
+from os import path, makedirs
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -100,16 +100,19 @@ def make_data_distribution(args):
     #     ax.plot(log_p[i, :])
     # plt.show()
 
-    E = 15  # num of epochs
-    hists = np.zeros((4, 100))
+    fp = "musdb_histograms.npy"
+    hists = np.zeros((1, 4, 100))
     bins = np.linspace(-1, 1, 101)
-    for _ in trange(E):
-        data = MusDB(DEFAULT_MUSDB, subsets="train")
-        for track in tqdm(data, leave=False):
-            for i in range(4):
-                # _track = track[i, :][track[i, :].abs() > 0.05]
-                hists[i, :] += np.histogram(track, bins=bins)[0] / (E * len(data))
-    np.save(f"musdb_histograms.npy", hists)
+    data = MusDB(DEFAULT_MUSDB, subsets="train")
+    for track in tqdm(data, leave=False):
+        for i in range(4):
+            # _track = track[i, :][track[i, :].abs() > 0.05]
+            hists[:, i, :] += np.histogram(track, bins=bins)[0] / (E * len(data))
+    if path.exists(fp):
+        _h = np.load(fp)
+        np.save(fp, np.vstack((_h, hists)))
+    else:
+        np.save(fp, hists)
 
 
 def main(args):
