@@ -94,10 +94,12 @@ def make_toy_dataset(args):
 
 def make_data_distribution(args):
     from thesis.data.musdb import MusDB
-    # _, axs = plt.subplots(5)
-    # for i, ax in zip(range(5), axs):
-    #     # ax.bar((bins + 0.01)[:-1], histi[i, :])
-    #     ax.plot(log_p[i, :])
+
+    # h = torch.load('musdb_histograms.pt')
+    # h = np.mean(h, axis=0)
+    # _, axs = plt.subplots(4)
+    # for i, ax in zip(range(4), axs):
+    #     ax.plot(h[i, :])
     # plt.show()
 
     fp = "musdb_histograms.pt"
@@ -107,7 +109,7 @@ def make_data_distribution(args):
     n = 10
     for i, track in enumerate(tqdm(data, leave=False)):
         for k in range(4):
-            hists[k, :] += np.histogram(track, bins=bins)[0] / n
+            hists[k, :] += np.histogram(track[k, :], bins=bins)[0] / n
 
         if i % 10 == 0:
             with FileLock(fp):
