@@ -94,21 +94,21 @@ def make_toy_dataset(args):
 
 def make_data_distribution(args):
     from thesis.data.musdb import MusDB
-
-    data = MusDB(DEFAULT_MUSDB, subsets="train")
-
     # _, axs = plt.subplots(5)
     # for i, ax in zip(range(5), axs):
     #     # ax.bar((bins + 0.01)[:-1], histi[i, :])
     #     ax.plot(log_p[i, :])
     # plt.show()
 
+    E = 15  # num of epochs
+    hists = np.zeros((4, 100))
     bins = np.linspace(-1, 1, 101)
-    hists = np.zeros((5, 100))
-    for track in tqdm(data):
-        for i in range(5):
-            _track = track[i, :][track[i, :].abs() > 0.05]
-            hists[i, :] += np.histogram(_track, bins=bins)[0] / len(data)
+    for _ in trange(E):
+        data = MusDB(DEFAULT_MUSDB, subsets="train")
+        for track in tqdm(data, leave=False):
+            for i in range(4):
+                # _track = track[i, :][track[i, :].abs() > 0.05]
+                hists[i, :] += np.histogram(track, bins=bins)[0] / (E * len(data))
     np.save(f"musdb_histograms.npy", hists)
 
 
