@@ -16,7 +16,7 @@ from ...functional import (
     interleave,
 )
 from ...utils import clean_init_args
-from ...setup import TOY_SIGNALS
+from ...setup import DEFAULT
 
 
 class ActNorm(nn.Module):
@@ -317,5 +317,5 @@ class Flowavenet(BaseModel):
         log_p = -log_p.mean(-1).mean(0)
         for c in range(C):
             ℒ += log_p[c]
-            setattr(self.ℒ, f"log_p/{TOY_SIGNALS[c]}", log_p[c])
+            setattr(self.ℒ, f"log_p/{DEFAULT.signals[c]}", log_p[c])
         return ℒ

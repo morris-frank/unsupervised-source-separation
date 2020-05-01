@@ -157,7 +157,7 @@ def train(
             exit()
         else:
             ℒ.backward()
-            clip_grad_value_(model.parameters(), 100)
+            clip_grad_value_(model.parameters(), 60)
             if any_invalid_grad(model.parameters()):
                 print(
                     Fore.RED + "There was a NaN or inf in one of the grads.\n"

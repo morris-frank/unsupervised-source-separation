@@ -92,6 +92,14 @@ def make_toy_dataset(args):
             np.save(f"{args.data}/{name}/{name}_{i:05}.npy", item)
 
 
+def make_musdb_pre_save(args):
+    from thesis.data.musdb import MusDB
+    n = 100
+
+    data = MusDB(DEFAULT_MUSDB, subsets="train")
+    data.pre_save(n)
+
+
 def make_data_distribution(args):
     from thesis.data.musdb import MusDB
 
@@ -137,6 +145,7 @@ COMMANDS = {
     "posterior": make_posterior_examples,
     "toy-data": make_toy_dataset,
     "dist": make_data_distribution,
+    "musdb-pre-save": make_musdb_pre_save,
 }
 
 
