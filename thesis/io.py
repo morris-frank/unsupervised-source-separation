@@ -8,6 +8,7 @@ from typing import Any
 from pathlib import Path
 
 import torch
+from random import random
 from colorama import Fore
 from torch import nn
 from torch.serialization import SourceChangeWarning
@@ -102,12 +103,16 @@ class FileLock(object):
 
     def __enter__(self):
         while self.path.exists():
-            print('There is a lock mennno')
-            time.sleep(1)
+            print(f'{Fore.YELLOW}LockFile exists. Waiting…')
+            time.sleep(random())
+        time.sleep(random())
         self.path.touch()
 
     def __exit__(self, *args):
-        self.path.unlink()
+        if self.path.exists():
+            self.path.unlink()
+        else:
+            print(f"{Fore.RED}Trying to delete not-existing FileLock{Fore.RESET}")
 
 
 def exit_prompt():

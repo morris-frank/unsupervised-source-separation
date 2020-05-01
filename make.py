@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
-from os import path, makedirs
+from os import path, makedirs, getpid
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -107,11 +107,12 @@ def make_data_distribution(args):
     bins = np.linspace(-1, 1, 101)
     data = MusDB(DEFAULT_MUSDB, subsets="train")
     n = 10
-    for i, track in enumerate(tqdm(data, leave=False)):
+    for i, track in enumerate(data):
         for k in range(4):
-            hists[k, :] += np.histogram(track[k, :], bins=bins)[0] / n
+            hists[k, :] += np.histogram(track[k, :], bins=bins)[0] / (data.L * n)
 
         if i % 10 == 0:
+            print(f"{getpid()}: {i}")
             with FileLock(fp):
                 save_append(fp, hists)
             hists = np.zeros((4, 100))
