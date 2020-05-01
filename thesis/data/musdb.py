@@ -1,12 +1,11 @@
-from glob import glob
 import os
+from glob import glob
+from itertools import product
 from os import path
 from random import randint
-from itertools import product
 
 import musdb
 import torch
-from tqdm import tqdm
 
 from ..data import Dataset
 from ..functional import normalize
@@ -39,7 +38,9 @@ class MusDB(Dataset):
     def pre_save(self, n: int):
         fp = path.normpath(self.path) + "_samples/" + self.subsets
         os.makedirs(fp, exist_ok=True)
-        for j, i in tqdm(product(range(n), range(len(self)))):
+        for j, i in product(range(n), range(len(self))):
+            if i == 0:
+                print(f"Start next round for: {os.getpid()}")
             signals = self[i]
             torch.save(signals, f"{fp}/{i:03}_{j:03}_{os.getpid()}.pt")
 
@@ -47,7 +48,7 @@ class MusDB(Dataset):
 class MusDBSamples(Dataset):
     def __init__(self, path: str, subsets: str, **kwargs):
         super(MusDBSamples, self).__init__(**kwargs)
-        path = path + '_samples/' + subsets + '/*pt'
+        path = path + "_samples/" + subsets + "/*pt"
         self.files = glob(path)
 
     def __len__(self):
