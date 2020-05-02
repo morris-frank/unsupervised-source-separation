@@ -56,7 +56,7 @@ class MusDBSamples(Dataset):
         return len(self.files)
 
     def __getitem__(self, idx: int):
-        s, mel =  torch.load(self.files[idx])
+        s, mel = torch.load(self.files[idx])
         mel = F.interpolate(mel, s.shape[-1], mode="linear",
                             align_corners=False)
         return s, mel
