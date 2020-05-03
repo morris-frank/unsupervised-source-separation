@@ -16,12 +16,14 @@ from thesis.train import train
 def train_prior(args):
     from thesis.nn.models.flowavenet import Flowavenet
 
+    _n = '_musdb' if args.musdb else '_toy'
+
     if args.signal is None:
-        name = "all"
+        name = "all" + _n
         source = True
         groups = len(DEFAULT.signals)
     else:
-        name = args.signal
+        name = args.signal + _n
         k = DEFAULT.signals(args.signal)
         source = k
         groups = 1
