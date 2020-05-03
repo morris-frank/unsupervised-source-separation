@@ -22,7 +22,7 @@ class __DEFAULT:
 
     @property
     def data(self):
-        return DEFAULT_MUSDB if self.musdb else MUSDB_SIGNALS
+        return DEFAULT_MUSDB if self.musdb else DEFAULT_TOY
 
 
 DEFAULT = __DEFAULT()

@@ -57,6 +57,7 @@ class MusDBSamples(Dataset):
 
     def __getitem__(self, idx: int):
         s, mel = torch.load(self.files[idx])
+        s = s.squeeze()
         mel = F.interpolate(mel, s.shape[-1], mode="linear",
                             align_corners=False)
-        return s, mel
+        return s.contiguous(), mel.contiguous()
