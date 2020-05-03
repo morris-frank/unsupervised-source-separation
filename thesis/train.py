@@ -125,7 +125,7 @@ def train(
         )
 
     # Setup optimizer and learning rate scheduler
-    optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=1e-3)
+    optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=1e-4)
     lr_milestones = torch.linspace(iterations * 0.36, iterations, 5).tolist()
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, lr_milestones, gamma=0.6)
 
@@ -157,7 +157,7 @@ def train(
             exit()
         else:
             ℒ.backward()
-            clip_grad_value_(model.parameters(), 60)
+            clip_grad_value_(model.parameters(), 30)
             if any_invalid_grad(model.parameters()):
                 print(
                     Fore.RED + "There was a NaN or inf in one of the grads.\n"
