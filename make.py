@@ -44,20 +44,34 @@ def make_cross_likelihood_plot(args):
     weights = get_newest_checkpoint(f"*Flowavenet*pt")
     fp = f"./figures/{path.basename(weights).split('-')[0]}_prior_cross_likelihood.npy"
 
+    print(f"{Fore.YELLOW}I'am building: {Fore.BLUE}{fp}{Fore.RESET}")
+
     model = load_model(weights, args.device)
 
+    batch_size = 50
     if args.musdb:
-        data = MusDBSamples(args.data, "test")
+        data = MusDBSamples(args.data, "test").loader(batch_size)
     else:
-        data = ToyData(args.data, "test", source=True, mel_source=True, interpolate=True)
+        data = ToyData(
+            args.data, "test", source=True, mel_source=True, interpolate=True
+        ).loader(batch_size)
 
     K = len(DEFAULT.signals)
-    results = np.zeros((K, K, len(data)))
+    results = np.zeros((K, K, len(data) * batch_size))
 
     for i, (_, m) in enumerate(tqdm(data)):
+        _, _, C, L = m.shape
+        m = m.view(batch_size * K, C, L)
         m = m.repeat(1, K, 1).to(args.device)
         logp = model(m)[0]
-        results[:, :, i] = logp.mean(-1).squeeze().cpu().numpy()
+        results[:, :, i:i+batch_size] = (
+            logp.mean(-1)
+            .view(batch_size, K, K)
+            .permute(1, 2, 0)
+            .squeeze()
+            .cpu()
+            .numpy()
+        )
 
     print(Fore.YELLOW + "Saving to " + fp + Fore.RESET)
     np.save(fp, results)
@@ -100,6 +114,7 @@ def make_toy_dataset(args):
 
 def make_musdb_pre_save(args):
     from thesis.data.musdb import MusDB
+
     n = 100
 
     data = MusDB(args.data, subsets="test", mel=True)
@@ -139,7 +154,6 @@ def main(args):
     if args.data is None:
         args.data = DEFAULT.data
 
-    makedirs(f"./figures/{args.basename}/", exist_ok=True)
     args.device = "cpu" if args.cpu else "cuda"
 
     with torch.no_grad():
