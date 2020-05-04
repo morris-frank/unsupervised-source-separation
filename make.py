@@ -11,15 +11,16 @@ from tqdm import tqdm, trange
 
 from thesis import plot
 from thesis.data.toy import ToyData, generate_toy
+from thesis.data.musdb import MusDBSamples
 from thesis.io import load_model, save_append, get_newest_checkpoint, FileLock
 from thesis.nn.modules import MelSpectrogram
-from thesis.setup import TOY_SIGNALS, DEFAULT_TOY, DEFAULT_MUSDB
+from thesis.setup import DEFAULT
 
 mpl.use("agg")
 
 
 def make_noise_likelihood_plot(args):
-    k = TOY_SIGNALS.index(args.k)
+    k = DEFAULT.signals.index(args.k)
     model = load_model(args.weights, args.device)
     mel = MelSpectrogram()
     data = ToyData(args.data, "test", source=k, mel_source=True)
@@ -44,8 +45,13 @@ def make_cross_likelihood_plot(args):
     fp = f"./figures/{path.basename(weights).split('-')[0]}_prior_cross_likelihood.npy"
 
     model = load_model(weights, args.device)
-    data = ToyData(args.data, "test", source=True, mel_source=True, interpolate=True)
-    K = len(TOY_SIGNALS)
+
+    if args.musdb:
+        data = MusDBSamples(args.data, "test")
+    else:
+        data = ToyData(args.data, "test", source=True, mel_source=True, interpolate=True)
+
+    K = len(DEFAULT.signals)
     results = np.zeros((K, K, len(data)))
 
     for i, (_, m) in enumerate(tqdm(data)):
@@ -96,7 +102,7 @@ def make_musdb_pre_save(args):
     from thesis.data.musdb import MusDB
     n = 100
 
-    data = MusDB(DEFAULT_MUSDB, subsets="test", mel=True)
+    data = MusDB(args.data, subsets="test", mel=True)
     data.pre_save(n)
 
 
@@ -113,7 +119,7 @@ def make_data_distribution(args):
     fp = "musdb_histograms.pt"
     hists = np.zeros((4, 100))
     bins = np.linspace(-1, 1, 101)
-    data = MusDB(DEFAULT_MUSDB, subsets="train")
+    data = MusDB(args.data, subsets="train")
     n = 10
     for i, track in enumerate(data):
         for k in range(4):
@@ -128,9 +134,11 @@ def make_data_distribution(args):
 
 def main(args):
     makedirs("./figures", exist_ok=True)
-    if args.weights is None:
-        args.weights = get_newest_checkpoint(f"*{args.k}*pt" if args.k else "*pt")
-    args.basename = path.basename(args.weights)[:-3]
+
+    DEFAULT.musdb = args.musdb
+    if args.data is None:
+        args.data = DEFAULT.data
+
     makedirs(f"./figures/{args.basename}/", exist_ok=True)
     args.device = "cpu" if args.cpu else "cuda"
 
@@ -153,7 +161,8 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("command", choices=COMMANDS.keys())
     parser.add_argument("--weights", type=get_newest_checkpoint)
-    parser.add_argument("-k", choices=TOY_SIGNALS)
-    parser.add_argument("--data", type=path.abspath, default=DEFAULT_TOY)
+    parser.add_argument("-k", choices=DEFAULT.all_signals)
+    parser.add_argument("--data", type=path.abspath, default=None)
     parser.add_argument("-cpu", action="store_true")
+    parser.add_argument("-musdb", action="store_true")
     main(parser.parse_args())
