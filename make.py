@@ -50,11 +50,11 @@ def make_cross_likelihood_plot(args):
 
     batch_size = 50
     if args.musdb:
-        data = MusDBSamples(args.data, "test").loader(batch_size)
+        data = MusDBSamples(args.data, "test").loader(batch_size, drop_last=True)
     else:
         data = ToyData(
             args.data, "test", source=True, mel_source=True, interpolate=True
-        ).loader(batch_size)
+        ).loader(batch_size, drop_last=True)
 
     K = len(DEFAULT.signals)
     results = np.zeros((K, K, len(data) * batch_size))

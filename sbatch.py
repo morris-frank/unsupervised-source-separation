@@ -16,7 +16,7 @@ def main(args):
         raise ValueError("Invalid experiment given.")
 
     p = "gpu_short" if args.short else "gpu_shared"
-    t = "0:30:00" if args.short else f"{args.hours}:00:00"
+    t = "0:35:00" if args.short else f"{args.hours}:00:00"
     if args.short:
         args.batch_size = 2
 
