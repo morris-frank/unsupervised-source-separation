@@ -5,18 +5,19 @@ from torch import nn
 from torch.autograd import Variable
 from torch.nn import functional as F
 from torchaudio.transforms import MelSpectrogram as _MelSpectrogram
+from torch import Tensor as T
 
 
 class Conv1d(nn.Module):
     def __init__(
-        self,
-        in_channels,
-        out_channels,
-        kernel_size=3,
-        dilation=1,
-        causal=False,
-        bias=True,
-        groups=1,
+            self,
+            in_channels,
+            out_channels,
+            kernel_size=3,
+            dilation=1,
+            causal=False,
+            bias=True,
+            groups=1,
     ):
         super(Conv1d, self).__init__()
 
@@ -48,10 +49,12 @@ class ZeroConv1d(nn.Module):
     def __init__(self, in_channel, out_channel, groups=1):
         super(ZeroConv1d, self).__init__()
 
-        self.conv = nn.Conv1d(in_channel, out_channel, 1, padding=0, groups=groups)
+        self.conv = nn.Conv1d(in_channel, out_channel, 1, padding=0,
+                              groups=groups)
         self.conv.weight.data.zero_()
         self.conv.bias.data.zero_()
-        self.scale = nn.Parameter(torch.zeros(1, out_channel, 1), requires_grad=True)
+        self.scale = nn.Parameter(torch.zeros(1, out_channel, 1),
+                                  requires_grad=True)
 
     def forward(self, x):
         out = self.conv(x)
@@ -99,7 +102,7 @@ class STFTUpsample(nn.Module):
     def forward(self, c: torch.Tensor, width: int):
         c = self.up(c.unsqueeze(1)).squeeze(1)
         si = (c.shape[-1] - width) // 2
-        c = c[..., si : si + width]
+        c = c[..., si: si + width]
         return c
 
 
@@ -116,11 +119,15 @@ class MelSpectrogram(_MelSpectrogram):
         self.reference = 20.0
         self.min_db = -100.0
 
-    def forward(self, waveform):
+    def forward(self, waveform: T, L: int = None):
         mel_specgram = super(MelSpectrogram, self).forward(waveform)
         mel_spectrogram = (
-            20 * torch.log10(mel_specgram.clamp(min=1e-4)) - self.reference
+                20 * torch.log10(mel_specgram.clamp(min=1e-4)) - self.reference
         )
         mel_spectrogram = (mel_spectrogram - self.min_db) / (-self.min_db)
         # mel_spectrogram = ((mel_spectrogram - self.min_db) / (-self.min_db)).clamp(0, 1)
+
+        if L is not None:
+            mel_spectrogram = F.interpolate(mel_spectrogram, L, mode="linear",
+                                                align_corners=False)
         return mel_spectrogram

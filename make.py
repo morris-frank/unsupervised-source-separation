@@ -20,23 +20,31 @@ mpl.use("agg")
 
 
 def make_noise_likelihood_plot(args):
-    k = DEFAULT.signals.index(args.k)
-    model = load_model(args.weights, args.device)
+    weights = get_newest_checkpoint(f"*Flowavenet*pt")
+    basename = path.basename(weights)[:-3]
+    model = load_model(weights, args.device)
     mel = MelSpectrogram()
-    data = ToyData(args.data, "test", source=k, mel_source=True)
+    K = len(DEFAULT.signals)
+
+    batch_size = 200
+    if args.musdb:
+        data = MusDBSamples(args.data, "test").loader(batch_size, drop_last=True)
+    else:
+        data = ToyData(args.data, "test", source=True, mel_source=True, interpolate=True).loader(batch_size, drop_last=True)
 
     results = {}
     for σ in [0.0, 0.001, 0.01, 0.05, 0.1, 0.2, 0.3]:
-        results[σ] = np.zeros((len(data)))
-        for i, (s, m) in enumerate(tqdm(data.loader(1))):
-            s = (s + σ * torch.randn_like(s)).clamp(-1, 1)
-            m = mel(s[0])
-            s, m = s.to(args.device), m.to(args.device)
-            logp = model(s, m)[0]
-            results[σ][i] = logp.mean(-1).item()
+        results[σ] = np.zeros((K, len(data) * batch_size))
+        for i, (s, _) in enumerate(tqdm(data)):
+            L = s.shape[-1]
+            s = (s + σ * torch.randn_like(s)).clamp(-1, 1).view(batch_size * K, L)
+            m = mel(s, L).view(batch_size, K, 80, L).view(batch_size, K * 80, L).to(args.device)
+            logp = model(m)[0]
+            results[σ][:, i:i+batch_size] = logp.mean(-1).T.cpu().numpy()
 
+    makedirs(f"./figures/{basename}", exist_ok=True)
     np.save(
-        f"./figures/{args.basename}/noise_likelihood.npy", results, allow_pickle=True
+        f"./figures/{basename}/noise_likelihood.npy", results, allow_pickle=True
     )
 
 
