@@ -9,7 +9,9 @@ class Dataset(data.Dataset):
         self.interpolate, self.complex = interpolate, complex
 
         if complex:
-            self.spectrograph = Spectrogram(n_fft=1024, hop_length=256, power=None)
+            self.spectrograph = Spectrogram(n_fft=128, power=None, normalized=True)
+            # inverse is:
+            # waveform = istft(spectrogram, n_fft=128, length=3072, normalized=True)
         else:
             self.spectrograph = MelSpectrogram(sr=sr)
 
