@@ -24,7 +24,7 @@ class ToyData(Dataset):
         noise: float = 0.0,
         rand_noise: bool = False,
         with_phase: int = False,
-        **kwargs
+        **kwargs,
     ):
         super(ToyData, self).__init__(**kwargs)
         self.files = glob(f"{path}/{subset}/*npy")
@@ -69,8 +69,8 @@ class ToyData(Dataset):
         mix = self._mel_get(mix, self.mel)
 
         if self.mel_source and self.with_phase:
-            add = torch.ones(4,1,3072) * torch.tensor(datum['φ']).view(4,1,1)
-            sources[1] = torch.cat([sources[1], add], dim=1)
+            add = torch.ones(4, 1, 3072) * torch.tensor(datum["φ"]).view(4, 1, 1)
+            sources = (sources[0], torch.cat([sources[1], add], dim=1))
 
         if self.mix:
             if self.source:
