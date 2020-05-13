@@ -23,6 +23,7 @@ class ToyData(Dataset):
         rand_amplitude: float = 0.0,
         noise: float = 0.0,
         rand_noise: bool = False,
+        with_phase: int = False,
         **kwargs
     ):
         super(ToyData, self).__init__(**kwargs)
@@ -30,6 +31,7 @@ class ToyData(Dataset):
         self.mix, self.mel = mix, mel
         self.rand_amplitude = rand_amplitude
         self.noise, self.rand_noise = noise, rand_noise
+        self.with_phase = with_phase
 
         self.k = "all" if isinstance(source, bool) else source
         self.source = source is not False
@@ -65,6 +67,10 @@ class ToyData(Dataset):
 
         sources = self._mel_get(sources, self.mel_source)
         mix = self._mel_get(mix, self.mel)
+
+        if self.mel_source and self.with_phase:
+            add = torch.ones(4,1,3072) * torch.tensor(datum['φ']).view(4,1,1)
+            sources[1] = torch.cat([sources[1], add], dim=1)
 
         if self.mix:
             if self.source:

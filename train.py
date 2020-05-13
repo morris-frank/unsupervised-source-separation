@@ -15,7 +15,8 @@ from thesis.train import train
 
 def train_prior(args):
     from thesis.nn.models.flowavenet import Flowavenet
-    complex = True
+    complex = False
+    add = True
 
     _n = '_musdb' if args.musdb else '_toy'
 
@@ -30,7 +31,7 @@ def train_prior(args):
         groups = 1
 
     model = Flowavenet(
-        in_channel=130 if complex else 80,
+        in_channel=130 if complex else (81 if add else 80),
         n_block=8 if args.musdb else 4,
         n_flow=10 if args.musdb else 10,
         n_layer=4 if args.musdb else 4,
@@ -52,7 +53,8 @@ def train_prior(args):
             noise=0.03,
             rand_noise=True,
             interpolate=True,
-            complex=complex
+            complex=complex,
+            with_phase=add,
         )
         train_set = ToyData(args.data, "train", **set_opt)
         test_set = ToyData(args.data, "test", **set_opt)
