@@ -5,7 +5,7 @@ from torchaudio.transforms import Spectrogram
 
 
 class Dataset(data.Dataset):
-    def __init__(self, interpolate: bool = False, sr: int = 16000, complex: bool = False):
+    def __init__(self, interpolate: bool = False, sr: int = 16000, complex: bool = False, n_mels: int = 80):
         self.interpolate, self.complex = interpolate, complex
 
         if complex:
@@ -13,7 +13,7 @@ class Dataset(data.Dataset):
             # inverse is:
             # waveform = istft(spectrogram, n_fft=128, length=3072, normalized=True)
         else:
-            self.spectrograph = MelSpectrogram(sr=sr)
+            self.spectrograph = MelSpectrogram(n_mels=n_mels, sr=sr)
 
     def loader(self, batch_size: int, **kwargs) -> data.DataLoader:
         return data.DataLoader(self, batch_size=batch_size, num_workers=8, shuffle=True, **kwargs)

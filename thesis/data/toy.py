@@ -26,7 +26,7 @@ class ToyData(Dataset):
         with_phase: int = False,
         **kwargs,
     ):
-        super(ToyData, self).__init__(**kwargs)
+        super(ToyData, self).__init__(n_mels=79 if with_phase else 80, **kwargs)
         self.files = glob(f"{path}/{subset}/*npy")
         self.mix, self.mel = mix, mel
         self.rand_amplitude = rand_amplitude

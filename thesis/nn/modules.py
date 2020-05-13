@@ -107,12 +107,12 @@ class STFTUpsample(nn.Module):
 
 
 class MelSpectrogram(_MelSpectrogram):
-    def __init__(self, sr=16000):
+    def __init__(self, n_mels=80, sr=16000):
         super(MelSpectrogram, self).__init__(
             sample_rate=sr,
             n_fft=1024,
             hop_length=256,
-            n_mels=80,
+            n_mels=n_mels,
             f_min=125,
             f_max=7600,
         )
