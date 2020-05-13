@@ -31,7 +31,7 @@ def train_prior(args):
         groups = 1
 
     model = Flowavenet(
-        in_channel=130 if complex else (81 if add else 80),
+        in_channel=130 if complex else 80,
         n_block=8 if args.musdb else 4,
         n_flow=10 if args.musdb else 10,
         n_layer=4 if args.musdb else 4,
