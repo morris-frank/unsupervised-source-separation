@@ -48,9 +48,11 @@ def reconstruction(*signals: torch.Tensor, sharey: bool = True, ylim=None):
     return fig
 
 
-def add_plot_tick(ax, symbol, pos=0.5, where="tensor", size=0.05):
+def add_plot_tick(
+    ax: plt.Axes, symbol: str, pos: float = 0.5, where: str = "x", size: float = 0.05
+):
 
-    if "tensor" in where:
+    if "x" in where:
         anchor, loc = (pos, 1.01), 8
     else:
         anchor, loc = (-0.025, pos), 7
@@ -69,16 +71,32 @@ def add_plot_tick(ax, symbol, pos=0.5, where="tensor", size=0.05):
 
     if "sin" in symbol:
         y = np.sin(x)
+        _ax.plot(x, y, linewidth=3, c="k")
     elif "tri" in symbol:
         y = sawtooth(x, width=0.5)
+        _ax.plot(x, y, linewidth=3, c="k")
     elif "saw" in symbol:
         y = sawtooth(x, width=1.0)
+        _ax.plot(x, y, linewidth=3, c="k")
     elif "sq" in symbol:
         y = square(x)
+        _ax.plot(x, y, linewidth=3, c="k")
+    elif "drums" in symbol:
+        icon = plt.imread('thesis/plot/drums_grey.png')
+        _ax.imshow(np.repeat(icon[..., None], 3, 2))
+    elif "bass" in symbol:
+        icon = plt.imread('thesis/plot/bass_grey.png')
+        _ax.imshow(np.repeat(icon[..., None], 3, 2))
+    elif "vocals" in symbol:
+        icon = plt.imread('thesis/plot/voice_grey.png')
+        _ax.imshow(np.repeat(icon[..., None], 3, 2))
+    elif "other" in symbol:
+        icon = plt.imread('thesis/plot/other_grey.png')
+        _ax.imshow(np.repeat(icon[..., None], 3, 2))
     else:
         raise ValueError("unknown symbol")
 
-    _ax.plot(x, y, linewidth=3, c="k")
+
 
 
 def plot_signal_heatmap(ax, data, symbols):
@@ -89,10 +107,19 @@ def plot_signal_heatmap(ax, data, symbols):
 
     for edge, spine in ax.spines.items():
         spine.set_visible(False)
-    ax.set_xticks(np.arange(data.shape[1]+1)-.5)
-    ax.set_yticks(np.arange(data.shape[0]+1)-.5)
-    ax.grid(which="major", color=ax.get_facecolor(), linestyle='-', linewidth=5)
-    ax.tick_params(bottom=False, top=False, left=False, right=False, labelbottom=False, labeltop=False, labelleft=False, labelright=False)
+    ax.set_xticks(np.arange(data.shape[1] + 1) - 0.5)
+    ax.set_yticks(np.arange(data.shape[0] + 1) - 0.5)
+    ax.grid(which="major", color=ax.get_facecolor(), linestyle="-", linewidth=5)
+    ax.tick_params(
+        bottom=False,
+        top=False,
+        left=False,
+        right=False,
+        labelbottom=False,
+        labeltop=False,
+        labelleft=False,
+        labelright=False,
+    )
 
     for i, j in product(range(n), repeat=2):
         col = "black" if data[i, j] > 0 else "white"
@@ -102,5 +129,5 @@ def plot_signal_heatmap(ax, data, symbols):
     size = 1 / n * 1.75
 
     for i in range(n):
-        add_plot_tick(ax, symbols[i], pos=pos_tick[i], where="tensor", size=size)
+        add_plot_tick(ax, symbols[i], pos=pos_tick[i], where="x", size=size)
         add_plot_tick(ax, symbols[i], pos=pos_tick[-i - 1], where="y", size=size)

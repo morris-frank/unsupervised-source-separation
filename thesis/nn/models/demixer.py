@@ -121,6 +121,7 @@ class Demixer(BaseModel):
         ℒ = self.ℒ.reconstruction
 
         self.ℒ.β = max(min((self.iteration - 500) / 100, 1), 0)
+
         ℒ += self.ℒ.β * self.ℒ.KL
         # for k in range(self.n_classes):
         #     ℒ += β * getattr(self.ℒ, f"KL/{k}")

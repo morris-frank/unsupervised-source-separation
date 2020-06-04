@@ -61,6 +61,19 @@ def train_prior(args):
     return model, train_set, test_set
 
 
+def train_jem(args):
+    from thesis.nn.models.jem import JEM
+    from thesis.data.musdb import MusDBSamples
+
+    groups = len(DEFAULT.signals)
+
+    model = JEM(in_channels=80, out_channels=1, width = 48, groups=groups)
+
+    train_set = MusDBSamples(args.data, "train")
+    test_set = MusDBSamples(args.data, "test")
+    return model, train_set, test_set
+
+
 def train_demixer(path: str):
     from thesis.nn.models.demixer import Demixer
 
@@ -123,6 +136,7 @@ EXPERIMENTS = {
     "demixer": train_demixer,
     "denoiser": partial(train_denoiser, modelclass=Denoiser),
     "denoiser_semi": partial(train_denoiser, modelclass=Denoiser_Semi),
+    "jem": train_jem,
 }
 
 if __name__ == "__main__":

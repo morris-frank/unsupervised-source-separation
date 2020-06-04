@@ -13,7 +13,8 @@ from thesis import plot
 from thesis.data.toy import ToyData
 from thesis.io import load_model, exit_prompt, get_newest_checkpoint, get_newest_file
 from thesis.nn.modules import MelSpectrogram
-from thesis.setup import TOY_SIGNALS, DEFAULT_TOY
+from thesis.setup import TOY_SIGNALS, DEFAULT_TOY, MUSDB_SIGNALS
+from torchaudio.functional import istft
 
 mpl.use("TkCairo")
 
@@ -68,11 +69,11 @@ def show_cross_likelihood(args):
     )
 
     # ax = fig.add_axes((0.15, 0.15, 0.7, 0.7))
-    plot.toy.plot_signal_heatmap(ax1, log_p.mean(-1), TOY_SIGNALS)
-    ax1.set_title(r"mean of likelihood log p(s)")
+    plot.toy.plot_signal_heatmap(ax1, log_p.mean(-1), MUSDB_SIGNALS)
+    # ax1.set_title(r"mean of likelihood log p(s)")
 
     # ax = fig.add_axes((0.15, 0.15, 0.7, 0.7))
-    plot.toy.plot_signal_heatmap(ax2, log_p.var(-1), TOY_SIGNALS)
+    plot.toy.plot_signal_heatmap(ax2, log_p.var(-1), MUSDB_SIGNALS)
     ax2.set_title("var of likelihood log p(s)")
 
     fig.show()
@@ -105,14 +106,35 @@ def show_prior(args):
 
 def show_prior_z(args):
     model = load_model(args.weights, args.device)
+    _istft = lambda x: istft(x, n_fft=128, length=3072, normalized=True)
 
     while True:
-        z = torch.rand((1, 80, 3072))
-        out = model.reverse(z)
+        z = torch.rand((1, 4 * model.params['kwargs']['in_channel'], 3072))
+        out = model.reverse(z).view(4, -1, 3072)
 
-        plt.imshow(out.squeeze()[:, ::10])
+        import ipdb; ipdb.set_trace()
+        # sgrams = out.view(4, -1, 2, 3072).permute(0, 1, 3, 2)
+        # waveforms = [_istft(sgrams[i, ...]) for i in range(4)]
+
+        _, axs = plt.subplots(4)
+        a, b = 1000, 2000
+        for i in range(4):
+            axs[i].plot(waveforms[i][a:a+b])
         plt.show()
         exit_prompt()
+
+
+def show_hist_posterior():
+    from thesis.audio import oscillator
+
+    mpl.style.use(f"./thesis/plot/mpl.style")
+    _, axs = plt.subplots(4)
+    for i, k in enumerate(['sin', 'square', 'saw', 'triangle']):
+        hist = torch.histc(torch.tensor(oscillator(10000, k, 500, 0)[0]) + (torch.rand(10000)-0.5)*0.04, bins=20, min=-1, max=1)
+        axs[i].plot(hist, linewidth=4)
+        axs[i].grid(b=None)
+        axs[i].tick_params(axis=u'both', labelsize=0)
+    plt.show()
 
 
 def show_posterior(args):
