@@ -69,7 +69,7 @@ class JEM(BaseModel):
 
     @staticmethod
     def init_random(bs: int):
-        return torch.FloatTensor(bs, 1, 3072).uniform_(-1, 1).cpu()
+        return torch.FloatTensor(bs, 80, 13).uniform_(-1, 1).cpu()
 
     def sample_from_buffer(self, bs, device):
         if len(self.replay_buffer) == 0:
