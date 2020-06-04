@@ -8,7 +8,7 @@ from torch import Tensor as T
 
 
 class JEM(BaseModel):
-    def __init__(self, in_channels: int, out_channels: int, width: int, groups: int = 1, cin_channel: int = None):
+    def __init__(self, in_channels: int, out_channels: int, width: int, cin_channel: int = None):
         super(JEM, self).__init__()
         self.params = clean_init_args(locals().copy())
 
@@ -16,24 +16,22 @@ class JEM(BaseModel):
         self.η = 20         # Steps of internal SGLD
         self.α = 1          # SGLD step size / learning rate
         self.σ = 0.01       # SGLD added noise variance
-        self.N = groups     # Number of Classes / Source channels
 
         self.replay_buffer = self.init_random(1000)
 
         self.wave = Wavenet(
-            in_channels=in_channels * groups,
-            out_channels=out_channels * groups,
+            in_channels=in_channels,
+            out_channels=out_channels,
             n_blocks=1,
             n_layers=2,
-            residual_channels=width * groups,
-            gate_channels=width * groups,
-            skip_channels=width * groups,
+            residual_channels=width,
+            gate_channels=width,
+            skip_channels=width,
             kernel_size=3,
             cin_channels=cin_channel,
             causal=False,
             zero_final=False,
             bias=False,
-            groups=groups,
         )
 
     def forward(self, s: T) -> T:
@@ -44,6 +42,7 @@ class JEM(BaseModel):
 
         # p(i|s)
         # Normal Cross-Entropy classification loss
+        print(f"s {s.shape},\ti {i.shape}")
         ī = self.forward(s)
         self.ℒ.p_iǀs = F.cross_entropy(ī, i)
 

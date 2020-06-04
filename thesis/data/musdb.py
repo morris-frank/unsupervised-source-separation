@@ -61,3 +61,18 @@ class MusDBSamples(Dataset):
         mel = F.interpolate(mel, s.shape[-1], mode="linear",
                             align_corners=False)
         return s.contiguous(), mel.contiguous()
+
+
+class MusDBSamples2(MusDBSamples):
+    def __len__(self):
+        return 4 * super(MusDBSamples2, self).__len__()
+
+    def __getitem__(self, idx: int):
+        _, mel = torch.load(self.files[idx//4])
+        i = randint(0, 3)
+        mel = mel[i, ...]
+        i = torch.empty(1, mel.shape[-1]).fill_(i)
+        return mel, i
+
+
+

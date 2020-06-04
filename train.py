@@ -63,14 +63,14 @@ def train_prior(args):
 
 def train_jem(args):
     from thesis.nn.models.jem import JEM
-    from thesis.data.musdb import MusDBSamples
+    from thesis.data.musdb import MusDBSamples2
 
     groups = len(DEFAULT.signals)
 
-    model = JEM(in_channels=80, out_channels=1, width = 48, groups=groups)
+    model = JEM(in_channels=80, out_channels=groups, width = 48)
 
-    train_set = MusDBSamples(args.data, "train")
-    test_set = MusDBSamples(args.data, "test")
+    train_set = MusDBSamples2(args.data, "train")
+    test_set = MusDBSamples2(args.data, "test")
     return model, train_set, test_set
 
 
