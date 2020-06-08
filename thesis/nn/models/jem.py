@@ -12,6 +12,8 @@ class JEM(BaseModel):
         super(JEM, self).__init__()
         self.params = clean_init_args(locals().copy())
 
+        self.classes = out_channels
+
         self.ρ = 0.05       # Reinatialization probability for the Buffer
         self.η = 20         # Steps of internal SGLD
         self.α = 1          # SGLD step size / learning rate
@@ -42,9 +44,8 @@ class JEM(BaseModel):
 
         # p(i|s)
         # Normal Cross-Entropy classification loss
-        print(f"s {s.shape},\ti {i.shape}")
         ī = self.forward(s)
-        self.ℒ.p_iǀs = F.cross_entropy(ī, i)
+        self.ℒ.p_iǀs = F.cross_entropy(ī, i.squeeze().long())
 
         # p(s)
         # Sample from ŝ ~ p(s) with SGLD and E[s] = -LogSumExp_i f_θ(s)[i]
@@ -74,8 +75,8 @@ class JEM(BaseModel):
     def sample_from_buffer(self, bs, device):
         if len(self.replay_buffer) == 0:
             return self.init_random(bs), None
-        î = torch.randint(0, self.N, (bs,)).to(device)
-        buffer_size = len(self.replay_buffer) // self.N
+        î = torch.randint(0, self.classes, (bs,)).to(device)
+        buffer_size = len(self.replay_buffer) // self.classes
         b_i = torch.randint(0, buffer_size, (bs,))
         b_i = î.cpu() * buffer_size + b_i
         ŝ_buffer = self.replay_buffer[b_i]
