@@ -9,7 +9,15 @@ from torch.nn import functional as F
 from . import BaseModel
 from ..wavenet import Wavenet
 from ...utils import clean_init_args
-from ...io import vprint
+
+
+class ResConv1d(nn.Module):
+    def __init__(self, *args, **kwargs):
+        super(ResConv1d, self).__init__()
+        self.conv = nn.Sequential(nn.Conv1d(*args, **kwargs, bias=False), nn.ReLU())
+
+    def forward(self, x):
+        return x + self.conv(x)
 
 
 class JEM(BaseModel):
@@ -29,20 +37,15 @@ class JEM(BaseModel):
         self.replay_buffer = self.init_random(1000)
 
         self.classify = nn.Sequential(
-            Wavenet(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                n_blocks=1,
-                n_layers=2,
-                residual_channels=width,
-                gate_channels=width,
-                skip_channels=width,
-                kernel_size=3,
-                cin_channels=cin_channel,
-                causal=False,
-                zero_final=False,
-                bias=False,
-            ),
+            ResConv1d(in_channels, 120, 3, padding=1),
+            ResConv1d(120, 120, 3, padding=1),
+            ResConv1d(120, 120, 3, padding=1),
+            ResConv1d(120, 120, 3, padding=1),
+            ResConv1d(120, 120, 3, padding=1),
+            ResConv1d(120, 120, 3, padding=1),
+            ResConv1d(120, 120, 3, padding=1),
+            ResConv1d(120, 60, 3, padding=1),
+            ResConv1d(60, 4, 3, padding=1),
             nn.Linear(13, 1, bias=False),
         )
 

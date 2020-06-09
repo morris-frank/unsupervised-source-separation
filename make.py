@@ -125,7 +125,7 @@ def make_musdb_pre_save(args):
 
     n = 100
 
-    data = MusDB(args.data, subsets="test", mel=True)
+    data = MusDB(args.data, subsets="train", mel=True)
     data.pre_save(n)
 
 

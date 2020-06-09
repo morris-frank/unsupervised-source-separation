@@ -14,7 +14,7 @@ from torch.nn import functional as F
 
 class MusDB(Dataset):
     def __init__(self, path: str, subsets: str, mel: bool = False, **kwargs):
-        super(MusDB, self).__init__(sr=14700, **kwargs)
+        super(MusDB, self).__init__(sr=14700, n_mels=80, **kwargs)
         self.path, self.subsets = path, subsets
         self.mel = mel
         self.db = musdb.DB(root=path, subsets=subsets)
@@ -26,6 +26,7 @@ class MusDB(Dataset):
     def __getitem__(self, idx: int):
         track = self.db[idx]
 
+        # stems = track.stems[1:, ::3, :]
         stems = track.stems[1:, ::3, :]
         ν = randint(0, stems.shape[1] - self.L)
         stems = stems[:, None, ν : ν + self.L, :].mean(-1)
@@ -69,7 +70,7 @@ class MusDBSamples2(MusDBSamples):
 
     def __getitem__(self, idx: int):
         _, mel = torch.load(self.files[idx//4])
-        i = randint(0, 3)
+        i = idx % 4
         mel = mel[i, ...]
         # i = torch.empty(1, mel.shape[-1]).fill_(i)
         return mel, i
