@@ -15,10 +15,11 @@ from thesis.train import train
 
 def train_prior(args):
     from thesis.nn.models.flowavenet import Flowavenet
+
     complex = False
     add = True
 
-    _n = '_musdb' if args.musdb else '_toy'
+    _n = "_musdb" if args.musdb else "_toy"
 
     if args.signal is None:
         name = "all" + _n
@@ -67,7 +68,7 @@ def train_jem(args):
 
     groups = len(DEFAULT.signals)
 
-    model = JEM(in_channels=80, out_channels=groups, width = 48)
+    model = JEM(in_channels=80, out_channels=groups, width=48)
 
     train_set = MusDBSamples2(args.data, "train")
     test_set = MusDBSamples2(args.data, "test")

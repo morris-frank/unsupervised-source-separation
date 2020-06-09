@@ -5,6 +5,7 @@ from torch.nn import functional as F
 import torch
 from torch import autograd
 from torch import Tensor as T
+from typing import Optional
 
 
 class JEM(BaseModel):
@@ -36,8 +37,12 @@ class JEM(BaseModel):
             bias=False,
         )
 
-    def forward(self, s: T) -> T:
-        return self.wave(s)
+    def forward(self, s: T, i: Optional[T] = None) -> T:
+        logits = self.wave(s)
+        if i:
+            return torch.gather(logits, i[:, None])
+        else:
+            return logits.logsumexp(1)
 
     def test(self, s: T, i: T) -> T:
         bs = s.shape[0]
@@ -57,7 +62,6 @@ class JEM(BaseModel):
         for _ in range(self.η):
             δf_δŝ = autograd.grad(self(ŝ, i=i).sum(), [ŝ], retain_graph=True)[0]
             ŝ += self.α * δf_δŝ + self.σ * torch.randn_like(ŝ)
-        self.replay_buffer.append(ŝ)
         self.train()
         ŝ = ŝ.detach()
         if len(self.replay_buffer) > 0:
@@ -72,7 +76,8 @@ class JEM(BaseModel):
     def init_random(bs: int):
         return torch.FloatTensor(bs, 80, 13).uniform_(-1, 1).cpu()
 
-    def sample_from_buffer(self, bs, device):
+    def sample_from_buffer(self, i, device):
+        bs = i.size(0)
         if len(self.replay_buffer) == 0:
             return self.init_random(bs), None
         î = torch.randint(0, self.classes, (bs,)).to(device)
