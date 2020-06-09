@@ -62,7 +62,7 @@ class JEM(BaseModel):
         # p(s)
         # Sample from ŝ ~ p(s) with SGLD and E[s] = -LogSumExp_i f_θ(s)[i]
         self.eval()
-        ŝ, î, b_i = self.sample_from_buffer(3, s.device)
+        ŝ, î, b_i = self.sample_from_buffer(ī.shape[0], s.device)
 
         # SGLD
         ŝ = autograd.Variable(ŝ, requires_grad=True)
