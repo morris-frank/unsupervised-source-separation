@@ -71,7 +71,7 @@ class MusDBSamples2(MusDBSamples):
         _, mel = torch.load(self.files[idx//4])
         i = randint(0, 3)
         mel = mel[i, ...]
-        i = torch.empty(1, mel.shape[-1]).fill_(i)
+        # i = torch.empty(1, mel.shape[-1]).fill_(i)
         return mel, i
 
 

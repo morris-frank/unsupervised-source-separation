@@ -14,6 +14,7 @@ from torch import nn
 from torch.serialization import SourceChangeWarning
 
 from .setup import DEFAULT_CHECKPOINTS
+from .utils import get_func_arguments
 
 warnings.simplefilter("ignore", SourceChangeWarning)
 
@@ -123,3 +124,13 @@ def exit_prompt():
         import ipdb
 
         ipdb.set_trace()
+
+
+def vprint(*args):
+    names = get_func_arguments()
+    for n,v in zip(names, args):
+        if isinstance(v, torch.Tensor):
+            v = v.shape
+        print(f'{Fore.YELLOW}{n}{Fore.WHITE} = {Fore.MAGENTA}{v}', end=f'{Fore.RESET}\t')
+    print()
+
