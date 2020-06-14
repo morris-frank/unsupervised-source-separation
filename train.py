@@ -61,6 +61,7 @@ def train_prior(args):
         test_set = ToyData(args.data, "test", **set_opt)
     return model, train_set, test_set
 
+
 def train_discprior(args):
     from thesis.nn.models.flowavenet import FlowavenetClassified
 
@@ -160,6 +161,7 @@ EXPERIMENTS = {
     "denoiser": partial(train_denoiser, modelclass=Denoiser),
     "denoiser_semi": partial(train_denoiser, modelclass=Denoiser_Semi),
     "jem": train_jem,
+    "discprior": train_discprior,
 }
 
 if __name__ == "__main__":
