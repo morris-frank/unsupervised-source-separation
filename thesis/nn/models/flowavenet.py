@@ -279,7 +279,7 @@ class Flowavenet(BaseModel):
         log_p = log_p_sum + log_p_out
 
         logdet = logdet / (N * C * L)
-        return log_p, logdet
+        return out, log_p, logdet
 
     def reverse(self, z, c=None):
         if c is not None:
@@ -309,7 +309,7 @@ class Flowavenet(BaseModel):
         C = s.shape[1]
         if m.dim() > 3:
             m = m.flatten(1, 2)
-        log_p, logdet = self.forward(m)
+        _, log_p, logdet = self.forward(m)
 
         self.ℒ.logdet = -torch.mean(logdet)
         ℒ = self.ℒ.logdet
@@ -318,4 +318,27 @@ class Flowavenet(BaseModel):
         for c in range(C):
             ℒ += log_p[c]
             setattr(self.ℒ, f"log_p/{DEFAULT.signals[c]}", log_p[c])
+        return ℒ
+
+
+class FlowavenetClassified(Flowavenet):
+    def __init__(self, *args, **kwargs):
+        super(FlowavenetClassified, self).__init__(*args, **kwargs)
+        self.classifier = nn.Sequential()
+
+    def forward(self, x, c=None):
+        out, log_p, logdet = super(FlowavenetClassified, self).forward(x, c)
+        print(out.shape)
+        import ipdb; ipdb.set_trace()
+        ŷ = self.classifier(out)
+        return ŷ, log_p, logdet
+
+    def test(self, m, y):
+        ŷ, log_p, logdet = self.forward(m)
+
+        self.ℒ.ce = F.cross_entropy(ŷ, y)
+        self.ℒ.logdet = -torch.mean(logdet)
+        self.ℒ.log_p = -log_p.mean()
+
+        ℒ = self.ℒ.log_p + self.ℒ.logdet + self.ℒ.ce
         return ℒ

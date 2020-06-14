@@ -61,6 +61,28 @@ def train_prior(args):
         test_set = ToyData(args.data, "test", **set_opt)
     return model, train_set, test_set
 
+def train_discprior(args):
+    from thesis.nn.models.flowavenet import FlowavenetClassified
+
+    name = "musdb" if args.musdb else "toy"
+
+    model = FlowavenetClassified(
+        in_channel=80,
+        n_block=8 if args.musdb else 4,
+        n_flow=10 if args.musdb else 10,
+        n_layer=4 if args.musdb else 4,
+        block_per_split=2 if args.musdb else 2,
+        width=48 if args.musdb else 32,
+        name=name,
+    )
+
+    if args.musdb:
+        from thesis.data.musdb import MusDBSamples2
+
+        train_set = MusDBSamples2(args.data, "train", complex=complex)
+        test_set = MusDBSamples2(args.data, "test", complex=complex)
+    return model, train_set, test_set
+
 
 def train_jem(args):
     from thesis.nn.models.jem import JEM
