@@ -8,13 +8,16 @@ import pandas as pd
 import seaborn as sns
 import torch
 from matplotlib import pyplot as plt
+from torchaudio.functional import istft
+from sklearn import metrics
+from tqdm import trange
 
 from thesis import plot
 from thesis.data.toy import ToyData
-from thesis.io import load_model, exit_prompt, get_newest_checkpoint, get_newest_file
+from thesis.io import load_model, exit_prompt, get_newest_checkpoint, \
+    get_newest_file
 from thesis.nn.modules import MelSpectrogram
 from thesis.setup import TOY_SIGNALS, DEFAULT_TOY, MUSDB_SIGNALS
-from torchaudio.functional import istft
 
 mpl.use("TkCairo")
 
@@ -84,9 +87,7 @@ def show_cross_likelihood(args):
 def show_prior(args):
     model = load_model(args.weights, args.device)
 
-    data = ToyData(
-        args.data, "test", mix=True, mel=True, source=True, mel_source=True
-    )
+    data = ToyData(args.data, "test", mix=True, mel=True, source=True, mel_source=True)
     mel_spectr = MelSpectrogram()
 
     for (m, m_mel), (s, s_mel) in data:
@@ -109,17 +110,16 @@ def show_prior_z(args):
     _istft = lambda x: istft(x, n_fft=128, length=3072, normalized=True)
 
     while True:
-        z = torch.rand((1, 4 * model.params['kwargs']['in_channel'], 3072))
+        z = torch.rand((1, 4 * model.params["kwargs"]["in_channel"], 3072))
         out = model.reverse(z).view(4, -1, 3072)
 
-        import ipdb; ipdb.set_trace()
         # sgrams = out.view(4, -1, 2, 3072).permute(0, 1, 3, 2)
         # waveforms = [_istft(sgrams[i, ...]) for i in range(4)]
 
         _, axs = plt.subplots(4)
         a, b = 1000, 2000
         for i in range(4):
-            axs[i].plot(waveforms[i][a:a+b])
+            axs[i].plot(waveforms[i][a : a + b])
         plt.show()
         exit_prompt()
 
@@ -129,11 +129,30 @@ def show_hist_posterior():
 
     mpl.style.use(f"./thesis/plot/mpl.style")
     _, axs = plt.subplots(4)
-    for i, k in enumerate(['sin', 'square', 'saw', 'triangle']):
-        hist = torch.histc(torch.tensor(oscillator(10000, k, 500, 0)[0]) + (torch.rand(10000)-0.5)*0.04, bins=20, min=-1, max=1)
+    for i, k in enumerate(["sin", "square", "saw", "triangle"]):
+        hist = torch.histc(
+            torch.tensor(oscillator(10000, k, 500, 0)[0])
+            + (torch.rand(10000) - 0.5) * 0.04,
+            bins=20,
+            min=-1,
+            max=1,
+        )
         axs[i].plot(hist, linewidth=4)
         axs[i].grid(b=None)
-        axs[i].tick_params(axis=u'both', labelsize=0)
+        axs[i].tick_params(axis="both", labelsize=0)
+    plt.show()
+
+
+def show_discrprior_roc(args):
+    res = np.load("figures/Jun14_prior_cross_entropy.npy", allow_pickle=True).item()
+    ŷ = np.array(res["ŷ"])
+    y = np.array(res["y"])
+    ŷ = ŷ / ŷ.sum(-1, keepdims=True)
+    true_class_ŷ = ŷ[np.indices(y.shape)[0], y]
+    cmat = metrics.confusion_matrix(y, ŷ.argmax(-1))
+
+    fig, ax = plt.subplots(1, 1, gridspec_kw=dict(left=0.1, right=0.95, top=0.9, bottom=0.05, wspace=0.2))
+    plot.toy.plot_signal_heatmap(ax, cmat, MUSDB_SIGNALS)
     plt.show()
 
 
@@ -210,6 +229,7 @@ COMMANDS = {
     "denoiser": show_sample_denoiser,
     "noise": show_noise_plot,
     "mel": show_mel,
+    "discrprior_roc": show_discrprior_roc,
 }
 
 if __name__ == "__main__":

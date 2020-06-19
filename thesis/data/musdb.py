@@ -71,9 +71,10 @@ class MusDBSamples2(MusDBSamples):
     def __getitem__(self, idx: int):
         _, mel = torch.load(self.files[idx//4])
         i = idx % 4
-        mel = mel[i, ...]
+        mel = mel[None, i, ...]
+        mel = F.interpolate(mel, 3072, mode="linear", align_corners=False)
         # i = torch.empty(1, mel.shape[-1]).fill_(i)
-        return mel, i
+        return mel[0, ...], i
 
 
 

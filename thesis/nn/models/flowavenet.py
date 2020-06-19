@@ -324,13 +324,19 @@ class Flowavenet(BaseModel):
 class FlowavenetClassified(Flowavenet):
     def __init__(self, *args, **kwargs):
         super(FlowavenetClassified, self).__init__(*args, **kwargs)
-        self.classifier = nn.Sequential()
+        self.classifier = Wavenet(
+            in_channels=2560,
+            out_channels=4,
+            residual_channels=32,
+            skip_channels=None,
+            gate_channels=32,
+            cin_channels=None,
+        )
 
     def forward(self, x, c=None):
         out, log_p, logdet = super(FlowavenetClassified, self).forward(x, c)
-        print(out.shape)
-        import ipdb; ipdb.set_trace()
         ŷ = self.classifier(out)
+        ŷ = torch.sigmoid(ŷ).squeeze().mean(-1)
         return ŷ, log_p, logdet
 
     def test(self, m, y):

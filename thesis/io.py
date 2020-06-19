@@ -4,7 +4,8 @@ import warnings
 from collections import OrderedDict
 from glob import glob
 from os import path
-from typing import Any
+from typing import Any, Type
+from typing import Optional as Opt
 from pathlib import Path
 
 import torch
@@ -58,23 +59,14 @@ def save_append(fp: str, obj: Any):
     torch.save(data, fp)
 
 
-def load_model(fp: str, device: str, train: bool = False) -> nn.Module:
-    """
-
-    Args:
-        fp:
-        device:
-        train:
-
-    Returns:
-
-    """
+def load_model(fp: str, device: str, train: bool = False, model_class: Opt[Type] = None ) -> nn.Module:
     save_point = torch.load(fp, map_location=torch.device(device))
 
     if "model_state_dict" in save_point:
         state_dict = save_point["model_state_dict"]
 
-        model_class = save_point["params"]["__class__"]
+        if model_class is None:
+            model_class = save_point["params"]["__class__"]
         args = save_point["params"]["args"]
         kwargs = save_point["params"]["kwargs"].copy()
         model = model_class(*args, **kwargs)

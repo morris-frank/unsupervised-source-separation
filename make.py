@@ -48,6 +48,25 @@ def make_noise_likelihood_plot(args):
     )
 
 
+def make_test_discrprior(args):
+    from thesis.data.musdb import MusDBSamples2
+    from thesis.nn.models.flowavenet import FlowavenetClassified
+
+    batch_size = 24
+    weights = get_newest_checkpoint("*FlowavenetClassified*")
+    model = load_model(weights, args.device, model_class=FlowavenetClassified)
+    test_set = MusDBSamples2(args.data, "test", complex=complex).loader(batch_size, drop_last=False)
+    fp = f"./figures/{path.basename(weights).split('-')[0]}_prior_cross_entropy.npy"
+
+    results = {'y': [], 'ŷ': [], 'logp': []}
+    for k, (m, y) in enumerate(tqdm(test_set)):
+        ŷ, logp, _ = model(m.to(args.device))
+        results['y'].extend(y.squeeze().tolist())
+        results['ŷ'].extend(ŷ.cpu().squeeze().tolist())
+        results['logp'].extend(logp.cpu().squeeze().mean(-1).tolist())
+    np.save(fp, results)
+
+
 def make_cross_likelihood_plot(args):
     weights = get_newest_checkpoint(f"*Flowavenet*pt")
     fp = f"./figures/{path.basename(weights).split('-')[0]}_prior_cross_likelihood.npy"
@@ -71,7 +90,11 @@ def make_cross_likelihood_plot(args):
         _, _, C, L = m.shape
         m = m.view(batch_size * K, C, L)
         m = m.repeat(1, K, 1).to(args.device)
-        logp = model(m)[0]
+        res = model(m)
+        if len(res) > 2:
+            logp = res[1]
+        else:
+            logp = res[0]
         results[:, :, i:i+batch_size] = (
             logp.mean(-1)
             .view(batch_size, K, K)
@@ -176,6 +199,7 @@ COMMANDS = {
     "toy-data": make_toy_dataset,
     "dist": make_data_distribution,
     "musdb-pre-save": make_musdb_pre_save,
+    "discrprior": make_test_discrprior,
 }
 
 

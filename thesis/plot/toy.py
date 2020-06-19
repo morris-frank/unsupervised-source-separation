@@ -123,7 +123,8 @@ def plot_signal_heatmap(ax, data, symbols):
 
     for i, j in product(range(n), repeat=2):
         col = "black" if data[i, j] > 0 else "white"
-        ax.text(j, i, f"{data[i, j]:.3}", ha="center", va="center", color=col)
+        t = f"{data[i, j]:.3}" if isinstance(data[i, j], float) else f"{data[i, j]}"
+        ax.text(j, i, t, ha="center", va="center", color=col)
 
     pos_tick = np.linspace(0, 1, 2 * n + 1)[1::2]
     size = 1 / n * 1.75
