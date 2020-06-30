@@ -2,6 +2,7 @@ from random import random
 from typing import Tuple
 
 import torch
+from torch import Tensor as T
 from torch import nn
 from torch.nn import functional as F
 from torchaudio.transforms import MelSpectrogram
@@ -47,9 +48,11 @@ class q_sǀm(nn.Module):
             nn.Softplus(),
         )
 
-    def forward(self, m, m_mel=None):
-        m_mel = F.interpolate(m_mel, m.shape[-1], mode="linear", align_corners=False)
-        f = self.f(m.repeat(1, self.n_classes, 1), m_mel)
+    def forward(self, m: T, m_mel: T = None):
+        if m_mel is not None:
+            m_mel = F.interpolate(m_mel, m.shape[-1], mode="linear", align_corners=False)
+        # m = m.repeat(1, self.n_classes, 1)
+        f = self.f(m, m_mel)
         α = self.f_α(f) + 1e-4
         β = self.f_β(f) + 1e-4
         q_s = AffineBeta(α, β)

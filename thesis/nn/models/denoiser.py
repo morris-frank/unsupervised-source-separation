@@ -29,8 +29,8 @@ class Denoiser(BaseModel):
         log_q_ŝ = q_s.log_prob(ŝ).clamp(-1e4, 1e3)
 
         scaled_ŝ = normalize(ŝ)
-        scaled_ŝ_mel = self.spectrograph(scaled_ŝ[:, 0, :])
-        log_p_ŝ, _ = self.p_s[0](scaled_ŝ, scaled_ŝ_mel)
+        scaled_ŝ_mel = torch.cat([F.interpolate(self.spectrograph(scaled_ŝ[:, i, :]), m.shape[-1], mode="linear", align_corners=False) for i in range(4)], dim=1)
+        _, log_p_ŝ, _ = self.p_s[0](scaled_ŝ_mel)
         log_p_ŝ = log_p_ŝ[:, None].clamp(-1e5, 1e5)
 
         self.ℒ.log_p = log_p_ŝ.mean()
@@ -45,14 +45,11 @@ class Denoiser(BaseModel):
 
         ŝ = self.forward(s_noised)
         ẑ = s_noised - ŝ
-        import ipdb
 
-        ipdb.set_trace()
+        self.ℒ.l1_s = F.l2_loss(ŝ, s)
+        self.ℒ.l1_z = F.l2_loss(ẑ, z)
 
-        self.ℒ.l1_s = F.l1_loss(ŝ, s)
-        self.ℒ.l1_z = F.l1_loss(ẑ, z)
-
-        ℒ = self.ℒ.l1_s + self.ℒ.l1_z
+        ℒ = self.ℒ.l1_s
         return ℒ
 
 
