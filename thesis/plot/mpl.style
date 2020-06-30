@@ -7,7 +7,7 @@ patch.edgecolor: 282828
 
 text.color: 282828
 
-axes.facecolor: f7f7f7
+axes.facecolor: ffffff
 axes.edgecolor: 282828
 axes.labelcolor: 282828
 axes.prop_cycle: cycler('color', ['689D6A', '8dd3c7', 'feffb3', 'bfbbd9', 'fa8174', '81b1d2', 'fdb462', 'b3de69', 'bc82bd', 'ccebc4', 'ffed6f'])
@@ -18,12 +18,11 @@ ytick.color: 282828
 grid.color: 888888
 
 figure.autolayout: True
-figure.facecolor: f7f7f7
+figure.facecolor: ffffff
 
-savefig.facecolor: f7f7f7
-savefig.edgecolor: f7f7f7
+savefig.facecolor: ffffff
+savefig.edgecolor: ffffff
 
-font.family: Fira Sans
 font.weight: regular
 font.variant: normal
 font.size: 12.0

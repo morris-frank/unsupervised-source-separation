@@ -1,11 +1,12 @@
 from itertools import product
 from math import tau as τ
 
-from matplotlib import rcParams
 import matplotlib.pyplot as plt
 import numpy as np
+import seaborn as sns
 import torch
 from matplotlib import colors
+from matplotlib import rcParams
 from mpl_toolkits.axes_grid1.inset_locator import inset_axes
 from scipy.signal import sawtooth, square
 
@@ -81,35 +82,27 @@ def add_plot_tick(
     elif "sq" in symbol:
         y = square(x)
         _ax.plot(x, y, linewidth=3, c="k")
-    elif "drums" in symbol:
-        icon = plt.imread('thesis/plot/drums_grey.png')
-        _ax.imshow(np.repeat(icon[..., None], 3, 2))
-    elif "bass" in symbol:
-        icon = plt.imread('thesis/plot/bass_grey.png')
-        _ax.imshow(np.repeat(icon[..., None], 3, 2))
-    elif "vocals" in symbol:
-        icon = plt.imread('thesis/plot/voice_grey.png')
-        _ax.imshow(np.repeat(icon[..., None], 3, 2))
-    elif "other" in symbol:
-        icon = plt.imread('thesis/plot/other_grey.png')
+    elif symbol in ["drums", "bass", "vocals", "other"]:
+        sf = "_grey" if rcParams["figure.facecolor"] == "#f7f7f7" else ""
+        icon = plt.imread(f"thesis/plot/{symbol}{sf}.png")
         _ax.imshow(np.repeat(icon[..., None], 3, 2))
     else:
         raise ValueError("unknown symbol")
-
-
 
 
 def plot_signal_heatmap(ax, data, symbols):
     n = len(symbols)
     assert data.shape[0] == n == data.shape[1]
 
-    ax.imshow(data, norm=colors.SymLogNorm(linthresh=0.03, base=np.e))
+    cmap = sns.light_palette("#99961a")
+    # ax.imshow(data, norm=colors.SymLogNorm(linthresh=0.03, base=np.e))
+    sns.heatmap(data, ax=ax, annot=True, linewidths=2, cbar=False, square=True, norm=colors.SymLogNorm(linthresh=0.03, base=np.e), cmap=cmap)
 
-    for edge, spine in ax.spines.items():
-        spine.set_visible(False)
-    ax.set_xticks(np.arange(data.shape[1] + 1) - 0.5)
-    ax.set_yticks(np.arange(data.shape[0] + 1) - 0.5)
-    ax.grid(which="major", color=ax.get_facecolor(), linestyle="-", linewidth=5)
+    # for edge, spine in ax.spines.items():
+    #     spine.set_visible(False)
+    # ax.set_xticks(np.arange(data.shape[1] + 1) - 0.5)
+    # ax.set_yticks(np.arange(data.shape[0] + 1) - 0.5)
+    # ax.grid(which="major", color=ax.get_facecolor(), linestyle="-", linewidth=5)
     ax.tick_params(
         bottom=False,
         top=False,
@@ -121,10 +114,10 @@ def plot_signal_heatmap(ax, data, symbols):
         labelright=False,
     )
 
-    for i, j in product(range(n), repeat=2):
-        col = "black" if data[i, j] > 0 else "white"
-        t = f"{data[i, j]:.3}" if isinstance(data[i, j], float) else f"{data[i, j]}"
-        ax.text(j, i, t, ha="center", va="center", color=col)
+    # for i, j in product(range(n), repeat=2):
+    #     col = "black" if data[i, j] > 0 else "white"
+    #     t = f"{data[i, j]:.3}" if isinstance(data[i, j], float) else f"{data[i, j]}"
+    #     ax.text(j, i, t, ha="center", va="center", color=col)
 
     pos_tick = np.linspace(0, 1, 2 * n + 1)[1::2]
     size = 1 / n * 1.75

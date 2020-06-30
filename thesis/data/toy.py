@@ -22,7 +22,7 @@ class ToyData(Dataset):
         mel_source: bool = False,
         rand_amplitude: float = 0.0,
         noise: float = 0.0,
-        rand_noise: bool = False,
+        rand_noise: bool = True,
         with_phase: int = False,
         **kwargs,
     ):

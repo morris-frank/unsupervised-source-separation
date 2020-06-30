@@ -20,13 +20,14 @@ mpl.use("agg")
 
 
 def make_noise_likelihood_plot(args):
-    weights = get_newest_checkpoint(f"*Flowavenet*pt")
+    suffix = f'*{args.k}*' if args.k else '*'
+    weights = get_newest_checkpoint(f"*Flowavenet{suffix}pt")
     basename = path.basename(weights)[:-3]
     model = load_model(weights, args.device)
     mel = MelSpectrogram()
     K = len(DEFAULT.signals)
 
-    batch_size = 200
+    batch_size = 50
     if args.musdb:
         data = MusDBSamples(args.data, "test").loader(batch_size, drop_last=True)
     else:
@@ -39,8 +40,8 @@ def make_noise_likelihood_plot(args):
             L = s.shape[-1]
             s = (s + σ * torch.randn_like(s)).clamp(-1, 1).view(batch_size * K, L)
             m = mel(s, L).view(batch_size, K, 80, L).view(batch_size, K * 80, L).to(args.device)
-            logp = model(m)[0]
-            results[σ][:, i:i+batch_size] = logp.mean(-1).T.cpu().numpy()
+            logp = model(m)[1]
+            results[σ][:, i*batch_size:(i+1)*batch_size] = logp.mean(-1).T.cpu().numpy()
 
     makedirs(f"./figures/{basename}", exist_ok=True)
     np.save(
@@ -207,7 +208,7 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("command", choices=COMMANDS.keys())
     parser.add_argument("--weights", type=get_newest_checkpoint)
-    parser.add_argument("-k", choices=DEFAULT.all_signals)
+    parser.add_argument("-k", type=str)
     parser.add_argument("--data", type=path.abspath, default=None)
     parser.add_argument("-cpu", action="store_true")
     parser.add_argument("-musdb", action="store_true")

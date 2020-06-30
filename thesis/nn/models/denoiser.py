@@ -1,10 +1,10 @@
 import torch
+from torch import Tensor as T
 from torch.nn import functional as F
 
 from . import BaseModel
 from .demixer import q_sǀm
 from ..modules import MelSpectrogram
-from ...dist import AffineBeta
 from ...functional import normalize
 from ...utils import clean_init_args
 
@@ -16,37 +16,38 @@ class Denoiser(BaseModel):
 
         self.iteration = 0
 
-        self.q_sǀm = q_sǀm(width, None)
+        self.q_sǀm = q_sǀm(4, width, None)
 
         # The placeholder for the prior networks
         self.p_s = [None]
 
-        self.mel = MelSpectrogram()
+        self.spectrograph = MelSpectrogram(n_mels=80, sr=16000)
 
-    def forward(self, m: torch.Tensor):
-        α, β = self.q_sǀm(m)
-        q_s = AffineBeta(α, β)
+    def forward(self, m: T) -> T:
+        q_s = self.q_sǀm(m)
         ŝ = q_s.rsample()
-        log_q_ŝ = q_s.log_prob(ŝ).clamp(-1e5, 1e5)
+        log_q_ŝ = q_s.log_prob(ŝ).clamp(-1e4, 1e3)
 
-        # with torch.no_grad():
         scaled_ŝ = normalize(ŝ)
-        scaled_ŝ_mel = self.mel(scaled_ŝ[:, 0, :])
+        scaled_ŝ_mel = self.spectrograph(scaled_ŝ[:, 0, :])
         log_p_ŝ, _ = self.p_s[0](scaled_ŝ, scaled_ŝ_mel)
         log_p_ŝ = log_p_ŝ[:, None].clamp(-1e5, 1e5)
 
         self.ℒ.log_p = log_p_ŝ.mean()
         self.ℒ.log_q = log_q_ŝ.mean()
-        self.ℒ.KL = - torch.mean(log_p_ŝ - log_q_ŝ)
+        self.ℒ.KL = -torch.mean(log_p_ŝ - log_q_ŝ)
 
-        return scaled_ŝ, log_p_ŝ
+        return scaled_ŝ
 
-    def test(self, s):
+    def test(self, s: T) -> T:
         s_noised = (s + 0.3 * torch.randn_like(s)).clamp(-1, 1)
         z = s_noised - s
 
         ŝ = self.forward(s_noised)
         ẑ = s_noised - ŝ
+        import ipdb
+
+        ipdb.set_trace()
 
         self.ℒ.l1_s = F.l1_loss(ŝ, s)
         self.ℒ.l1_z = F.l1_loss(ẑ, z)

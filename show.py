@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
 from os import path
+from itertools import product
 
 import matplotlib as mpl
 import numpy as np
@@ -8,9 +9,8 @@ import pandas as pd
 import seaborn as sns
 import torch
 from matplotlib import pyplot as plt
-from torchaudio.functional import istft
 from sklearn import metrics
-from tqdm import trange
+from torchaudio.functional import istft
 
 from thesis import plot
 from thesis.data.toy import ToyData
@@ -61,14 +61,15 @@ def show_sample_denoiser(args):
 
 
 def show_cross_likelihood(args):
-    log_p = np.load(get_newest_file("./figures", "*_cross_likelihood.npy"))
+    # log_p = np.load(get_newest_file("./figures", "Apr*_cross_likelihood.npy"))
+    log_p = np.load(get_newest_file("./figures", "*cross_likelihood.npy"))
     log_p[log_p == -np.inf] = -1e3
     log_p = np.maximum(log_p, -1e3)
     log_p = log_p.swapaxes(0, 1)
 
     # fig = plt.figure()
-    fig, (ax1, ax2) = plt.subplots(
-        1, 2, gridspec_kw=dict(left=0.1, right=0.95, top=0.9, bottom=0.05, wspace=0.2)
+    fig, (ax1) = plt.subplots(
+        1, 1, gridspec_kw=dict(left=0.1, right=0.95, top=0.9, bottom=0.05, wspace=0.2)
     )
 
     # ax = fig.add_axes((0.15, 0.15, 0.7, 0.7))
@@ -76,13 +77,17 @@ def show_cross_likelihood(args):
     # ax1.set_title(r"mean of likelihood log p(s)")
 
     # ax = fig.add_axes((0.15, 0.15, 0.7, 0.7))
-    plot.toy.plot_signal_heatmap(ax2, log_p.var(-1), MUSDB_SIGNALS)
-    ax2.set_title("var of likelihood log p(s)")
+    # plot.toy.plot_signal_heatmap(ax2, log_p.var(-1), MUSDB_SIGNALS)
+    # ax2.set_title("var of likelihood log p(s)")
+
+    # plt.savefig('example.pgf', dpi=80, bbox_inches=Bbox([[1, 0], [6, 5]]), transparent=True)
+
+    # tikzplotlib.clean_figure()
+    # tikzplotlib.save('example.tex')
 
     fig.show()
     exit_prompt()
     plt.close()
-
 
 def show_prior(args):
     model = load_model(args.weights, args.device)
@@ -151,7 +156,9 @@ def show_discrprior_roc(args):
     true_class_ŷ = ŷ[np.indices(y.shape)[0], y]
     cmat = metrics.confusion_matrix(y, ŷ.argmax(-1))
 
-    fig, ax = plt.subplots(1, 1, gridspec_kw=dict(left=0.1, right=0.95, top=0.9, bottom=0.05, wspace=0.2))
+    fig, ax = plt.subplots(
+        1, 1, gridspec_kw=dict(left=0.1, right=0.95, top=0.9, bottom=0.05, wspace=0.2)
+    )
     plot.toy.plot_signal_heatmap(ax, cmat, MUSDB_SIGNALS)
     plt.show()
 
@@ -176,17 +183,24 @@ def show_posterior(args):
 
 
 def show_noise_plot(args):
-    df = pd.DataFrame(
-        np.load(
-            get_newest_file("./figures", f"**{args.k}*/noise_likelihood.npy"),
+    pref = f'*{args.k}*' if args.k is not None else '**'
+    df = np.load(
+            get_newest_file("./figures", f"{pref}/noise_likelihood.npy"),
             allow_pickle=True,
         ).item()
-    )
-    df = df.melt(var_name="amount of noise", value_name="log-likelihood under prior")
+
+    l = []
+    for σ, (i, k) in product(df.keys(), enumerate(TOY_SIGNALS)):
+        l.extend([(σ, k, v) for v in df[σ][i].tolist()])
+
+    df = pd.DataFrame(l, columns=['noise-level', 'signal', 'log-likelihood'])
+    df = df[df['log-likelihood'] != 0]
+    df = df[df['noise-level'] != 0.001]
+    # df = df[df['signal'] == 'triangle']
 
     _, ax = plt.subplots()
-    plot.toy.add_plot_tick(ax, symbol=args.k, size=0.1)
-    sns.boxplot(x="amount of noise", y="log-likelihood under prior", data=df, ax=ax)
+    # plot.toy.add_plot_tick(ax, symbol=args.k, size=0.1)
+    sns.boxplot(x="noise-level", y="log-likelihood", hue='signal', data=df, ax=ax, showfliers=False)
     plt.show()
 
 
@@ -211,9 +225,9 @@ def show_mel(args):
 
 
 def main(args):
-    if args.weights is None:
-        args.weights = get_newest_checkpoint(f"*{args.k}*pt" if args.k else "*pt")
-        args.basename = path.basename(args.weights)[:-3]
+    # if args.weights is None:
+    #     args.weights = get_newest_checkpoint(f"*{args.k}*pt" if args.k else "*pt")
+    #     args.basename = path.basename(args.weights)[:-3]
     args.device = "cpu" if not args.gpu else "cuda"
 
     with torch.no_grad():
@@ -237,6 +251,6 @@ if __name__ == "__main__":
     parser.add_argument("command", choices=COMMANDS.keys())
     parser.add_argument("--weights", type=get_newest_checkpoint)
     parser.add_argument("--data", type=path.abspath, default=DEFAULT_TOY)
-    parser.add_argument("-k", choices=TOY_SIGNALS)
+    parser.add_argument("-k", type=str)
     parser.add_argument("-gpu", action="store_true")
     main(parser.parse_args())

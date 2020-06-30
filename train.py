@@ -13,13 +13,15 @@ from thesis.setup import IS_HERMES, DEFAULT
 from thesis.train import train
 
 
-def train_prior(args):
+def train_prior(args, noise=0.):
     from thesis.nn.models.flowavenet import Flowavenet
 
     complex = False
-    add = True
+    add = False
 
     _n = "_musdb" if args.musdb else "_toy"
+    _n += '_no_noise' if noise==0 else '_with_noise'
+    _n += '_rand_ampl'
 
     if args.signal is None:
         name = "all" + _n
@@ -51,15 +53,20 @@ def train_prior(args):
         set_opt = dict(
             source=source,
             mel_source=True,
-            noise=0.03,
+            noise=noise,
             rand_noise=True,
             interpolate=True,
             complex=complex,
             with_phase=add,
+            rand_amplitude=0.2,
         )
         train_set = ToyData(args.data, "train", **set_opt)
         test_set = ToyData(args.data, "test", **set_opt)
     return model, train_set, test_set
+
+
+def train_prior_noise(args):
+    train_prior(args, noise=0.1)
 
 
 def train_discprior(args):
@@ -112,16 +119,15 @@ def train_demixer(path: str):
     return model, train_set, test_set
 
 
-def train_denoiser(path: str, signal: str, modelclass):
-    k = DEFAULT.signals.index(signal)
+def train_denoiser(args, modelclass):
+    model = modelclass(width=128)
 
-    model = modelclass(width=128, name=signal)
     model.p_s = [
-        load_model(get_newest_checkpoint(f"*Flowavenet*{signal}"), "cuda").to("cuda")
+        load_model(get_newest_checkpoint(f"{args.signal}*Flowavenet*"), "cuda").to("cuda")
     ]
 
-    train_set = ToyData(path, "train", source=k, rand_amplitude=0.1)
-    test_set = ToyData(path, "test", source=k, rand_amplitude=0.1)
+    train_set = ToyData(args.data, "train", source=True, rand_amplitude=0.1)
+    test_set = ToyData(args.data, "test", source=True, rand_amplitude=0.1)
     return model, train_set, test_set
 
 
@@ -157,6 +163,7 @@ def main(args):
 
 EXPERIMENTS = {
     "prior": train_prior,
+    "prior_noised": train_prior_noise,
     "demixer": train_demixer,
     "denoiser": partial(train_denoiser, modelclass=Denoiser),
     "denoiser_semi": partial(train_denoiser, modelclass=Denoiser_Semi),
@@ -167,7 +174,7 @@ EXPERIMENTS = {
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("experiment", choices=EXPERIMENTS.keys())
-    parser.add_argument("-k", choices=DEFAULT.all_signals, dest="signal")
+    parser.add_argument("-k", type=str, dest="signal")
     parser.add_argument(
         "--gpu", type=int, required=False, nargs="+",
     )
