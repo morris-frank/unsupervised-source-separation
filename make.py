@@ -179,6 +179,23 @@ def make_data_distribution(args):
             hists = np.zeros((4, 100))
 
 
+def make_langevin(args):
+    from thesis.langevin import langevin_sample
+
+    model = load_model(get_newest_checkpoint(f"*{args.weights}*"), args.device)
+    σ = 0.5
+
+    data = ToyData(args.data, "test", mix=True, source=True, mel_source=True, mel=True, interpolate=True)
+
+    for (m, m_mel), (s, s_mel) in data:
+        for k in range(4):
+            plt.imshow(s_mel[k, :, 1000:1500])
+            plt.savefig(f"/home/morris/s_{k}.png")
+            plt.close()
+        with torch.enable_grad():
+            langevin_sample(model, σ, m_mel)
+
+
 def main(args):
     makedirs("./figures", exist_ok=True)
 
@@ -201,6 +218,7 @@ COMMANDS = {
     "dist": make_data_distribution,
     "musdb-pre-save": make_musdb_pre_save,
     "discrprior": make_test_discrprior,
+    "langevin": make_langevin,
 }
 
 

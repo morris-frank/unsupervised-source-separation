@@ -28,6 +28,8 @@ class Dataset(data.Dataset):
                 N, _, L, _ = mel.shape
                 mel = mel.permute(0, 1, 3, 2).view(N, -1, L)
             if self.interpolate:
+                if mel.ndim == 2:
+                    mel = mel[None, ...]
                 mel = F.interpolate(mel, signal.shape[-1], mode="linear", align_corners=False)
             return signal, mel
         else:

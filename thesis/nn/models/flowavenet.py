@@ -20,13 +20,37 @@ from ...setup import DEFAULT
 
 
 class ActNorm(nn.Module):
-    def __init__(self, in_channel):
+    def __init__(self, in_channel, pretrained=False):
         super().__init__()
 
         self.loc = nn.Parameter(torch.zeros(1, in_channel, 1), requires_grad=True)
         self.scale = nn.Parameter(torch.ones(1, in_channel, 1), requires_grad=True)
+        self.initialized = pretrained
+
+    def initialize(self, x):
+        with torch.no_grad():
+            flatten = x.permute(1, 0, 2).contiguous().view(x.shape[1], -1)
+            mean = (
+                flatten.mean(1)
+                .unsqueeze(1)
+                .unsqueeze(2)
+                .permute(1, 0, 2)
+            )
+            std = (
+                flatten.std(1)
+                .unsqueeze(1)
+                .unsqueeze(2)
+                .permute(1, 0, 2)
+            )
+
+            self.loc.data.copy_(-mean)
+            self.scale.data.copy_(1 / (std + 1e-6))
 
     def forward(self, x):
+        if not self.initalized:
+            self.initalize()
+            self.initialized = True
+
         B, _, T = x.size()
 
         log_abs = self.scale.abs().log()

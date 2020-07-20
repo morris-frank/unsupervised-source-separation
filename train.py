@@ -22,6 +22,7 @@ def train_prior(args, noise=0.):
     _n = "_musdb" if args.musdb else "_toy"
     _n += '_no_noise' if noise==0 else '_with_noise'
     _n += '_rand_ampl'
+    _n += '_timedomain'
 
     if args.signal is None:
         name = "all" + _n
