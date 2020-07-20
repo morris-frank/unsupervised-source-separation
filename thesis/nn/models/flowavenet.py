@@ -216,10 +216,9 @@ class Block(nn.Module):
 
         if self.split:
             x, z = chunk(x, groups=self.groups)
-            # WaveNet prior
             μ, σ = chunk(self.prior(x, c), groups=self.groups)
             N, _, L = μ.shape
-            log_p = norm_log_prob(z, μ, σ).view(N, self.groups, -1, L).mean(2)
+            log_p = norm_log_prob(z, μ, σ).view(N, self.groups, -1).mean(-1)
 
         return x, c, logdet, log_p
 
@@ -293,13 +292,10 @@ class Flowavenet(BaseModel):
         for k, block in enumerate(self.blocks):
             out, c, logdet_new, logp_new = block(out, c)
             logdet = logdet + logdet_new
-            if isinstance(logp_new, torch.Tensor):
-                logp_new = F.interpolate(logp_new, size=L)
             log_p_sum = logp_new + log_p_sum
 
         log_p_out = -0.5 * (log(2.0 * pi) + out.pow(2))
-        log_p_out = log_p_out.view(N, self.groups, -1, L).mean(2)
-        log_p_out = F.interpolate(log_p_out, size=L)
+        log_p_out = log_p_out.view(N, self.groups, -1).mean(-1)
         log_p = log_p_sum + log_p_out
 
         logdet = logdet / (N * C * L)
@@ -329,20 +325,21 @@ class Flowavenet(BaseModel):
                 x, c = block.reverse(x, c)
         return x
 
-    def test(self, s, m):
-        C = s.shape[1]
-        if m.dim() > 3:
-            m = m.flatten(1, 2)
-        _, log_p, logdet = self.forward(m)
+    def test(self, x):
+        N = x.shape[1]
+        if x.dim() > 3:
+            x = x.flatten(1, 2)
+        _, log_p, logdet = self.forward(x)
 
         self.ℒ.logdet = -torch.mean(logdet)
         ℒ = self.ℒ.logdet
 
-        log_p = -log_p.mean(-1).mean(0)
-        for c in range(C):
-            ℒ += log_p[c]
-            setattr(self.ℒ, f"log_p/{DEFAULT.signals[c]}", log_p[c])
+        log_p = -log_p.mean(0)
+        for k in range(N):
+            ℒ += log_p[k]
+            setattr(self.ℒ, f"log_p/{DEFAULT.signals[k]}", log_p[k])
         return ℒ
+
 
 class FlowavenetClassified(Flowavenet):
     def __init__(self, *args, **kwargs):

@@ -14,11 +14,11 @@ from torch.nn import functional as F
 
 class MusDB(Dataset):
     def __init__(self, path: str, subsets: str, mel: bool = False, **kwargs):
-        super(MusDB, self).__init__(sr=14700, n_mels=80, **kwargs)
+        super(MusDB, self).__init__(sr=14_700, n_mels=80, **kwargs)
         self.path, self.subsets = path, subsets
         self.mel = mel
         self.db = musdb.DB(root=path, subsets=subsets)
-        self.L = 3 * 2 ** 10
+        self.L = 14_700 * 3
 
     def __len__(self):
         return len(self.db)
@@ -33,7 +33,7 @@ class MusDB(Dataset):
         signals = torch.tensor(stems, dtype=torch.float32)
         for i in range(4):
             signals[i, :] = normalize(signals[i, :])
-        signals = self._mel_get(signals, self.mel)
+        signals = self._mel_get(signals, True, self.mel)
         return signals
 
     def pre_save(self, n: int):
@@ -47,7 +47,7 @@ class MusDB(Dataset):
 
 
 class MusDBSamples(Dataset):
-    def __init__(self, path: str, subsets: str, **kwargs):
+    def __init__(self, path: str, subsets: str, length: int = False, **kwargs):
         super(MusDBSamples, self).__init__(**kwargs)
         path = path + "_samples/" + subsets + "/*pt"
         self.files = glob(path)

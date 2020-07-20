@@ -54,7 +54,7 @@ def key2freq(n: int) -> float:
     return 440 * 2 ** ((n - 49) / 12)
 
 
-def rand_period_phase(high: int = 88, low: int = 1, sr: int = 16000) -> Tuple[int, int]:
+def rand_period_phase(high: int = 88, low: int = 1, sr: int = 14_700) -> Tuple[int, int]:
     key = randint(low, high * 10, 1)[0] / 10
     freq = key2freq(key)
     ν = int(sr // freq)
