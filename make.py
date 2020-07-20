@@ -134,7 +134,7 @@ def make_posterior_examples(args):
 
 def make_toy_dataset(args):
     length, ns = 48_000, 4
-    config = {"train": 5_000, "test": 500}
+    config = {"test": 500, "train": 5_000}
 
     for name, n in config.items():
         print(f"Generate Toy [{name}] n={n}, length={length}, ns={ns}")

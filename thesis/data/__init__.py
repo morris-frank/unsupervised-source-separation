@@ -21,8 +21,8 @@ class Dataset(data.Dataset):
     def __str__(self) -> str:
         return f"{type(self).__name__} with <{len(self):>7} signals>"
 
-    def _mel_get(self, signal, compute_mel):
-        if compute_mel:
+    def _mel_get(self, signal, do_time, do_mel):
+        if do_mel:
             mel = self.spectrograph(signal.squeeze())
             if self.complex:
                 N, _, L, _ = mel.shape
@@ -31,6 +31,9 @@ class Dataset(data.Dataset):
                 if mel.ndim == 2:
                     mel = mel[None, ...]
                 mel = F.interpolate(mel, signal.shape[-1], mode="linear", align_corners=False)
-            return signal, mel
+            if do_time:
+                return signal, mel
+            else:
+                return mel
         else:
             return signal

@@ -13,27 +13,27 @@ from thesis.setup import IS_HERMES, DEFAULT
 from thesis.train import train
 
 
-def train_prior(args, space, noise=0., rand_ampl=0.2):
+def train_prior(args, space, noise=0.0, rand_ampl=0.2):
     from thesis.nn.models.flowavenet import Flowavenet
-    assert space in ('time', 'spec')
+
+    assert space in ("time", "spec")
 
     if args.signal is None:
         name = "musdb" if args.musdb else "toy"
-        source = True
+        source, groups = True, len(DEFAULT.signals)
         groups = len(DEFAULT.signals)
     else:
         name = args.signal
         k = DEFAULT.signals(args.signal)
-        source = k
-        groups = 1
+        source, groups = k, 1
 
-    name += '_no_noise' if noise==0 else '_with_noise'
-    name += f'_{space}'
+    name += "_no_noise" if noise == 0 else "_with_noise"
+    name += f"_{space}"
     if rand_ampl > 0:
-        name += '_rand_ampl'
+        name += "_rand_ampl"
 
     model = Flowavenet(
-        in_channel=80,
+        in_channel=80 if space == "spec" else 1,
         n_block=8 if args.musdb else 4,
         n_flow=6,
         n_layer=10,
@@ -49,16 +49,15 @@ def train_prior(args, space, noise=0., rand_ampl=0.2):
         train_set = MusDBSamples(args.data, "train")
         test_set = MusDBSamples(args.data, "test")
     else:
-        set_opt = dict(
-            source=source,
-            mel_source=True,
-            noise=noise,
-            interpolate=True,
-            rand_amplitude=rand_ampl,
-            length=args.L
+        opt = dict(
+            noise=noise, interpolate=True, rand_amplitude=rand_ampl, length=args.L
         )
-        train_set = ToyData(args.data, "train", **set_opt)
-        test_set = ToyData(args.data, "test", **set_opt)
+        if space == "spec":
+            opt["mel_source"] = source
+        else:
+            opt["source"] = source
+        train_set = ToyData(args.data, "train", **opt)
+        test_set = ToyData(args.data, "test", **opt)
     return model, train_set, test_set
 
 
@@ -116,7 +115,9 @@ def train_denoiser(args, modelclass):
     model = modelclass(width=128)
 
     model.p_s = [
-        load_model(get_newest_checkpoint(f"{args.signal}*Flowavenet*"), "cuda").to("cuda")
+        load_model(get_newest_checkpoint(f"{args.signal}*Flowavenet*"), "cuda").to(
+            "cuda"
+        )
     ]
 
     train_set = ToyData(args.data, "train", source=True, rand_amplitude=0.1)
@@ -155,10 +156,10 @@ def main(args):
 
 
 EXPERIMENTS = {
-    "prior_time": partial(train_prior, space='time'),
+    "prior_time": partial(train_prior, space="time"),
     "prior_spec": partial(train_prior, space="spec"),
-    "prior_time_noised": partial(train_prior, space='time', noise=0.1),
-    "prior_spec_noised": partial(train_prior, space='spec', noise=0.1),
+    "prior_time_noised": partial(train_prior, space="time", noise=0.1),
+    "prior_spec_noised": partial(train_prior, space="spec", noise=0.1),
     "demixer": train_demixer,
     "denoiser": partial(train_denoiser, modelclass=Denoiser),
     "denoiser_semi": partial(train_denoiser, modelclass=Denoiser_Semi),

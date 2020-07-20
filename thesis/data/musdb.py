@@ -26,7 +26,6 @@ class MusDB(Dataset):
     def __getitem__(self, idx: int):
         track = self.db[idx]
 
-        # stems = track.stems[1:, ::3, :]
         stems = track.stems[1:, ::3, :]
         ν = randint(0, stems.shape[1] - self.L)
         stems = stems[:, None, ν : ν + self.L, :].mean(-1)

@@ -47,8 +47,8 @@ class ActNorm(nn.Module):
             self.scale.data.copy_(1 / (std + 1e-6))
 
     def forward(self, x):
-        if not self.initalized:
-            self.initalize()
+        if not self.initialized:
+            self.initialize(x)
             self.initialized = True
 
         B, _, T = x.size()
@@ -343,7 +343,6 @@ class Flowavenet(BaseModel):
             ℒ += log_p[c]
             setattr(self.ℒ, f"log_p/{DEFAULT.signals[c]}", log_p[c])
         return ℒ
-
 
 class FlowavenetClassified(Flowavenet):
     def __init__(self, *args, **kwargs):

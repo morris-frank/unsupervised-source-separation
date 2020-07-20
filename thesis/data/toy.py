@@ -17,31 +17,32 @@ class ToyData(Dataset):
         path: str,
         subset: str,
         mix: bool = False,
-        mel: bool = False,
+        mel_mix: bool = False,
         source: Union[bool, int] = False,
-        mel_source: bool = False,
+        mel_source: Union[bool, int] = False,
         rand_amplitude: float = 0.0,
         noise: float = 0.0,
-        rand_noise: bool = True,
         with_phase: int = False,
         length: int = False,
         **kwargs,
     ):
         super(ToyData, self).__init__(n_mels=79 if with_phase else 80, **kwargs)
         self.files = glob(f"{path}/{subset}/*npy")
-        self.mix, self.mel = mix, mel
-        self.rand_amplitude = rand_amplitude
-        self.noise, self.rand_noise = noise, rand_noise
+        self.mix, self.mel_mix = mix, mel_mix
+        self.rand_A = rand_amplitude
+        self.noise = noise
         self.with_phase = with_phase
         self.length = length
 
-        self.k = "all" if isinstance(source, bool) else source
-        self.source = source is not False
-        self.mel_source = mel_source
+        self.source, self.mel_source = source is not False, mel_source is not False
+        if self.source is True and self.mel_source is True:
+            assert source == mel_source
+        if self.source is True:
+            self.k = "all" if isinstance(source, bool) else source
+        else:
+            self.k = "all" if isinstance(mel_source, bool) else mel_source
 
-        assert mix or self.source
-        assert mix or not mel
-        assert self.source or not mel_source
+        assert mix or mel_mix or self.source or self.mel_source
 
     def __len__(self):
         return len(self.files)
@@ -57,14 +58,12 @@ class ToyData(Dataset):
         if self.length is not False:
             L = mix.shape[-1]
             ν = randint(0, L - self.length)
-            mix = mix[..., ν:ν+self.length]
-            sources = sources[..., ν:ν+self.length]
+            mix = mix[..., ν : ν + self.length]
+            sources = sources[..., ν : ν + self.length]
 
-        if self.rand_amplitude > 0:
-            A = torch.rand(sources.shape[0], 1) * self.rand_amplitude + (
-                1.0 - self.rand_amplitude
-            )
-            sources = A * sources
+        if self.rand_A > 0:
+            A = torch.rand(sources.shape[0], 1) * self.rand_A
+            sources = (A + (1. - self.rand_A)) * sources
             mix = sources.mean(0, keepdim=True)
 
         if self.noise > 0:
@@ -72,11 +71,13 @@ class ToyData(Dataset):
             sources = (sources + noise).clamp(-1, 1)
             mix = sources.mean(0, keepdim=True)
 
-        sources = self._mel_get(sources, self.mel_source)
-        mix = self._mel_get(mix, self.mel)
+        sources = self._mel_get(sources, self.source, self.mel_source)
+        mix = self._mel_get(mix, self.mix, self.mel_mix)
 
         if self.mel_source and self.with_phase:
-            add = torch.ones(4, 1, sources.shape[-1]) * torch.tensor(datum["φ"]).view(4, 1, 1)
+            add = torch.ones(4, 1, sources.shape[-1]) * torch.tensor(datum["φ"]).view(
+                4, 1, 1
+            )
             sources = (sources[0], torch.cat([sources[1], add], dim=1))
 
         if self.mix:
