@@ -24,6 +24,7 @@ class ToyData(Dataset):
         noise: float = 0.0,
         rand_noise: bool = True,
         with_phase: int = False,
+        length: int = False,
         **kwargs,
     ):
         super(ToyData, self).__init__(n_mels=79 if with_phase else 80, **kwargs)
@@ -32,6 +33,7 @@ class ToyData(Dataset):
         self.rand_amplitude = rand_amplitude
         self.noise, self.rand_noise = noise, rand_noise
         self.with_phase = with_phase
+        self.length = length
 
         self.k = "all" if isinstance(source, bool) else source
         self.source = source is not False
@@ -52,6 +54,12 @@ class ToyData(Dataset):
         if self.k != "all":
             sources = sources[None, self.k, :].contiguous()
 
+        if self.length is not False:
+            L = mix.shape[-1]
+            ν = randint(0, L - self.length)
+            mix = mix[..., ν:ν+self.length]
+            sources = sources[..., ν:ν+self.length]
+
         if self.rand_amplitude > 0:
             A = torch.rand(sources.shape[0], 1) * self.rand_amplitude + (
                 1.0 - self.rand_amplitude
@@ -60,8 +68,7 @@ class ToyData(Dataset):
             mix = sources.mean(0, keepdim=True)
 
         if self.noise > 0:
-            σ = uniform(0, self.noise) if self.rand_noise else self.noise
-            noise = σ * torch.randn_like(sources)
+            noise = self.noise * torch.randn_like(sources)
             sources = (sources + noise).clamp(-1, 1)
             mix = sources.mean(0, keepdim=True)
 
@@ -69,7 +76,7 @@ class ToyData(Dataset):
         mix = self._mel_get(mix, self.mel)
 
         if self.mel_source and self.with_phase:
-            add = torch.ones(4, 1, 3072) * torch.tensor(datum["φ"]).view(4, 1, 1)
+            add = torch.ones(4, 1, sources.shape[-1]) * torch.tensor(datum["φ"]).view(4, 1, 1)
             sources = (sources[0], torch.cat([sources[1], add], dim=1))
 
         if self.mix:

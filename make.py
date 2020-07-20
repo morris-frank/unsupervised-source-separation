@@ -133,7 +133,7 @@ def make_posterior_examples(args):
 
 
 def make_toy_dataset(args):
-    length, ns = 3072, 4
+    length, ns = 48_000, 4
     config = {"train": 5_000, "test": 500}
 
     for name, n in config.items():

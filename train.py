@@ -13,33 +13,31 @@ from thesis.setup import IS_HERMES, DEFAULT
 from thesis.train import train
 
 
-def train_prior(args, noise=0.):
+def train_prior(args, space, noise=0., rand_ampl=0.2):
     from thesis.nn.models.flowavenet import Flowavenet
-
-    complex = False
-    add = False
-
-    _n = "_musdb" if args.musdb else "_toy"
-    _n += '_no_noise' if noise==0 else '_with_noise'
-    _n += '_rand_ampl'
-    _n += '_timedomain'
+    assert space in ('time', 'spec')
 
     if args.signal is None:
-        name = "all" + _n
+        name = "musdb" if args.musdb else "toy"
         source = True
         groups = len(DEFAULT.signals)
     else:
-        name = args.signal + _n
+        name = args.signal
         k = DEFAULT.signals(args.signal)
         source = k
         groups = 1
 
+    name += '_no_noise' if noise==0 else '_with_noise'
+    name += f'_{space}'
+    if rand_ampl > 0:
+        name += '_rand_ampl'
+
     model = Flowavenet(
-        in_channel=130 if complex else 80,
+        in_channel=80,
         n_block=8 if args.musdb else 4,
-        n_flow=10 if args.musdb else 10,
-        n_layer=4 if args.musdb else 4,
-        block_per_split=2 if args.musdb else 2,
+        n_flow=6,
+        n_layer=10,
+        block_per_split=2,
         width=48 if args.musdb else 32,
         name=name,
         groups=groups,
@@ -48,26 +46,20 @@ def train_prior(args, noise=0.):
     if args.musdb:
         from thesis.data.musdb import MusDBSamples
 
-        train_set = MusDBSamples(args.data, "train", complex=complex)
-        test_set = MusDBSamples(args.data, "test", complex=complex)
+        train_set = MusDBSamples(args.data, "train")
+        test_set = MusDBSamples(args.data, "test")
     else:
         set_opt = dict(
             source=source,
             mel_source=True,
             noise=noise,
-            rand_noise=True,
             interpolate=True,
-            complex=complex,
-            with_phase=add,
-            rand_amplitude=0.2,
+            rand_amplitude=rand_ampl,
+            length=args.L
         )
         train_set = ToyData(args.data, "train", **set_opt)
         test_set = ToyData(args.data, "test", **set_opt)
     return model, train_set, test_set
-
-
-def train_prior_noise(args):
-    train_prior(args, noise=0.1)
 
 
 def train_discprior(args):
@@ -163,8 +155,10 @@ def main(args):
 
 
 EXPERIMENTS = {
-    "prior": train_prior,
-    "prior_noised": train_prior_noise,
+    "prior_time": partial(train_prior, space='time'),
+    "prior_spec": partial(train_prior, space="spec"),
+    "prior_time_noised": partial(train_prior, space='time', noise=0.1),
+    "prior_spec_noised": partial(train_prior, space='spec', noise=0.1),
     "demixer": train_demixer,
     "denoiser": partial(train_denoiser, modelclass=Denoiser),
     "denoiser_semi": partial(train_denoiser, modelclass=Denoiser_Semi),
@@ -185,4 +179,5 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=None)
     parser.add_argument("-debug", action="store_true")
     parser.add_argument("-musdb", action="store_true")
+    parser.add_argument("-L", type=int, default=None)
     main(parser.parse_args())
