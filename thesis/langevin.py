@@ -6,17 +6,15 @@ def langevin_sample(model, σ, m):
     N, C, L = m.shape
     η = .00003 * (σ / .01)**2
     λ = 1./σ**2
-    λ = 0
+    # λ = 0
 
     with torch.enable_grad():
         model.train()
-        ŝ = torch.randn((N, 4*C, L), requires_grad=True)
+        ŝ = torch.randn((N, 4*C, L), requires_grad=True, device=m.device)
         for i in range(100):
-            print(f"step {i:05}, ", end="\t")
             model.zero_grad()
-            log_p, _ = model(ŝ)
+            _, log_p, _ = model(ŝ)
             ℒ = -log_p.clamp(-1e5, 1e5).mean()
-            print(f"ℒ: {ℒ}, ", end="\t")
             ℒ.backward()
             δŝ = ŝ.grad
             ŝ.detach_()

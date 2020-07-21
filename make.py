@@ -190,12 +190,12 @@ def make_langevin(args):
     opt = {"source": True, "mix": True} if "time" in model.name else {"mel_source": True, "mel_mix": True}
     data = ToyData(args.data, "test", noise=noise, interpolate=True, rand_amplitude=0.2, length=length, **opt).loader(1)
 
-    for m, s in data:
+    for i, (m, s) in enumerate(data):
         plot.toy.reconstruction(s, sharey=True, ylim=[-1, 1])
-        plt.savefig(f"s.png")
-        for i, ŝ in enumerate(langevin_sample(model, σ, m)):
+        plt.savefig(f"s_{i:03}.png")
+        for j, ŝ in enumerate(langevin_sample(model, σ, m.to(args.device))):
             plot.toy.reconstruction(ŝ, sharey=True, ylim=[-1, 1])
-            plt.savefig(f"ŝ_{i*10}.png")
+            plt.savefig(f"ŝ_{i:03}_{j*10:03}.png")
         exit(0)
 
 

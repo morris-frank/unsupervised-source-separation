@@ -51,6 +51,10 @@ def main(args):
     if args.file == "train":
         f += f" --batch_size={args.batch_size} -wandb --gpu 0"
 
+    if args.file == "make":
+        if args.weights is not None:
+            f += f" --weights=\"{args.weights}\""
+
     if args.debug:
         f += " -debug"
 
@@ -83,4 +87,5 @@ if __name__ == "__main__":
     parser.add_argument("-debug", action="store_true")
     parser.add_argument("-musdb", action="store_true")
     parser.add_argument("-test", action="store_true", help="Just print the file")
+    parser.add_argument("--weights")
     main(parser.parse_args())
