@@ -28,7 +28,7 @@ def get_newest_file(folder: str, match: str = "*pt"):
     return chosen
 
 
-def get_newest_checkpoint(match: str):
+def get_newest_checkpoint(match: str = '*pt'):
     if "*" not in match:
         return match
     if not match.endswith("pt"):
@@ -59,7 +59,7 @@ def save_append(fp: str, obj: Any):
     torch.save(data, fp)
 
 
-def load_model(fp: str, device: str, train: bool = False, model_class: Opt[Type] = None ) -> nn.Module:
+def load_model(fp: str, device: str, train: bool = False, model_class: Opt[Type] = None) -> nn.Module:
     save_point = torch.load(fp, map_location=torch.device(device))
 
     if "model_state_dict" in save_point:
@@ -79,6 +79,9 @@ def load_model(fp: str, device: str, train: bool = False, model_class: Opt[Type]
             state_dict = _state_dict
 
         model.load_state_dict(state_dict)
+        for module in model.modules():
+            if hasattr(module, 'initialized'):
+                module.initialized = True
     else:
         model = save_point["model"]
 

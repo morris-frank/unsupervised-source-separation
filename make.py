@@ -139,6 +139,7 @@ def make_toy_dataset(args):
     for name, n in config.items():
         print(f"Generate Toy [{name}] n={n}, length={length}, ns={ns}")
         print(f"Save to {args.data}/{name}")
+        makedirs(f"{args.data}/{name}/", exist_ok=True)
         for i in trange(n):
             item = generate_toy(length, ns)
             np.save(f"{args.data}/{name}/{name}_{i:05}.npy", item)
@@ -181,19 +182,21 @@ def make_data_distribution(args):
 
 def make_langevin(args):
     from thesis.langevin import langevin_sample
+    noise, length = 0.1, 16_384
 
-    model = load_model(get_newest_checkpoint(f"*{args.weights}*"), args.device)
+    model = load_model(args.weights, args.device)
     σ = 0.5
 
-    data = ToyData(args.data, "test", mix=True, source=True, mel_source=True, mel=True, interpolate=True)
+    opt = {"source": True, "mix": True} if "time" in model.name else {"mel_source": True, "mel_mix": True}
+    data = ToyData(args.data, "test", noise=noise, interpolate=True, rand_amplitude=0.2, length=length, **opt).loader(1)
 
-    for (m, m_mel), (s, s_mel) in data:
-        for k in range(4):
-            plt.imshow(s_mel[k, :, 1000:1500])
-            plt.savefig(f"/home/morris/s_{k}.png")
-            plt.close()
-        with torch.enable_grad():
-            langevin_sample(model, σ, m_mel)
+    for m, s in data:
+        plot.toy.reconstruction(s, sharey=True, ylim=[-1, 1])
+        plt.savefig(f"s.png")
+        for i, ŝ in enumerate(langevin_sample(model, σ, m)):
+            plot.toy.reconstruction(ŝ, sharey=True, ylim=[-1, 1])
+            plt.savefig(f"ŝ_{i*10}.png")
+        exit(0)
 
 
 def main(args):

@@ -48,7 +48,8 @@ class ActNorm(nn.Module):
 
     def forward(self, x):
         if not self.initialized:
-            self.initialize(x)
+            if self.training:
+                self.initialize(x)
             self.initialized = True
 
         B, _, T = x.size()
@@ -210,34 +211,35 @@ class Block(nn.Module):
             c = permute_L2C(c)
 
         logdet, log_p = 0, 0
-        for k, flow in enumerate(self.flows):
+        for flow in self.flows:
             x, c, _logdet = flow(x, c)
             logdet = logdet + _logdet
 
+        z = None
         if self.split:
+            # print('now')
+            # TODO: transform z to be under normal dist ⇒ make reverse possible
             x, z = chunk(x, groups=self.groups)
             μ, σ = chunk(self.prior(x, c), groups=self.groups)
             N, _, L = μ.shape
             log_p = norm_log_prob(z, μ, σ).view(N, self.groups, -1).mean(-1)
 
-        return x, c, logdet, log_p
+        return x, c, logdet, log_p, z
 
     def reverse(self, output, c=None, eps=None):
         if self.split:
-            μ, σ = chunk(self.prior(output, c), groups=self.groups)
-            z_new = μ + σ.exp() * eps
-
-            x = interleave((output, z_new), groups=self.groups)
+            # μ, σ = chunk(self.prior(output, c), groups=self.groups)
+            # z_new = μ + σ.exp() * eps
+            x = interleave((output, eps), groups=self.groups)
         else:
             x = output
 
-        for i, flow in enumerate(self.flows[::-1]):
+        for flow in self.flows[::-1]:
             x, c = flow.reverse(x, c)
 
         unsqueezed_x = permute_C2L(x)
         if c is not None:
             c = permute_C2L(c)
-
         return unsqueezed_x, c
 
 
@@ -289,17 +291,33 @@ class Flowavenet(BaseModel):
             c = self.c_up(c, L)
         logdet, log_p_sum = 0, 0
 
-        for k, block in enumerate(self.blocks):
-            out, c, logdet_new, logp_new = block(out, c)
+        z_list = []
+        for i, block in enumerate(self.blocks):
+            out, c, logdet_new, logp_new, z = block(out, c)
             logdet = logdet + logdet_new
             log_p_sum = logp_new + log_p_sum
+            if z is not None:
+                z_list.append(z)
+            # print(f"fw {i}: {out.mean()}")
 
+        z_list.append(out)
         log_p_out = -0.5 * (log(2.0 * pi) + out.pow(2))
         log_p_out = log_p_out.view(N, self.groups, -1).mean(-1)
         log_p = log_p_sum + log_p_out
 
         logdet = logdet / (N * C * L)
-        return out, log_p, logdet
+
+        z = self.combine_z_list(z_list)
+        return z, log_p, logdet
+
+    def combine_z_list(self, z_list):
+        for i in reversed(range(self.n_block)):
+            if not ((i + 1) % self.block_per_split or i == self.n_block - 1):
+                z1 = z_list.pop()
+                z2 = z_list.pop()
+                z_list.append(interleave((z1, z2), groups=self.groups))
+            z_list[-1] = permute_C2L(z_list[-1])
+        return z_list[0]
 
     def reverse(self, z, c=None):
         if c is not None:
@@ -319,8 +337,10 @@ class Flowavenet(BaseModel):
 
         for i, block in enumerate(self.blocks[::-1]):
             index = self.n_block - i
+            # print(f"bw {index}: {x.mean()}")
             if not (index % self.block_per_split or index == self.n_block):
                 x, c = block.reverse(x, c, z_list[index // self.block_per_split - 1])
+                # print('now')
             else:
                 x, c = block.reverse(x, c)
         return x
@@ -354,7 +374,7 @@ class FlowavenetClassified(Flowavenet):
         )
 
     def forward(self, x, c=None):
-        out, log_p, logdet = super(FlowavenetClassified, self).forward(x, c)
+        out = log_p, logdet = super(FlowavenetClassified, self).forward(x, c)
         ŷ = self.classifier(out)
         ŷ = torch.sigmoid(ŷ).squeeze().mean(-1)
         return ŷ, log_p, logdet

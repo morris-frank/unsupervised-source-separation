@@ -89,6 +89,7 @@ def show_cross_likelihood(args):
     exit_prompt()
     plt.close()
 
+
 def show_prior(args):
     model = load_model(args.weights, args.device)
 
@@ -224,6 +225,42 @@ def show_mel(args):
         plt.close(fig)
 
 
+def show_sample_from_prior(args):
+    length = 16_384
+
+    model = load_model(args.weights, args.device)
+
+    if "time" in model.name:
+        opt = {"source": True}
+        zshape = (1, 4, length)
+    else:
+        opt = {"mel_source": True}
+
+    dset = ToyData(args.data, "test", noise=0., interpolate=True, rand_amplitude=0.2, length=length, **opt).loader(1)
+    z_alt = None
+    for x in dset:
+        z, logp, logdet = model.forward(x)
+        print(f"logp: {logp},\tlogdet: {logdet}")
+
+        if z_alt is not None:
+            x_ = model.reverse((z + z_alt) / 2)
+            fig = plot.toy.reconstruction(x, x_, sharey=True, ylim=[-1, 1])
+            plt.show()
+            plt.close(fig)
+
+        z_alt = z.clone().detach()
+
+    while True:
+        z = torch.randn(zshape)
+        x = model.reverse(z)
+
+        fig, axs = plt.subplots(4)
+        for k, ax in enumerate(axs):
+            ax.plot(x[0, k, 500:1500])
+        plt.show()
+        plt.close(fig)
+
+
 def main(args):
     # if args.weights is None:
     #     args.weights = get_newest_checkpoint(f"*{args.k}*pt" if args.k else "*pt")
@@ -244,6 +281,7 @@ COMMANDS = {
     "noise": show_noise_plot,
     "mel": show_mel,
     "discrprior_roc": show_discrprior_roc,
+    "sample-prior": show_sample_from_prior,
 }
 
 if __name__ == "__main__":
