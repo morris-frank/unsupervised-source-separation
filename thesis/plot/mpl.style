@@ -1,5 +1,5 @@
 lines.color: 282828
-lines.linewidth: 2
+lines.linewidth: 1
 lines.solid_capstyle: round
 lines.antialiased: True
 
@@ -18,6 +18,7 @@ ytick.color: 282828
 grid.color: 888888
 
 figure.autolayout: True
+figure.figsize: 12.0, 7.0
 figure.facecolor: ffffff
 
 savefig.facecolor: ffffff

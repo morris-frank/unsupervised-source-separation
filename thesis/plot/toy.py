@@ -12,8 +12,8 @@ from scipy.signal import sawtooth, square
 
 from ..utils import get_func_arguments
 
-PRINT_START = 100
-PRINT_LENGTH = 500
+PRINT_START = 0
+PRINT_LENGTH = 2000
 
 
 def squeeze(tensor):

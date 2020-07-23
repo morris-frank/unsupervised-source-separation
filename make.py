@@ -182,20 +182,25 @@ def make_data_distribution(args):
 
 def make_langevin(args):
     from thesis.langevin import langevin_sample
-    noise, length = 0.1, 16_384
+    noise, length = 0., 16_384 // 4
 
     model = load_model(args.weights, args.device)
     σ = 0.1
 
     opt = {"source": True, "mix": True} if "time" in model.name else {"mel_source": True, "mel_mix": True}
-    data = ToyData(args.data, "test", noise=noise, interpolate=True, rand_amplitude=0.2, length=length, **opt).loader(1)
+    data = ToyData(args.data, "test", noise=noise, interpolate=True, rand_amplitude=0.05, length=length, **opt).loader(1, shuffle=False)
 
     for i, (m, s) in enumerate(data):
-        plot.toy.reconstruction(s, sharey=True, ylim=[-1, 1])
+        fig = plot.toy.reconstruction(s, sharey=True, ylim=[-1, 1])
         plt.savefig(f"s_{i:03}.png")
-        for j, ŝ in enumerate(langevin_sample(model, σ, m.to(args.device))):
-            plot.toy.reconstruction(ŝ, s, sharey=True, ylim=[-1, 1])
+        plt.close(fig)
+        for j, (ŝ, ℒ, δŝ) in enumerate(langevin_sample(model, σ, m.to(args.device), ŝ=s.clone().to(args.device))):
+            print(ℒ)
+            δŝ /= δŝ.abs().max()
+            fig = plot.toy.reconstruction(s, ŝ, δŝ, sharey=True, ylim=[-1, 1])
+            plt.suptitle(ℒ)
             plt.savefig(f"ŝ_{i:03}_{j:04}.png")
+            plt.close(fig)
 
 
 def main(args):

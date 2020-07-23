@@ -210,7 +210,7 @@ class Block(nn.Module):
         if c is not None:
             c = permute_L2C(c)
 
-        logdet, log_p = 0, 0
+        logdet = 0
         for flow in self.flows:
             x, c, _logdet = flow(x, c)
             logdet = logdet + _logdet
@@ -221,10 +221,11 @@ class Block(nn.Module):
             # TODO: transform z to be under normal dist ⇒ make reverse possible
             x, z = chunk(x, groups=self.groups)
             μ, σ = chunk(self.prior(x, c), groups=self.groups)
-            N, _, L = μ.shape
-            log_p = norm_log_prob(z, μ, σ).view(N, self.groups, -1).mean(-1)
+            # N, _, L = μ.shape
+            # log_p = norm_log_prob(z, μ, σ).view(N, self.groups, -1).mean(-1)
+            z = z / σ.exp() - μ
 
-        return x, c, logdet, log_p, z
+        return x, c, logdet, z
 
     def reverse(self, output, c=None, eps=None):
         if self.split:
@@ -289,25 +290,23 @@ class Flowavenet(BaseModel):
         out = x
         if c is not None:
             c = self.c_up(c, L)
-        logdet, log_p_sum = 0, 0
 
+        logdet = 0
         z_list = []
         for i, block in enumerate(self.blocks):
-            out, c, logdet_new, logp_new, z = block(out, c)
+            out, c, logdet_new, z = block(out, c)
             logdet = logdet + logdet_new
-            log_p_sum = logp_new + log_p_sum
             if z is not None:
                 z_list.append(z)
-            # print(f"fw {i}: {out.mean()}")
 
         z_list.append(out)
-        log_p_out = -0.5 * (log(2.0 * pi) + out.pow(2))
-        log_p_out = log_p_out.view(N, self.groups, -1).mean(-1)
-        log_p = log_p_sum + log_p_out
+        z = self.combine_z_list(z_list)
+
+        log_p = -0.5 * (log(2.0 * pi) + z.pow(2))
+        log_p = log_p.view(N, self.groups, -1).mean(-1)
 
         logdet = logdet / (N * C * L)
 
-        z = self.combine_z_list(z_list)
         return z, log_p, logdet
 
     def combine_z_list(self, z_list):

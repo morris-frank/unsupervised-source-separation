@@ -1,27 +1,37 @@
 import torch
 from math import sqrt
+from torch import  autograd
 
 
-def langevin_sample(model, σ, m):
+def langevin_sample(model, σ, m, ŝ=None):
     N, C, L = m.shape
     η = .00003 * (σ / .01)**2
     λ = 1./σ**2
-    # λ = 0
+    λ = 0
+
+    δŝ = torch.zeros_like(ŝ)
+
+    # s = torch.zeros_like(ŝ)
+    # s[:, 0, :] = ŝ[:, -1, :]
+    # s[:, -1, :] = ŝ[:, 0, :]
+    # s[:, 1, :] = ŝ[:, 2, :]
+    # s[:, 2, :] = ŝ[:, 1, :]
+    # ŝ = s
+    _, L, _ = model(ŝ)
+    yield ŝ, -L.mean().detach().item(), δŝ
+    ŝ = (ŝ + 0.4 * torch.randn_like(ŝ)).clamp(-1, 1)
 
     with torch.enable_grad():
-        model.train()
-        ŝ = (0.1 * torch.randn((N, 4*C, L), device=m.device)).clamp(-1, 1)
+        if ŝ is None:
+            ŝ = (0.1 * torch.randn((N, 4*C, L), device=m.device)).clamp(-1, 1)
         ŝ.requires_grad = True
-        for i in range(100):
-            yield ŝ
-            model.zero_grad()
-            _, log_p, _ = model(ŝ)
-            ℒ = -log_p.clamp(-1e5, 1e5).mean()
-            ℒ.backward()
-            δŝ = ŝ.grad
-            ŝ.detach_()
+        ℒ = 0
+        for i in range(300):
+            yield ŝ, ℒ, δŝ
+            _, ℒ, _ = model(ŝ)
+            δŝ = autograd.grad((ℒ.mean()), ŝ, only_inputs=True)[0]
             ε = sqrt(2 * η) * torch.randn_like(ŝ)
-            m_ = torch.stack(ŝ.chunk(4, 1), 0).sum(0) - m
-            ŝ = ŝ + η * (δŝ - λ * m_.repeat(1, 4, 1)) + ε
-            ŝ.requires_grad = True
-        return ŝ
+            m_ = (torch.stack(ŝ.chunk(4, 1), 0).sum(0) - m).repeat(1, 4, 1)
+            ŝ.data.add_(30 * (δŝ - λ * m_) + 0.05 * ε)
+            ℒ = list(map(lambda x: f"{x:.3}", ℒ.detach().cpu().squeeze().tolist()))
+    return ŝ, ℒ, δŝ
