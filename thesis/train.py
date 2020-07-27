@@ -203,7 +203,9 @@ def train(
             }
             if keep_optim:
                 save_point.update(
-                    {"optimizer_state_dict": optimizer.state_dict(), "test": ℒ}
+                    {"optimizer_state_dict": optimizer.state_dict(),
+                     "scheduler": scheduler.state_dict(),
+                     "test": ℒ}
                 )
             torch.save(save_point, f"checkpoints/{model_id}_{it:06}.pt")
             test(model, test_loader, device)

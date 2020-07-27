@@ -67,7 +67,7 @@ class ToyData(Dataset):
             mix = sources.mean(0, keepdim=True)
 
         if self.noise > 0:
-            noise = self.noise * torch.randn_like(sources)
+            noise = self.noise * np.random.rand() * torch.randn_like(sources)
             sources = (sources + noise).clamp(-1, 1)
             mix = sources.mean(0, keepdim=True)
 
@@ -136,7 +136,7 @@ def generate_toy(length: int, ns: int) -> Dict:
         shapes[1] = "high_square"
     for i, s in zip(range(ns), shapes):
         item["shape"].append(s)
-        high, low = 88, 1
+        high, low = 65, 1
         if s.startswith("high_"):
             low = 50
             s = s[5:]

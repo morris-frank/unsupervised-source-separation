@@ -37,7 +37,7 @@ def train_prior(args, space, noise=0.0, rand_ampl=0.2):
         n_block=8 if args.musdb else 4,
         n_flow=6,
         n_layer=10,
-        block_per_split=2,
+        block_per_split=4,
         width=48 if args.musdb else 32,
         name=name,
         groups=groups,
@@ -79,8 +79,8 @@ def train_discprior(args):
     if args.musdb:
         from thesis.data.musdb import MusDBSamples2
 
-        train_set = MusDBSamples2(args.data, "train", complex=complex)
-        test_set = MusDBSamples2(args.data, "test", complex=complex)
+        train_set = MusDBSamples2(args.data, "train")
+        test_set = MusDBSamples2(args.data, "test")
     return model, train_set, test_set
 
 
@@ -152,6 +152,7 @@ def main(args):
             test_loader=test_loader,
             iterations=args.iterations,
             wandb=args.wandb,
+            keep_optim=True,
         )
 
 

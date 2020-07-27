@@ -261,6 +261,14 @@ def show_sample_from_prior(args):
         plt.close(fig)
 
 
+def show_data(args):
+    test_set = ToyData(args.data, "test", noise=0.1, interpolate=True, rand_amplitude=0.2, length=1000, source=True)
+    for s in test_set:
+        fig = plot.toy.reconstruction(s, sharey=True, ylim=[-1, 1])
+        plt.show()
+        plt.close(fig)
+
+
 def main(args):
     # if args.weights is None:
     #     args.weights = get_newest_checkpoint(f"*{args.k}*pt" if args.k else "*pt")
@@ -282,6 +290,7 @@ COMMANDS = {
     "mel": show_mel,
     "discrprior_roc": show_discrprior_roc,
     "sample-prior": show_sample_from_prior,
+    "data": show_data,
 }
 
 if __name__ == "__main__":

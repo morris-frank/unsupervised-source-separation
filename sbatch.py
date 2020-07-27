@@ -79,7 +79,7 @@ def main(args):
 if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("experiment", type=str)
-    parser.add_argument("-t", type=int, default=5, dest="hours")
+    parser.add_argument("-t", type=str, default='5', dest="hours")
     parser.add_argument("-f", type=str, default="train", dest="file")
     parser.add_argument("-k", type=str, required=False)
     parser.add_argument("--batch_size", type=int)
