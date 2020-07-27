@@ -32,13 +32,18 @@ def train_prior(args, space, noise=0.0, rand_ampl=0.2):
     if rand_ampl > 0:
         name += "_rand_ampl"
 
+    if space == "spec":
+        width = 48 if args.musdb else 32
+    else:
+        width = 48 if args.musdb else 32
+
     model = Flowavenet(
         in_channel=80 if space == "spec" else 1,
         n_block=8 if args.musdb else 4,
         n_flow=6,
         n_layer=10,
         block_per_split=4,
-        width=48 if args.musdb else 32,
+        width=width,
         name=name,
         groups=groups,
     )
@@ -50,7 +55,7 @@ def train_prior(args, space, noise=0.0, rand_ampl=0.2):
         test_set = MusDBSamples(args.data, "test")
     else:
         opt = dict(
-            noise=noise, interpolate=True, rand_amplitude=rand_ampl, length=args.L
+            noise=noise, interpolate=False, rand_amplitude=rand_ampl, length=args.L
         )
         if space == "spec":
             opt["mel_source"] = source

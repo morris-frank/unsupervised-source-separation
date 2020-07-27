@@ -31,6 +31,7 @@ class Dataset(data.Dataset):
                 if mel.ndim == 2:
                     mel = mel[None, ...]
                 mel = F.interpolate(mel, signal.shape[-1], mode="linear", align_corners=False)
+            mel = F.interpolate(mel, 2**9, mode="linear", align_corners=False)
             if do_time:
                 return signal, mel
             else:
