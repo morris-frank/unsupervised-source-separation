@@ -91,6 +91,7 @@ def train(
     wandb: bool = False,
     keep_checkpoints: bool = False,
     keep_optim: bool = False,
+    base_lr: float = 1e-4
 ):
     """
     Args:
@@ -102,6 +103,7 @@ def train(
         wandb: Whether to log wandb
         keep_checkpoints: whether to keep all checkpoints not just the last one
         keep_optim: whether to also save the optimizer
+        base_lr: the starting learing rate
     """
     model_id = f"{datetime.today():%b%d-%H%M}_{type(model).__name__}_{model.name}"
 
@@ -125,7 +127,7 @@ def train(
         )
 
     # Setup optimizer and learning rate scheduler
-    optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=1e-4)
+    optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=base_lr)
     lr_milestones = torch.linspace(iterations * 0.36, iterations, 5).tolist()
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, lr_milestones, gamma=0.6)
 

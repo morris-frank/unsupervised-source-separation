@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
 from os import path
-from itertools import product
+from itertools import product, combinations
 
 import matplotlib as mpl
 import numpy as np
@@ -227,28 +227,12 @@ def show_mel(args):
 
 def show_sample_from_prior(args):
     length = 16_384
-
     model = load_model(args.weights, args.device)
 
     if "time" in model.name:
-        opt = {"source": True}
         zshape = (1, 4, length)
     else:
-        opt = {"mel_source": True}
-
-    dset = ToyData(args.data, "test", noise=0., interpolate=True, rand_amplitude=0.2, length=length, **opt).loader(1)
-    z_alt = None
-    for x in dset:
-        z, logp, logdet = model.forward(x)
-        print(f"logp: {logp},\tlogdet: {logdet}")
-
-        if z_alt is not None:
-            x_ = model.reverse((z + z_alt) / 2)
-            fig = plot.toy.reconstruction(x, x_, sharey=True, ylim=[-1, 1])
-            plt.show()
-            plt.close(fig)
-
-        z_alt = z.clone().detach()
+        pass
 
     while True:
         z = torch.randn(zshape)
@@ -257,6 +241,27 @@ def show_sample_from_prior(args):
         fig, axs = plt.subplots(4)
         for k, ax in enumerate(axs):
             ax.plot(x[0, k, 500:1500])
+        plt.show()
+        plt.close(fig)
+
+
+def show_interpolate_prior(args):
+    length = 16_384
+    model = load_model(args.weights, args.device)
+
+    if "time" in model.name:
+        opt = {"source": True}
+    else:
+        opt = {"mel_source": True}
+
+    dset = ToyData(args.data, "test", noise=0., interpolate=False, rand_amplitude=0.2, length=length, **opt).loader(1)
+    for a, b in combinations(dset, 2):
+        α, *_ = model.forward(a)
+        β, *_ = model.forward(b)
+        γ = (α + β) / 2
+
+        c = model.reverse(γ)
+        fig = plot.toy.reconstruction(a, b, c, sharey=True, ylim=[-1, 1])
         plt.show()
         plt.close(fig)
 
@@ -290,6 +295,7 @@ COMMANDS = {
     "mel": show_mel,
     "discrprior_roc": show_discrprior_roc,
     "sample-prior": show_sample_from_prior,
+    "interpolate-prior": show_interpolate_prior,
     "data": show_data,
 }
 

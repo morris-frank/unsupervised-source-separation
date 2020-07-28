@@ -216,20 +216,20 @@ class Block(nn.Module):
             x, c, _log_det = flow(x, c)
             log_det = log_det + _log_det
 
-        log_p = None
+        log_p, z = None, None
         if self.split:
             x, z = chunk(x, groups=self.groups)
             μ, σ = chunk(self.prior(x, c), groups=self.groups)
             N, _, L = μ.shape
             log_p = norm_log_prob(z, μ, σ)
 
-        return x, c, log_det, log_p
+        return x, c, log_det, log_p, z
 
     def reverse(self, output, c=None, eps=None):
         if self.split:
-            # μ, σ = chunk(self.prior(output, c), groups=self.groups)
-            # z_new = μ + σ.exp() * eps
-            x = interleave((output, eps), groups=self.groups)
+            μ, σ = chunk(self.prior(output, c), groups=self.groups)
+            z = μ + σ.exp() * eps
+            x = interleave((output, z), groups=self.groups)
         else:
             x = output
 
@@ -290,13 +290,15 @@ class Flowavenet(BaseModel):
             c = self.c_up(c, L)
 
         log_det = 0
-        log_p_list = []
+        log_p_list, z_list = [], []
         for i, block in enumerate(self.blocks):
-            out, c, log_det_new, log_p_new = block(out, c)
+            out, c, log_det_new, log_p_new, z_new = block(out, c)
             log_det = log_det + log_det_new
-            if log_p_new is not None:
+            if z_new is not None:
+                z_list.append(z_new)
                 log_p_list.append(log_p_new)
 
+        z_list.append(out)
         log_p_out = -.5 * (log(τ) + out.pow(2))
         log_p_list.append(log_p_out)
         
@@ -306,10 +308,11 @@ class Flowavenet(BaseModel):
                 setattr(self.ℒ, f"log_p_{i}/{DEFAULT.signals[k]}", _log_p[k])
 
         log_p = self.combine_z_list(log_p_list)
+        z = self.combine_z_list(z_list)
 
         log_det = log_det / (N * C * L)
 
-        return log_p, log_det
+        return z, log_p, log_det
 
     def combine_z_list(self, z_list):
         for i in reversed(range(self.n_block)):
@@ -350,7 +353,7 @@ class Flowavenet(BaseModel):
         N = x.shape[1]
         if x.dim() > 3:
             x = x.flatten(1, 2)
-        log_p, log_det = self.forward(x)
+        _, log_p, log_det = self.forward(x)
 
         self.ℒ.log_det = -torch.mean(log_det)
         ℒ = self.ℒ.log_det

@@ -158,6 +158,7 @@ def main(args):
             iterations=args.iterations,
             wandb=args.wandb,
             keep_optim=True,
+            base_lr=args.base_lr,
         )
 
 
@@ -187,4 +188,5 @@ if __name__ == "__main__":
     parser.add_argument("-debug", action="store_true")
     parser.add_argument("-musdb", action="store_true")
     parser.add_argument("-L", type=int, default=16384)
+    parser.add_argument("-lr", type=float, default=1e-4, dest='base_lr')
     main(parser.parse_args())
