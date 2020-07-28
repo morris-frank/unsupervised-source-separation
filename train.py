@@ -42,7 +42,7 @@ def train_prior(args, space, noise=0.0, rand_ampl=0.2):
         n_block=8 if args.musdb else 4,
         n_flow=6,
         n_layer=10,
-        block_per_split=4,
+        block_per_split=2,
         width=width,
         name=name,
         groups=groups,

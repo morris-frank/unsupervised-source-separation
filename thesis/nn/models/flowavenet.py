@@ -1,4 +1,5 @@
-from math import log, pi
+from math import log
+from math import tau as τ
 
 import torch
 from torch import nn
@@ -56,9 +57,9 @@ class ActNorm(nn.Module):
 
         log_abs = self.scale.abs().log()
 
-        logdet = torch.sum(log_abs) * B * T
+        log_det = torch.sum(log_abs) * B * T
 
-        return self.scale * (x + self.loc), logdet
+        return self.scale * (x + self.loc), log_det
 
     def reverse(self, output):
         return output / self.scale - self.loc
@@ -97,9 +98,9 @@ class AffineCoupling(nn.Module):
         log_s, t = chunk(self.net(in_a, c), groups=self.groups)
 
         out_b = (in_b - t) * torch.exp(-log_s)
-        logdet = torch.sum(-log_s)
+        log_det = torch.sum(-log_s)
 
-        return interleave((in_a, out_b), groups=self.groups), logdet
+        return interleave((in_a, out_b), groups=self.groups), log_det
 
     def reverse(self, output, c=None):
         out_a, out_b = chunk(output, groups=self.groups)
@@ -130,17 +131,17 @@ class Flow(nn.Module):
         )
 
     def forward(self, x, c=None):
-        out, logdet = self.actnorm(x)
-        out, logdet_c = self.coupling(out, c)
+        out, log_det = self.actnorm(x)
+        out, log_det_c = self.coupling(out, c)
 
         out = flip(out, groups=self.groups)
         if c is not None:
             c = flip(c, groups=self.groups)
 
-        if logdet_c is not None:
-            logdet += logdet_c
+        if log_det_c is not None:
+            log_det += log_det_c
 
-        return out, c, logdet
+        return out, c, log_det
 
     def reverse(self, out, c=None):
         out = flip(out, groups=self.groups)
@@ -210,22 +211,19 @@ class Block(nn.Module):
         if c is not None:
             c = permute_L2C(c)
 
-        logdet = 0
+        log_det = 0
         for flow in self.flows:
-            x, c, _logdet = flow(x, c)
-            logdet = logdet + _logdet
+            x, c, _log_det = flow(x, c)
+            log_det = log_det + _log_det
 
-        z = None
+        log_p = None
         if self.split:
-            # print('now')
-            # TODO: transform z to be under normal dist ⇒ make reverse possible
             x, z = chunk(x, groups=self.groups)
             μ, σ = chunk(self.prior(x, c), groups=self.groups)
-            # N, _, L = μ.shape
-            # log_p = norm_log_prob(z, μ, σ).view(N, self.groups, -1).mean(-1)
-            z = z / σ.exp() - μ
+            N, _, L = μ.shape
+            log_p = norm_log_prob(z, μ, σ)
 
-        return x, c, logdet, z
+        return x, c, log_det, log_p
 
     def reverse(self, output, c=None, eps=None):
         if self.split:
@@ -291,23 +289,27 @@ class Flowavenet(BaseModel):
         if c is not None:
             c = self.c_up(c, L)
 
-        logdet = 0
-        z_list = []
+        log_det = 0
+        log_p_list = []
         for i, block in enumerate(self.blocks):
-            out, c, logdet_new, z = block(out, c)
-            logdet = logdet + logdet_new
-            if z is not None:
-                z_list.append(z)
+            out, c, log_det_new, log_p_new = block(out, c)
+            log_det = log_det + log_det_new
+            if log_p_new is not None:
+                log_p_list.append(log_p_new)
 
-        z_list.append(out)
-        z = self.combine_z_list(z_list)
+        log_p_out = -.5 * (log(τ) + out.pow(2))
+        log_p_list.append(log_p_out)
+        
+        for i in range(len(log_p_list)):
+            _log_p = log_p_list[i].mean((0, -1)).view(self.groups, -1).mean(-1)
+            for k in range(self.groups):
+                setattr(self.ℒ, f"log_p_{i}/{DEFAULT.signals[k]}", _log_p[k])
 
-        log_p = -0.5 * (log(2.0 * pi) + z.pow(2))
-        log_p = log_p.view(N, self.groups, -1).mean(-1)
+        log_p = self.combine_z_list(log_p_list)
 
-        logdet = logdet / (N * C * L)
+        log_det = log_det / (N * C * L)
 
-        return z, log_p, logdet
+        return log_p, log_det
 
     def combine_z_list(self, z_list):
         for i in reversed(range(self.n_block)):
@@ -348,12 +350,12 @@ class Flowavenet(BaseModel):
         N = x.shape[1]
         if x.dim() > 3:
             x = x.flatten(1, 2)
-        _, log_p, logdet = self.forward(x)
+        log_p, log_det = self.forward(x)
 
-        self.ℒ.logdet = -torch.mean(logdet)
-        ℒ = self.ℒ.logdet
+        self.ℒ.log_det = -torch.mean(log_det)
+        ℒ = self.ℒ.log_det
 
-        log_p = -log_p.mean(0)
+        log_p = -log_p.mean((0, -1))
         for k in range(N):
             ℒ += log_p[k]
             setattr(self.ℒ, f"log_p/{DEFAULT.signals[k]}", log_p[k])
@@ -373,17 +375,17 @@ class FlowavenetClassified(Flowavenet):
         )
 
     def forward(self, x, c=None):
-        out = log_p, logdet = super(FlowavenetClassified, self).forward(x, c)
+        out = log_p, log_det = super(FlowavenetClassified, self).forward(x, c)
         ŷ = self.classifier(out)
         ŷ = torch.sigmoid(ŷ).squeeze().mean(-1)
-        return ŷ, log_p, logdet
+        return ŷ, log_p, log_det
 
     def test(self, m, y):
-        ŷ, log_p, logdet = self.forward(m)
+        ŷ, log_p, log_det = self.forward(m)
 
         self.ℒ.ce = F.cross_entropy(ŷ, y)
-        self.ℒ.logdet = -torch.mean(logdet)
+        self.ℒ.log_det = -torch.mean(log_det)
         self.ℒ.log_p = -log_p.mean()
 
-        ℒ = self.ℒ.log_p + self.ℒ.logdet + self.ℒ.ce
+        ℒ = self.ℒ.log_p + self.ℒ.log_det + self.ℒ.ce
         return ℒ
