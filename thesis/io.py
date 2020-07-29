@@ -29,7 +29,7 @@ def get_newest_file(folder: str, match: str = "*pt"):
 
 
 def get_newest_checkpoint(match: str = '*pt'):
-    if "*" not in match:
+    if "*" not in match and path.exists(match):
         return match
     if not match.endswith("pt"):
         if not match.endswith("*"):
@@ -59,7 +59,7 @@ def save_append(fp: str, obj: Any):
     torch.save(data, fp)
 
 
-def load_model(fp: str, device: str, train: bool = False, model_class: Opt[Type] = None) -> nn.Module:
+def load_model(fp: str, device: str, train: bool = False, model_class: Opt[Type] = None):
     save_point = torch.load(fp, map_location=torch.device(device))
 
     if "model_state_dict" in save_point:
@@ -89,8 +89,8 @@ def load_model(fp: str, device: str, train: bool = False, model_class: Opt[Type]
         model.eval()
         return model.to(device)
 
-    # TODO implement continue training load
-    raise NotImplementedError
+    model.train()
+    return model.to(device), save_point['optimizer_state_dict'], save_point['scheduler_state_dict'], save_point['it']
 
 
 class FileLock(object):

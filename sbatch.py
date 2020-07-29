@@ -53,18 +53,17 @@ def main(args):
         if args.lr is not None:
             f += f" -lr {args.lr}"
 
-    if args.file == "make":
-        if args.weights is not None:
-            f += f" --weights=\"{args.weights}\""
+    if args.weights is not None:
+        f += f" --weights=\"{args.weights}\""
+
+    if args.k is not None:
+        f += f" -k {args.k}"
 
     if args.debug:
         f += " -debug"
 
     if args.musdb:
         f += " -musdb"
-
-    if args.k:
-        f += f" -k {args.k}"
 
     fn = "_temp.job"
     with open(fn, "w") as fp:

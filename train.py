@@ -134,11 +134,18 @@ def main(args):
     if IS_HERMES:
         args.batch_size = 2
 
+    args.device = f"cuda:{args.gpu[0]}" if args.gpu else "cpu"
+
     DEFAULT.musdb = args.musdb
     if args.data is None:
         args.data = DEFAULT.data
 
     model, train_set, test_set = EXPERIMENTS[args.experiment](args)
+    optimizer_state_dict, scheduler_state_dict, start_it = None, None, 0
+
+    if args.weights is not None:
+        del model
+        model, optimizer_state_dict, scheduler_state_dict, start_it = load_model(get_newest_checkpoint(args.weights), args.device, train=True).to(args.device)
 
     print(f"pid is: {os.getpid()}")
     train_loader = train_set.loader(args.batch_size)
@@ -159,6 +166,9 @@ def main(args):
             wandb=args.wandb,
             keep_optim=True,
             base_lr=args.base_lr,
+            start_it=start_it,
+            optimizer_state_dict=optimizer_state_dict,
+            scheduler_state_dict=scheduler_state_dict,
         )
 
 
@@ -189,4 +199,5 @@ if __name__ == "__main__":
     parser.add_argument("-musdb", action="store_true")
     parser.add_argument("-L", type=int, default=16384)
     parser.add_argument("-lr", type=float, default=1e-4, dest='base_lr')
+    parser.add_argument("--weights", type=str)
     main(parser.parse_args())

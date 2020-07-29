@@ -91,7 +91,10 @@ def train(
     wandb: bool = False,
     keep_checkpoints: bool = False,
     keep_optim: bool = False,
-    base_lr: float = 1e-4
+    base_lr: float = 1e-4,
+    start_it: int = 0,
+    optimizer_state_dict = None,
+    scheduler_state_dict = None,
 ):
     """
     Args:
@@ -128,8 +131,12 @@ def train(
 
     # Setup optimizer and learning rate scheduler
     optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=base_lr)
+    if optimizer_state_dict is not None:
+        optimizer.load_state_dict(optimizer_state_dict)
     lr_milestones = torch.linspace(iterations * 0.36, iterations, 5).tolist()
     scheduler = optim.lr_scheduler.MultiStepLR(optimizer, lr_milestones, gamma=0.6)
+    if scheduler_state_dict is not None:
+        scheduler.load_state_dict(scheduler_state_dict)
 
     losses, it_times = [], []
     train_iterator = iter(train_loader)
@@ -139,7 +146,7 @@ def train(
         f"\n{Fore.YELLOW}This is {Fore.GREEN}{model_id}{Fore.RESET}\n"
         f"{Fore.YELLOW}{f'{Fore.GREEN} Start training {Fore.YELLOW}'.center(80, '-')}{Fore.RESET}"
     )
-    for it in range(iterations):
+    for it in range(start_it, iterations):
         it_start_time = time.time()
         # Load next random batch
         try:
