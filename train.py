@@ -134,8 +134,6 @@ def main(args):
     if IS_HERMES:
         args.batch_size = 2
 
-    args.device = f"cuda:{args.gpu[0]}" if args.gpu else "cpu"
-
     DEFAULT.musdb = args.musdb
     if args.data is None:
         args.data = DEFAULT.data
@@ -144,8 +142,14 @@ def main(args):
     optimizer_state_dict, scheduler_state_dict, start_it = None, None, 0
 
     if args.weights is not None:
-        del model
-        model, optimizer_state_dict, scheduler_state_dict, start_it = load_model(get_newest_checkpoint(args.weights), args.device, train=True).to(args.device)
+        device = f"cuda:{args.gpu[0]}" if args.gpu else "cpu"
+        spt = torch.load(get_newest_checkpoint(args.weights), map_location=torch.device(device))
+        model.load_state_dict(spt['model_state_dict'])
+        optimizer_state_dict = spt['optimizer_state_dict']
+        scheduler_state_dict = spt['scheduler_state_dict']
+        for module in model.modules():
+            if hasattr(module, "initialized"):
+                module.initialized = True
 
     print(f"pid is: {os.getpid()}")
     train_loader = train_set.loader(args.batch_size)
