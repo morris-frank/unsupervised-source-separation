@@ -1,17 +1,16 @@
-import time
 import os
+import time
 import warnings
 from collections import OrderedDict
 from glob import glob
 from os import path
+from pathlib import Path
+from random import random
 from typing import Any, Type
 from typing import Optional as Opt
-from pathlib import Path
 
 import torch
-from random import random
 from colorama import Fore
-from torch import nn
 from torch.serialization import SourceChangeWarning
 
 from .setup import DEFAULT_CHECKPOINTS
@@ -21,19 +20,23 @@ warnings.simplefilter("ignore", SourceChangeWarning)
 
 
 def get_newest_file(folder: str, match: str = "*pt"):
-    chosen = sorted(glob(f"{folder}/{match}"), key=lambda x: path.getmtime(x))[-1]
+    try:
+        chosen = sorted(glob(f"{folder}/{match}"), key=lambda x: path.getmtime(x))[-1]
+    except IndexError:
+        print(f"{Fore.RED}Could not load weights\n\t{Fore.YELLOW}{folder}/{match}\n{Fore.GREEN}Give me something better{Fore.RESET}.")
+        exit(1)
     print(
         f"{Fore.YELLOW}For {Fore.GREEN}{match} {Fore.YELLOW}we using\t{Fore.GREEN}{chosen}{Fore.RESET}"
     )
     return chosen
 
 
-def get_newest_checkpoint(match: str = '*pt'):
+def get_newest_checkpoint(match: str = "*pt"):
     if "*" not in match and path.exists(match):
         return match
     if not match.endswith("pt"):
         if not match.endswith("*"):
-            match += '*'
+            match += "*"
         match += "pt"
     return get_newest_file(DEFAULT_CHECKPOINTS, match)
 
@@ -59,7 +62,9 @@ def save_append(fp: str, obj: Any):
     torch.save(data, fp)
 
 
-def load_model(fp: str, device: str, train: bool = False, model_class: Opt[Type] = None):
+def load_model(
+    fp: str, device: str, train: bool = False, model_class: Opt[Type] = None
+):
     save_point = torch.load(fp, map_location=torch.device(device))
 
     if "model_state_dict" in save_point:
@@ -80,7 +85,7 @@ def load_model(fp: str, device: str, train: bool = False, model_class: Opt[Type]
 
         model.load_state_dict(state_dict)
         for module in model.modules():
-            if hasattr(module, 'initialized'):
+            if hasattr(module, "initialized"):
                 module.initialized = True
     else:
         model = save_point["model"]
@@ -90,16 +95,21 @@ def load_model(fp: str, device: str, train: bool = False, model_class: Opt[Type]
         return model.to(device)
 
     model.train()
-    return model.to(device), save_point['optimizer_state_dict'], save_point['scheduler_state_dict'], save_point['it']
+    return (
+        model.to(device),
+        save_point["optimizer_state_dict"],
+        save_point["scheduler_state_dict"],
+        save_point["it"],
+    )
 
 
 class FileLock(object):
     def __init__(self, file_name):
-        self.path = Path(path.normpath(file_name) + '.lock')
+        self.path = Path(path.normpath(file_name) + ".lock")
 
     def __enter__(self):
         while self.path.exists():
-            print(f'{Fore.YELLOW}LockFile exists. Waiting…')
+            print(f"{Fore.YELLOW}LockFile exists. Waiting…")
             time.sleep(random())
         time.sleep(random())
         self.path.touch()
@@ -123,9 +133,10 @@ def exit_prompt():
 
 def vprint(*args):
     names = get_func_arguments()
-    for n,v in zip(names, args):
+    for n, v in zip(names, args):
         if isinstance(v, torch.Tensor):
             v = v.shape
-        print(f'{Fore.YELLOW}{n}{Fore.WHITE} = {Fore.MAGENTA}{v}', end=f'{Fore.RESET}\t')
+        print(
+            f"{Fore.YELLOW}{n}{Fore.WHITE} = {Fore.MAGENTA}{v}", end=f"{Fore.RESET}\t"
+        )
     print()
-
