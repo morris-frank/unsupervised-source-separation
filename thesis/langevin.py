@@ -1,6 +1,6 @@
 import torch
 from math import sqrt
-from torch import  autograd
+from torch import autograd
 
 
 def langevin_sample(model, σ, m, ŝ=None):
@@ -29,9 +29,9 @@ def langevin_sample(model, σ, m, ŝ=None):
         for i in range(300):
             yield ŝ, ℒ, δŝ
             _, ℒ, _ = model(ŝ)
-            δŝ = autograd.grad((ℒ.mean()), ŝ, only_inputs=True)[0]
+            δŝ = autograd.grad((-ℒ.mean()), ŝ, only_inputs=True)[0]
             ε = sqrt(2 * η) * torch.randn_like(ŝ)
             m_ = (torch.stack(ŝ.chunk(4, 1), 0).sum(0) - m).repeat(1, 4, 1)
-            ŝ.data.add_(30 * (δŝ - λ * m_) + 0.05 * ε)
-            ℒ = list(map(lambda x: f"{x:.3}", ℒ.detach().cpu().squeeze().tolist()))
+            ŝ = ŝ.detach().add(η * (δŝ - λ * m_) + 0.05 * ε).clamp(-1, 1)
+            ℒ = list(map(lambda x: f"{x:.3}", ℒ.detach().cpu().mean(-1).squeeze().tolist()))
     return ŝ, ℒ, δŝ

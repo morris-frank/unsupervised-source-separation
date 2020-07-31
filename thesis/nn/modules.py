@@ -1,13 +1,11 @@
 from typing import List
 
 import torch
+from torch import Tensor as T
 from torch import nn
 from torch.autograd import Variable
 from torch.nn import functional as F
 from torchaudio.transforms import MelSpectrogram as _MelSpectrogram
-from torchaudio.transforms import MelScale, Spectrogram, InverseMelScale
-from torchaudio.functional import istft
-from torch import Tensor as T
 
 
 class Conv1d(nn.Module):
@@ -107,13 +105,12 @@ class STFTUpsample(nn.Module):
 
 
 class MelSpectrogram(_MelSpectrogram):
-    def __init__(self, n_mels=80, sr=14_700):
+    def __init__(self, n_mels=128, sr=14_700):
         super(MelSpectrogram, self).__init__(
             sample_rate=sr,
-            n_fft=1024,
-            hop_length=256,
+            n_fft=400,
             n_mels=n_mels,
-            f_min=125,
+            f_min=70,
             f_max=7600,
         )
         self.reference = 20.0
@@ -125,7 +122,6 @@ class MelSpectrogram(_MelSpectrogram):
             20 * torch.log10(mel_specgram.clamp(min=1e-4)) - self.reference
         )
         mel_spectrogram = (mel_spectrogram - self.min_db) / (-self.min_db)
-        # mel_spectrogram = ((mel_spectrogram - self.min_db) / (-self.min_db)).clamp(0, 1)
 
         if L is not None:
             mel_spectrogram = F.interpolate(

@@ -21,7 +21,7 @@ class Denoiser(BaseModel):
         # The placeholder for the prior networks
         self.p_s = [None]
 
-        self.spectrograph = MelSpectrogram(n_mels=80, sr=16000)
+        self.spectrograph = MelSpectrogram()
 
     def forward(self, m: T) -> T:
         q_s = self.q_sǀm(m)

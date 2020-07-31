@@ -24,9 +24,8 @@ class ToyData(Dataset):
         noise: float = 0.0,
         with_phase: int = False,
         length: int = False,
-        **kwargs,
     ):
-        super(ToyData, self).__init__(n_mels=79 if with_phase else 80, **kwargs)
+        super(ToyData, self).__init__(n_mels=79 if with_phase else 80)
         self.files = glob(f"{path}/{subset}/*npy")
         self.mix, self.mel_mix = mix, mel_mix
         self.rand_A = rand_amplitude
@@ -86,37 +85,6 @@ class ToyData(Dataset):
             return mix
         else:
             return sources
-
-
-class ToyDataAndNoise(ToyData):
-    def __getitem__(self, idx):
-        if idx % 20 == 0:
-            σ = uniform(0, 0.1)
-            s = σ * torch.randn(1, 3072)
-            m = self.spectrograph(s.squeeze())
-            return (s, m), -0.01
-        else:
-            return super(ToyDataAndNoise, self).__getitem__(idx), 1
-
-
-class RandToyData(ToyData):
-    def __getitem__(self, idx):
-        if idx % 20 == 0:
-            σ = uniform(0, 0.1)
-            s = σ * torch.randn(1, 3072)
-            m = self.spectrograph(s.squeeze())
-            return (s, m), -1
-        elif idx % 21 == 0:
-            s, m = super(RandToyData, self).__getitem__(idx)
-            s = s.mean(0, keepdim=True)
-            m = self.spectrograph(s.squeeze())
-            return (s, m), -1
-        else:
-            s, m = super(RandToyData, self).__getitem__(idx)
-            k = randint(0, 3)
-            s = s[None, k, :]
-            m = m[k, :]
-            return (s, m), k
 
 
 def generate_toy(length: int, ns: int) -> Dict:

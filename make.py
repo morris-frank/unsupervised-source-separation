@@ -10,8 +10,8 @@ from colorama import Fore
 from tqdm import tqdm, trange
 
 from thesis import plot
-from thesis.data.toy import ToyData, generate_toy
 from thesis.data.musdb import MusDBSamples
+from thesis.data.toy import ToyData, generate_toy
 from thesis.io import load_model, save_append, get_newest_checkpoint, FileLock
 from thesis.nn.modules import MelSpectrogram
 from thesis.setup import DEFAULT
@@ -20,7 +20,7 @@ mpl.use("agg")
 
 
 def make_noise_likelihood_plot(args):
-    suffix = f'*{args.k}*' if args.k else '*'
+    suffix = f"*{args.k}*" if args.k else "*"
     weights = get_newest_checkpoint(f"*Flowavenet{suffix}pt")
     basename = path.basename(weights)[:-3]
     model = load_model(weights, args.device)
@@ -31,7 +31,9 @@ def make_noise_likelihood_plot(args):
     if args.musdb:
         data = MusDBSamples(args.data, "test").loader(batch_size, drop_last=True)
     else:
-        data = ToyData(args.data, "test", source=True, mel_source=True, interpolate=True).loader(batch_size, drop_last=True)
+        data = ToyData(
+            args.data, "test", source=True, mel_source=True, interpolate=True
+        ).loader(batch_size, drop_last=True)
 
     results = {}
     for σ in [0.0, 0.001, 0.01, 0.05, 0.1, 0.2, 0.3]:
@@ -39,14 +41,19 @@ def make_noise_likelihood_plot(args):
         for i, (s, _) in enumerate(tqdm(data)):
             L = s.shape[-1]
             s = (s + σ * torch.randn_like(s)).clamp(-1, 1).view(batch_size * K, L)
-            m = mel(s, L).view(batch_size, K, 80, L).view(batch_size, K * 80, L).to(args.device)
+            m = (
+                mel(s, L)
+                .view(batch_size, K, 80, L)
+                .view(batch_size, K * 80, L)
+                .to(args.device)
+            )
             logp = model(m)[1]
-            results[σ][:, i*batch_size:(i+1)*batch_size] = logp.mean(-1).T.cpu().numpy()
+            results[σ][:, i * batch_size : (i + 1) * batch_size] = (
+                logp.mean(-1).T.cpu().numpy()
+            )
 
     makedirs(f"./figures/{basename}", exist_ok=True)
-    np.save(
-        f"./figures/{basename}/noise_likelihood.npy", results, allow_pickle=True
-    )
+    np.save(f"./figures/{basename}/noise_likelihood.npy", results, allow_pickle=True)
 
 
 def make_test_discrprior(args):
@@ -56,15 +63,17 @@ def make_test_discrprior(args):
     batch_size = 24
     weights = get_newest_checkpoint("*FlowavenetClassified*")
     model = load_model(weights, args.device, model_class=FlowavenetClassified)
-    test_set = MusDBSamples2(args.data, "test", complex=complex).loader(batch_size, drop_last=False)
+    test_set = MusDBSamples2(args.data, "test", complex=complex).loader(
+        batch_size, drop_last=False
+    )
     fp = f"./figures/{path.basename(weights).split('-')[0]}_prior_cross_entropy.npy"
 
-    results = {'y': [], 'ŷ': [], 'logp': []}
+    results = {"y": [], "ŷ": [], "logp": []}
     for k, (m, y) in enumerate(tqdm(test_set)):
         ŷ, logp, _ = model(m.to(args.device))
-        results['y'].extend(y.squeeze().tolist())
-        results['ŷ'].extend(ŷ.cpu().squeeze().tolist())
-        results['logp'].extend(logp.cpu().squeeze().mean(-1).tolist())
+        results["y"].extend(y.squeeze().tolist())
+        results["ŷ"].extend(ŷ.cpu().squeeze().tolist())
+        results["logp"].extend(logp.cpu().squeeze().mean(-1).tolist())
     np.save(fp, results)
 
 
@@ -96,7 +105,7 @@ def make_cross_likelihood_plot(args):
             logp = res[1]
         else:
             logp = res[0]
-        results[:, :, i:i+batch_size] = (
+        results[:, :, i : i + batch_size] = (
             logp.mean(-1)
             .view(batch_size, K, K)
             .permute(1, 2, 0)
@@ -145,13 +154,21 @@ def make_toy_dataset(args):
             np.save(f"{args.data}/{name}/{name}_{i:05}.npy", item)
 
 
-def make_musdb_pre_save(args):
+def make_musdb_dataset(args):
     from thesis.data.musdb import MusDB
 
-    n = 100
+    length, n = 48_000, 150
 
-    data = MusDB(args.data, subsets="train", mel=True)
-    data.pre_save(n)
+    for subset in ["train", "test"]:
+        data = MusDB(args.data, subsets=subset, mel=True)
+        fp = path.normpath(data.path) + "_samples/" + subset
+        makedirs(fp, exist_ok=True)
+        pid = getpid()
+        for i, (wav, mel) in enumerate(
+            tqdm(data.pre_save(n_per_song=n, length=length), total=len(data) * n)
+        ):
+            np.save(f"{fp}/{i//n:03}_{i%n:03}_{pid}_mel.npy", mel.numpy())
+            np.save(f"{fp}/{i//n:03}_{i%n:03}_{pid}_wav.npy", wav.numpy())
 
 
 def make_data_distribution(args):
@@ -182,19 +199,33 @@ def make_data_distribution(args):
 
 def make_langevin(args):
     from thesis.langevin import langevin_sample
-    noise, length = 0., 16_384 // 4
+
+    noise, length = 0.0, 16_384 // 4
 
     model = load_model(args.weights, args.device)
     σ = 0.1
 
-    opt = {"source": True, "mix": True} if "time" in model.name else {"mel_source": True, "mel_mix": True}
-    data = ToyData(args.data, "test", noise=noise, interpolate=True, rand_amplitude=0.05, length=length, **opt).loader(1, shuffle=False)
+    opt = (
+        {"source": True, "mix": True}
+        if "time" in model.name
+        else {"mel_source": True, "mel_mix": True}
+    )
+    data = ToyData(
+        args.data,
+        "test",
+        noise=noise,
+        rand_amplitude=0.05,
+        length=length,
+        **opt,
+    ).loader(1, shuffle=False)
 
     for i, (m, s) in enumerate(data):
         fig = plot.toy.reconstruction(s, sharey=True, ylim=[-1, 1])
         plt.savefig(f"s_{i:03}.png")
         plt.close(fig)
-        for j, (ŝ, ℒ, δŝ) in enumerate(langevin_sample(model, σ, m.to(args.device), ŝ=s.clone().to(args.device))):
+        for j, (ŝ, ℒ, δŝ) in enumerate(
+            langevin_sample(model, σ, m.to(args.device), ŝ=s.clone().to(args.device))
+        ):
             print(ℒ)
             δŝ /= δŝ.abs().max()
             fig = plot.toy.reconstruction(s, ŝ, δŝ, sharey=True, ylim=[-1, 1])
@@ -205,6 +236,9 @@ def make_langevin(args):
 
 def main(args):
     makedirs("./figures", exist_ok=True)
+
+    if args.command == "musdb":
+        args.musdb = True
 
     DEFAULT.musdb = args.musdb
     if args.data is None:
@@ -221,9 +255,9 @@ COMMANDS = {
     "separate": make_separation_examples,
     "noise": make_noise_likelihood_plot,
     "posterior": make_posterior_examples,
-    "toy-data": make_toy_dataset,
+    "toy": make_toy_dataset,
     "dist": make_data_distribution,
-    "musdb-pre-save": make_musdb_pre_save,
+    "musdb": make_musdb_dataset,
     "discrprior": make_test_discrprior,
     "langevin": make_langevin,
 }

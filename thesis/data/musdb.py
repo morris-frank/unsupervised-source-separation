@@ -1,56 +1,56 @@
-import os
 from glob import glob
-from itertools import product
-from os import path
 from random import randint
 
+import librosa
 import musdb
+import numpy as np
 import torch
+from torch.nn import functional as F
 
 from ..data import Dataset
 from ..functional import normalize
-from torch.nn import functional as F
 
 
 class MusDB(Dataset):
-    def __init__(self, path: str, subsets: str, mel: bool = False, **kwargs):
-        super(MusDB, self).__init__(sr=14_700, n_mels=80, **kwargs)
+    def __init__(self, path: str, subsets: str, mel: bool = False):
+        super(MusDB, self).__init__(sr=14_700, n_mels=128)
         self.path, self.subsets = path, subsets
         self.mel = mel
         self.db = musdb.DB(root=path, subsets=subsets)
-        self.L = 14_700 * 3
 
     def __len__(self):
         return len(self.db)
 
     def __getitem__(self, idx: int):
         track = self.db[idx]
-
-        stems = track.stems[1:, ::3, :]
-        ν = randint(0, stems.shape[1] - self.L)
-        stems = stems[:, None, ν : ν + self.L, :].mean(-1)
-
+        # Take only the left channel, do not take mean, cause of weirdness
+        stems = track.stems[1:, :, 0]
+        stems = np.asfortranarray(stems)
+        # Down sample to our sample rate
+        stems = librosa.resample(stems, track.rate, self.rate, res_type="polyphase")
         signals = torch.tensor(stems, dtype=torch.float32)
         for i in range(4):
             signals[i, :] = normalize(signals[i, :])
         signals = self._mel_get(signals, True, self.mel)
         return signals
 
-    def pre_save(self, n: int):
-        fp = path.normpath(self.path) + "_samples/" + self.subsets
-        os.makedirs(fp, exist_ok=True)
-        for j, i in product(range(n), range(len(self))):
-            if i == 0:
-                print(f"Start next round for: {os.getpid()}")
-            signals = self[i]
-            torch.save(signals, f"{fp}/{i:03}_{j:03}_{os.getpid()}.pt")
+    def pre_save(self, n_per_song: int, length: float):
+        for i, (wav, mel) in enumerate(self):
+            c = mel.shape[2] / wav.shape[1]
+            for _ in range(n_per_song):
+                ν = randint(0, wav.shape[1] - length)
+                _mel = mel[:, :, int(ν * c) : int((ν + length) * c)]
+                _wav = wav[:, ν : ν + length]
+                yield _wav, _mel
 
 
 class MusDBSamples(Dataset):
-    def __init__(self, path: str, subsets: str, length: int = False, **kwargs):
+    def __init__(self, path: str, subsets: str, form: str, length: int = False, **kwargs):
         super(MusDBSamples, self).__init__(**kwargs)
-        path = path + "_samples/" + subsets + "/*pt"
+        assert form in ("mel", "wav")
+        path = path + "_samples/" + subsets + f"/*{form}.pt"
         self.files = glob(path)
+        self.length = length
 
     def __len__(self):
         return len(self.files)
@@ -58,22 +58,4 @@ class MusDBSamples(Dataset):
     def __getitem__(self, idx: int):
         s, mel = torch.load(self.files[idx])
         s = s.squeeze()
-        mel = F.interpolate(mel, s.shape[-1], mode="linear",
-                            align_corners=False)
         return s.contiguous(), mel.contiguous()
-
-
-class MusDBSamples2(MusDBSamples):
-    def __len__(self):
-        return 4 * super(MusDBSamples2, self).__len__()
-
-    def __getitem__(self, idx: int):
-        _, mel = torch.load(self.files[idx//4])
-        i = idx % 4
-        mel = mel[None, i, ...]
-        mel = F.interpolate(mel, 3072, mode="linear", align_corners=False)
-        # i = torch.empty(1, mel.shape[-1]).fill_(i)
-        return mel[0, ...], i
-
-
-
