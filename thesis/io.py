@@ -139,4 +139,4 @@ def vprint(*args):
         print(
             f"{Fore.YELLOW}{n}{Fore.WHITE} = {Fore.MAGENTA}{v}", end=f"{Fore.RESET}\t"
         )
-    print()
+    print(flush=True)

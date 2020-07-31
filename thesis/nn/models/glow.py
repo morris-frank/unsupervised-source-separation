@@ -1,10 +1,14 @@
 import torch
-from torch import nn
 from torch import Tensor as T
-from torch.nn import functional as F
+from torch import nn
+
+from . import BaseModel
 from ..modules import ZeroConv2d, InvConv2d
-from ...functional import chunk, interleave
 from ...dist import norm_log_prob
+from ...functional import chunk, interleave
+from ...utils import clean_init_args
+from ...io import vprint
+from ...setup import DEFAULT
 
 
 class ActNorm(nn.Module):
@@ -62,7 +66,7 @@ class AffineCoupling(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(filter_size, filter_size, 1),
             nn.ReLU(inplace=True),
-            ZeroConv2d(filter_size, in_channel if self.affine else in_channel // 2),
+            ZeroConv2d(filter_size, in_channel),
         )
 
         self.net[0].weight.data.normal_(0, 0.05)
@@ -75,7 +79,7 @@ class AffineCoupling(nn.Module):
         in_a, in_b = chunk(x, groups=self.groups)
 
         log_s, t = chunk(self.net(in_a), groups=self.groups)
-        s = F.sigmoid(log_s + 2)
+        s = torch.sigmoid(log_s + 2)
         out_b = (in_b + t) * s
 
         log_det = torch.sum(torch.log(s).view(x.shape[0], -1), 1)
@@ -86,7 +90,7 @@ class AffineCoupling(nn.Module):
         out_a, out_b = chunk(y, groups=self.groups)
 
         log_s, t = chunk(self.net(out_a), groups=self.groups)
-        s = F.sigmoid(log_s + 2)
+        s = torch.sigmoid(log_s + 2)
         in_b = out_b / s - t
 
         return interleave((out_a, in_b), groups=self.groups)
@@ -145,21 +149,20 @@ class Block(nn.Module):
         out = squeezed.contiguous().view(N, C * 4, H // 2, W // 2)
 
         log_det = 0
-
         for flow in self.flows:
-            out, det = flow(out)
-            log_det = log_det + det
+            out, _log_det = flow(out)
+            log_det = log_det + _log_det
 
         if self.split:
             out, z_new = chunk(out, groups=self.groups)
             mean, log_sd = self.prior(out).chunk(2, 1)
             log_p = norm_log_prob(z_new, mean, log_sd)
-            log_p = log_p.view(N, -1).sum(1)
+            # log_p = log_p.view(N, -1).sum(1)
         else:
             zero = torch.zeros_like(out)
             mean, log_sd = self.prior(zero).chunk(2, 1)
             log_p = norm_log_prob(out, mean, log_sd)
-            log_p = log_p.view(N, -1).sum(1)
+            # log_p = log_p.view(N, -1).sum(1)
             z_new = out
 
         return out, log_det, log_p, z_new
@@ -201,11 +204,13 @@ class Block(nn.Module):
         return unsqueezed
 
 
-class Glow(nn.Module):
-    def __init__(self, in_channel, n_flow, n_block, groups=1):
-        super().__init__()
+class Glow(BaseModel):
+    def __init__(self, in_channel, n_flow, n_block, groups=1, **kwargs):
+        super().__init__(**kwargs)
+        self.params = clean_init_args(locals().copy())
 
         self.blocks = nn.ModuleList()
+        self.n_blocks, self.groups = n_block, groups
         n_channel = in_channel
         for i in range(n_block - 1):
             self.blocks.append(Block(n_channel, n_flow, groups=groups))
@@ -213,20 +218,56 @@ class Glow(nn.Module):
         self.blocks.append(Block(n_channel, n_flow, split=False, groups=groups))
 
     def forward(self, x):
-        log_p_sum = 0
-        log_det = 0
         out = x
-        z_outs = []
-
+        log_det = 0
+        log_p_list, z_list = [], []
         for block in self.blocks:
             out, det, log_p, z_new = block(out)
-            z_outs.append(z_new)
+            z_list.append(z_new)
             log_det = log_det + det
-
             if log_p is not None:
-                log_p_sum = log_p_sum + log_p
+                log_p_list.append(log_p)
 
-        return log_p_sum, log_det, z_outs
+        log_p = self.combine_z_list(log_p_list)
+        z = self.combine_z_list(z_list)
+
+        return z, log_p, log_det
+
+    def combine_z_list(self, z_list):
+        for _ in range(self.n_blocks - 1):
+            z1 = z_list.pop()
+            z2 = z_list.pop()
+
+            N, C, H, W = z1.shape
+            z1 = (
+                z1.view(N, C // 4, 2, 2, H, W)
+                .permute(0, 1, 4, 2, 5, 3)
+                .contiguous()
+                .view(N, C // 4, H * 2, W * 2)
+            )
+            z_list.append(interleave((z1, z2), groups=self.groups))
+        N, C, H, W = z_list[0].shape
+        z = (
+            z_list[0]
+            .view(N, C // 4, 2, 2, H, W)
+            .permute(0, 1, 4, 2, 5, 3)
+            .contiguous()
+            .view(N, C // 4, H * 2, W * 2)
+        )
+        return z
+
+    def test(self, x: T):
+        vprint(x)
+        _, log_p, log_det = self.forward(x)
+
+        self.ℒ.log_det = -torch.mean(log_det)
+        ℒ = self.ℒ.log_det
+
+        log_p = -log_p.mean((0, 2, 3))
+        for k in range(self.groups):
+            ℒ += log_p[k]
+            setattr(self.ℒ, f"log_p/{DEFAULT.signals[k]}", log_p[k])
+        return ℒ
 
     def reverse(self, z_list, reconstruct=False):
         for i, block in enumerate(self.blocks[::-1]):
@@ -235,5 +276,4 @@ class Glow(nn.Module):
 
             else:
                 x = block.reverse(x, z_list[-(i + 1)], reconstruct=reconstruct)
-
         return x

@@ -86,10 +86,10 @@ class ZeroConv1d(nn.Module):
 
 
 class ZeroConv2d(nn.Module):
-    def __init__(self, in_channel, out_channel, padding=1):
+    def __init__(self, in_channel, out_channel):
         super().__init__()
 
-        self.conv = nn.Conv2d(in_channel, out_channel, 3, padding=padding)
+        self.conv = nn.Conv2d(in_channel, out_channel, 3)
         self.conv.weight.data.zero_()
         self.conv.bias.data.zero_()
         self.scale = nn.Parameter(torch.zeros(1, out_channel, 1, 1))

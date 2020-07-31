@@ -289,7 +289,7 @@ class Flowavenet(BaseModel):
 
         log_det = 0
         log_p_list, z_list = [], []
-        for i, block in enumerate(self.blocks):
+        for block in self.blocks:
             out, c, log_det_new, log_p_new, z_new = block(out, c)
             log_det = log_det + log_det_new
             if z_new is not None:
@@ -348,7 +348,6 @@ class Flowavenet(BaseModel):
         return x
 
     def test(self, x):
-        N = x.shape[1]
         if x.dim() > 3:
             x = x.flatten(1, 2)
         _, log_p, log_det = self.forward(x)
@@ -357,7 +356,7 @@ class Flowavenet(BaseModel):
         ℒ = self.ℒ.log_det
 
         log_p = -log_p.mean((0, -1))
-        for k in range(N):
+        for k in range(self.groups):
             ℒ += log_p[k]
             setattr(self.ℒ, f"log_p/{DEFAULT.signals[k]}", log_p[k])
         return ℒ
@@ -370,7 +369,6 @@ class FlowavenetClassified(Flowavenet):
             in_channels=2560,
             out_channels=4,
             residual_channels=32,
-            skip_channels=None,
             gate_channels=32,
             cin_channels=None,
         )

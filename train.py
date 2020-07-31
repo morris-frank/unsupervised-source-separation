@@ -60,7 +60,7 @@ def train_prior_time(args, noise=0.0, rand_ampl=0.2):
 
 def train_prior_mel(args, noise=0.0):
     from thesis.nn.models.glow import Glow
-    args.time *= 20550 / 2517334
+    args.length = 240
 
     if args.signal is None:
         name = "musdb" if args.musdb else "toy"
@@ -75,9 +75,7 @@ def train_prior_mel(args, noise=0.0):
     if noise > 0:
         name += "_noise"
 
-    width = 48 if args.musdb else 32
-
-    model = Glow(1, 32, 4, groups)
+    model = Glow(4, 32, 4, groups)
 
     if args.musdb:
         train_set = MusDBSamples(args.data, "train", space="mel", length=args.length)

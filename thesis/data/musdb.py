@@ -63,5 +63,6 @@ class MusDBSamples(Dataset):
 
     def __getitem__(self, idx: int):
         x = np.load(self.files[idx])
-        x = torch.from_numpy(x)
+        ν = randint(0, x.shape[-1] - self.length)
+        x = torch.from_numpy(x[..., ν:ν+self.length])
         return x
