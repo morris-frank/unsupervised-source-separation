@@ -15,7 +15,11 @@ def main(args):
     if args.file == "train" and args.experiment not in EXPERIMENTS:
         raise ValueError("Invalid experiment given.")
 
-    p = "gpu_short" if args.short else "gpu_shared"
+    if args.cpu:
+        p = "normal"
+    else:
+        p = "gpu_short" if args.short else "gpu_shared"
+
     t = "0:35:00" if args.short else f"{args.hours}:00:00"
     if args.short:
         args.batch_size = 2
@@ -29,9 +33,10 @@ def main(args):
         "time": t,
         "mem": "16000M",
         "partition": p,
-        "gres": "gpu:1",
         "output": f"./log/{datetime.today():%b%d-%H%M}_%x_{p}.out",
     }
+    if not args.cpu:
+        c["gres"] = "gpu:1"
 
     f = f"#!/usr/bin/env bash\n\n"
     f += "\n".join(f"#SBATCH --{k}={v}" for k, v in c.items()) + "\n"
@@ -90,4 +95,5 @@ if __name__ == "__main__":
     parser.add_argument("-test", action="store_true", help="Just print the file")
     parser.add_argument("--weights")
     parser.add_argument("-lr")
+    parser.add_argument("-cpu", action="store_true")
     main(parser.parse_args())

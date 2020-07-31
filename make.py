@@ -159,7 +159,7 @@ def make_musdb_dataset(args):
 
     length, n = 48_000, 150
 
-    for subset in ["train", "test"]:
+    for subset in ["test", "train"]:
         data = MusDB(args.data, subsets=subset, mel=True)
         fp = path.normpath(data.path) + "_samples/" + subset
         makedirs(fp, exist_ok=True)

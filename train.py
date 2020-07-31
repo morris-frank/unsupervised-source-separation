@@ -14,13 +14,9 @@ from thesis.setup import IS_HERMES, DEFAULT
 from thesis.train import train
 
 
-def train_prior(args, space, noise=0.0, rand_ampl=0.2):
+def train_prior_time(args, noise=0.0, rand_ampl=0.2):
     from thesis.nn.models.flowavenet import Flowavenet
-
-    assert space in ("time", "mel")
-
-    if space == "mel":
-        args.time *=  20550 / 2517334
+    space = "time"
 
     if args.signal is None:
         name = "musdb" if args.musdb else "toy"
@@ -31,8 +27,9 @@ def train_prior(args, space, noise=0.0, rand_ampl=0.2):
         k = DEFAULT.signals(args.signal)
         source, groups = k, 1
 
-    name += "_no_noise" if noise == 0 else "_with_noise"
-    name += f"_{space}"
+    name += f"_time"
+    if noise > 0:
+        name += "_noise"
     if rand_ampl > 0:
         name += "_rand_ampl"
 
@@ -54,12 +51,41 @@ def train_prior(args, space, noise=0.0, rand_ampl=0.2):
         test_set = MusDBSamples(args.data, "test", space=space, length=args.length)
     else:
         opt = dict(
-            noise=noise, rand_amplitude=rand_ampl, length=args.length
+            noise=noise, rand_amplitude=rand_ampl, length=args.length, source=source
         )
-        if space == "spec":
-            opt["mel_source"] = source
-        else:
-            opt["source"] = source
+        train_set = ToyData(args.data, "train", **opt)
+        test_set = ToyData(args.data, "test", **opt)
+    return model, train_set, test_set
+
+
+def train_prior_mel(args, noise=0.0):
+    from thesis.nn.models.glow import Glow
+    args.time *= 20550 / 2517334
+
+    if args.signal is None:
+        name = "musdb" if args.musdb else "toy"
+        source, groups = True, len(DEFAULT.signals)
+        groups = len(DEFAULT.signals)
+    else:
+        name = args.signal
+        k = DEFAULT.signals(args.signal)
+        source, groups = k, 1
+
+    name += f"_mel"
+    if noise > 0:
+        name += "_noise"
+
+    width = 48 if args.musdb else 32
+
+    model = Glow(1, 32, 4, groups)
+
+    if args.musdb:
+        train_set = MusDBSamples(args.data, "train", space="mel", length=args.length)
+        test_set = MusDBSamples(args.data, "test", space="mel", length=args.length)
+    else:
+        opt = dict(
+            noise=noise, length=args.length, mel_source=source
+        )
         train_set = ToyData(args.data, "train", **opt)
         test_set = ToyData(args.data, "test", **opt)
     return model, train_set, test_set
@@ -163,10 +189,10 @@ def main(args):
 
 
 EXPERIMENTS = {
-    "prior_time": partial(train_prior, space="time"),
-    "prior_mel": partial(train_prior, space="mel"),
-    "prior_time_noised": partial(train_prior, space="time", noise=0.1),
-    "prior_mel_noised": partial(train_prior, space="mel", noise=0.1),
+    "prior_time": train_prior_time,
+    "prior_mel": train_prior_mel,
+    "prior_time_noised": partial(train_prior_time, noise=0.1),
+    "prior_mel_noised": partial(train_prior_mel, noise=0.1),
     "demixer": train_demixer,
     "denoiser": partial(train_denoiser, modelclass=Denoiser),
     "discprior": train_discprior,
