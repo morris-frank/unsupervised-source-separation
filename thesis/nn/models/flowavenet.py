@@ -18,6 +18,7 @@ from ...functional import (
 )
 from ...utils import clean_init_args
 from ...setup import DEFAULT
+from ...io import vprint
 
 
 class ActNorm(nn.Module):

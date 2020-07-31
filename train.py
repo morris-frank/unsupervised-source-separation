@@ -16,7 +16,6 @@ from thesis.train import train
 
 def train_prior_time(args, noise=0.0, rand_ampl=0.2):
     from thesis.nn.models.flowavenet import Flowavenet
-    space = "time"
 
     if args.signal is None:
         name = "musdb" if args.musdb else "toy"
@@ -36,7 +35,7 @@ def train_prior_time(args, noise=0.0, rand_ampl=0.2):
     width = 48 if args.musdb else 32
 
     model = Flowavenet(
-        in_channel=128 if space == "mel" else 1,
+        in_channel=1,
         n_block=8 if args.musdb else 4,
         n_flow=6,
         n_layer=10,
@@ -47,8 +46,8 @@ def train_prior_time(args, noise=0.0, rand_ampl=0.2):
     )
 
     if args.musdb:
-        train_set = MusDBSamples(args.data, "train", space=space, length=args.length)
-        test_set = MusDBSamples(args.data, "test", space=space, length=args.length)
+        train_set = MusDBSamples(args.data, "train", space="time", length=args.length)
+        test_set = MusDBSamples(args.data, "test", space="time", length=args.length)
     else:
         opt = dict(
             noise=noise, rand_amplitude=rand_ampl, length=args.length, source=source
