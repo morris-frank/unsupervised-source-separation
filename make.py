@@ -89,9 +89,9 @@ def make_cross_likelihood_plot(args):
     if args.musdb:
         data = MusDBSamples(args.data, "test").loader(batch_size, drop_last=True)
     else:
-        data = ToyData(
-            args.data, "test", source=True, mel_source=True, interpolate=True
-        ).loader(batch_size, drop_last=True)
+        data = ToyData(args.data, "test", source=True, mel_source=True).loader(
+            batch_size, drop_last=True
+        )
 
     K = len(DEFAULT.signals)
     results = np.zeros((K, K, len(data) * batch_size))
@@ -168,7 +168,7 @@ def make_musdb_dataset(args):
             tqdm(data.pre_save(n_per_song=n, length=length), total=len(data) * n)
         ):
             np.save(f"{fp}/{i//n:03}_{i%n:03}_{pid}_mel.npy", mel.numpy())
-            np.save(f"{fp}/{i//n:03}_{i%n:03}_{pid}_wav.npy", wav.numpy())
+            np.save(f"{fp}/{i//n:03}_{i%n:03}_{pid}_time.npy", wav.numpy())
 
 
 def make_data_distribution(args):
@@ -211,12 +211,7 @@ def make_langevin(args):
         else {"mel_source": True, "mel_mix": True}
     )
     data = ToyData(
-        args.data,
-        "test",
-        noise=noise,
-        rand_amplitude=0.05,
-        length=length,
-        **opt,
+        args.data, "test", noise=noise, rand_amplitude=0.05, length=length, **opt,
     ).loader(1, shuffle=False)
 
     for i, (m, s) in enumerate(data):

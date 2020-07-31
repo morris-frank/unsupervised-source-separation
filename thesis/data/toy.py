@@ -1,4 +1,5 @@
 from glob import glob
+from random import randint
 from typing import Dict
 from typing import Union
 
@@ -7,8 +8,6 @@ import torch
 
 from ..audio import rand_period_phase, oscillator
 from ..data import Dataset
-
-from random import uniform, randint
 
 
 class ToyData(Dataset):
@@ -62,7 +61,7 @@ class ToyData(Dataset):
 
         if self.rand_A > 0:
             A = torch.rand(sources.shape[0], 1) * self.rand_A
-            sources = (A + (1. - self.rand_A)) * sources
+            sources = (A + (1.0 - self.rand_A)) * sources
             mix = sources.mean(0, keepdim=True)
 
         if self.noise > 0:

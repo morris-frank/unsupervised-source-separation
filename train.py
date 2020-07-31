@@ -7,8 +7,9 @@ import torch
 from torch import autograd
 
 from thesis.data.toy import ToyData
+from thesis.data.musdb import MusDBSamples
 from thesis.io import load_model, get_newest_checkpoint
-from thesis.nn.models.denoiser import Denoiser, Denoiser_Semi
+from thesis.nn.models.denoiser import Denoiser
 from thesis.setup import IS_HERMES, DEFAULT
 from thesis.train import train
 
@@ -16,7 +17,10 @@ from thesis.train import train
 def train_prior(args, space, noise=0.0, rand_ampl=0.2):
     from thesis.nn.models.flowavenet import Flowavenet
 
-    assert space in ("time", "spec")
+    assert space in ("time", "mel")
+
+    if space == "mel":
+        args.time *=  20550 / 2517334
 
     if args.signal is None:
         name = "musdb" if args.musdb else "toy"
@@ -32,13 +36,10 @@ def train_prior(args, space, noise=0.0, rand_ampl=0.2):
     if rand_ampl > 0:
         name += "_rand_ampl"
 
-    if space == "spec":
-        width = 48 if args.musdb else 32
-    else:
-        width = 48 if args.musdb else 32
+    width = 48 if args.musdb else 32
 
     model = Flowavenet(
-        in_channel=80 if space == "spec" else 1,
+        in_channel=128 if space == "mel" else 1,
         n_block=8 if args.musdb else 4,
         n_flow=6,
         n_layer=10,
@@ -49,13 +50,11 @@ def train_prior(args, space, noise=0.0, rand_ampl=0.2):
     )
 
     if args.musdb:
-        from thesis.data.musdb import MusDBSamples
-
-        train_set = MusDBSamples(args.data, "train")
-        test_set = MusDBSamples(args.data, "test")
+        train_set = MusDBSamples(args.data, "train", space=space, length=args.length)
+        test_set = MusDBSamples(args.data, "test", space=space, length=args.length)
     else:
         opt = dict(
-            noise=noise, interpolate=False, rand_amplitude=rand_ampl, length=args.L
+            noise=noise, rand_amplitude=rand_ampl, length=args.length
         )
         if space == "spec":
             opt["mel_source"] = source
@@ -86,19 +85,6 @@ def train_discprior(args):
 
         train_set = MusDBSamples2(args.data, "train")
         test_set = MusDBSamples2(args.data, "test")
-    return model, train_set, test_set
-
-
-def train_jem(args):
-    from thesis.nn.models.jem import JEM
-    from thesis.data.musdb import MusDBSamples2
-
-    groups = len(DEFAULT.signals)
-
-    model = JEM(in_channels=80, out_channels=groups, width=48)
-
-    train_set = MusDBSamples2(args.data, "train")
-    test_set = MusDBSamples2(args.data, "test")
     return model, train_set, test_set
 
 
@@ -178,13 +164,11 @@ def main(args):
 
 EXPERIMENTS = {
     "prior_time": partial(train_prior, space="time"),
-    "prior_spec": partial(train_prior, space="spec"),
+    "prior_mel": partial(train_prior, space="mel"),
     "prior_time_noised": partial(train_prior, space="time", noise=0.1),
-    "prior_spec_noised": partial(train_prior, space="spec", noise=0.1),
+    "prior_mel_noised": partial(train_prior, space="mel", noise=0.1),
     "demixer": train_demixer,
     "denoiser": partial(train_denoiser, modelclass=Denoiser),
-    "denoiser_semi": partial(train_denoiser, modelclass=Denoiser_Semi),
-    "jem": train_jem,
     "discprior": train_discprior,
 }
 
@@ -201,7 +185,7 @@ if __name__ == "__main__":
     parser.add_argument("--batch_size", type=int, default=None)
     parser.add_argument("-debug", action="store_true")
     parser.add_argument("-musdb", action="store_true")
-    parser.add_argument("-L", type=int, default=16384)
+    parser.add_argument("-L", type=int, default=16_384, dest='length')
     parser.add_argument("-lr", type=float, default=1e-4, dest='base_lr')
     parser.add_argument("--weights", type=str)
     main(parser.parse_args())

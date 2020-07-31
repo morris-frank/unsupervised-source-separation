@@ -5,7 +5,6 @@ import librosa
 import musdb
 import numpy as np
 import torch
-from torch.nn import functional as F
 
 from ..data import Dataset
 from ..functional import normalize
@@ -13,10 +12,11 @@ from ..functional import normalize
 
 class MusDB(Dataset):
     def __init__(self, path: str, subsets: str, mel: bool = False):
-        super(MusDB, self).__init__(sr=14_700, n_mels=128)
+        super(MusDB, self).__init__(sr=24_000, n_mels=265)
         self.path, self.subsets = path, subsets
         self.mel = mel
         self.db = musdb.DB(root=path, subsets=subsets)
+        self.time_sr = 14_700
 
     def __len__(self):
         return len(self.db)
@@ -26,13 +26,17 @@ class MusDB(Dataset):
         # Take only the left channel, do not take mean, cause of weirdness
         stems = track.stems[1:, :, 0]
         stems = np.asfortranarray(stems)
+
         # Down sample to our sample rate
-        stems = librosa.resample(stems, track.rate, self.rate, res_type="polyphase")
-        signals = torch.tensor(stems, dtype=torch.float32)
+        mel_stems = librosa.resample(stems, track.rate, self.rate, res_type="polyphase")
+        time_stems = librosa.resample(stems, track.rate, self.time_sr, res_type="polyphase")
+
+        mel = self.spectrograph(torch.tensor(mel_stems, dtype=torch.float32))
+
+        wav = torch.tensor(time_stems, dtype=torch.float32)
         for i in range(4):
-            signals[i, :] = normalize(signals[i, :])
-        signals = self._mel_get(signals, True, self.mel)
-        return signals
+            wav[i, :] = normalize(wav[i, :])
+        return wav, mel
 
     def pre_save(self, n_per_song: int, length: float):
         for i, (wav, mel) in enumerate(self):
@@ -45,10 +49,12 @@ class MusDB(Dataset):
 
 
 class MusDBSamples(Dataset):
-    def __init__(self, path: str, subsets: str, form: str, length: int = False, **kwargs):
-        super(MusDBSamples, self).__init__(**kwargs)
-        assert form in ("mel", "wav")
-        path = path + "_samples/" + subsets + f"/*{form}.pt"
+    def __init__(
+        self, path: str, subsets: str, space: str, length: int = False
+    ):
+        super(MusDBSamples, self).__init__()
+        assert space in ("mel", "time")
+        path = path + "_samples/" + subsets + f"/*_{space}.npy"
         self.files = glob(path)
         self.length = length
 
@@ -56,6 +62,6 @@ class MusDBSamples(Dataset):
         return len(self.files)
 
     def __getitem__(self, idx: int):
-        s, mel = torch.load(self.files[idx])
-        s = s.squeeze()
-        return s.contiguous(), mel.contiguous()
+        x = np.load(self.files[idx])
+        x = torch.from_numpy(x)
+        return x

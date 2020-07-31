@@ -9,7 +9,7 @@ TOY_SIGNALS = ["sin", "square", "saw", "triangle"]
 DEFAULT_TOY = "/home/morris/var/data/toy" if IS_HERMES else abspath("../data/toy")
 
 MUSDB_SIGNALS = ["drums", "bass", "other", "vocals"]
-DEFAULT_MUSDB = "/home/morris/var/data/musdb18" if IS_HERMES else abspath("../data/musdb")
+DEFAULT_MUSDB = "/home/morris/var/data/musdb" if IS_HERMES else abspath("../data/musdb")
 
 
 class __DEFAULT:

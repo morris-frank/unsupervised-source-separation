@@ -24,8 +24,8 @@ class ActNorm(nn.Module):
     def __init__(self, in_channel, pretrained=False):
         super().__init__()
 
-        self.loc = nn.Parameter(torch.zeros(1, in_channel, 1), requires_grad=True)
-        self.scale = nn.Parameter(torch.ones(1, in_channel, 1), requires_grad=True)
+        self.loc = nn.Parameter(torch.zeros(1, in_channel, 1))
+        self.scale = nn.Parameter(torch.ones(1, in_channel, 1))
         self.initialized = pretrained
 
     def initialize(self, x):
@@ -54,15 +54,13 @@ class ActNorm(nn.Module):
             self.initialized = True
 
         B, _, T = x.size()
-
         log_abs = self.scale.abs().log()
-
         log_det = torch.sum(log_abs) * B * T
 
         return self.scale * (x + self.loc), log_det
 
-    def reverse(self, output):
-        return output / self.scale - self.loc
+    def reverse(self, y):
+        return y / self.scale - self.loc
 
 
 class AffineCoupling(nn.Module):
@@ -102,8 +100,8 @@ class AffineCoupling(nn.Module):
 
         return interleave((in_a, out_b), groups=self.groups), log_det
 
-    def reverse(self, output, c=None):
-        out_a, out_b = chunk(output, groups=self.groups)
+    def reverse(self, y, c=None):
+        out_a, out_b = chunk(y, groups=self.groups)
 
         if c is not None:
             c, _ = chunk(c, groups=self.groups)
@@ -225,13 +223,13 @@ class Block(nn.Module):
 
         return x, c, log_det, log_p, z
 
-    def reverse(self, output, c=None, eps=None):
+    def reverse(self, y, c=None, eps=None):
         if self.split:
-            μ, σ = chunk(self.prior(output, c), groups=self.groups)
+            μ, σ = chunk(self.prior(y, c), groups=self.groups)
             z = μ + σ.exp() * eps
-            x = interleave((output, z), groups=self.groups)
+            x = interleave((y, z), groups=self.groups)
         else:
-            x = output
+            x = y
 
         for flow in self.flows[::-1]:
             x, c = flow.reverse(x, c)

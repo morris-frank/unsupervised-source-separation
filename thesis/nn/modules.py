@@ -38,11 +38,36 @@ class Conv1d(nn.Module):
         self.conv = nn.utils.weight_norm(self.conv)
         nn.init.kaiming_normal_(self.conv.weight)
 
-    def forward(self, tensor):
-        out = self.conv(tensor)
+    def forward(self, x: T):
+        y = self.conv(x)
         if self.causal and self.padding != 0:
-            out = out[:, :, : -self.padding]
-        return out
+            y = y[:, :, : -self.padding]
+        return y
+
+
+class InvConv2d(nn.Module):
+    def __init__(self, in_channel):
+        super().__init__()
+
+        weight = torch.randn(in_channel, in_channel)
+        q, _ = torch.qr(weight)
+        weight = q.unsqueeze(2).unsqueeze(3)
+        self.weight = nn.Parameter(weight)
+
+    def forward(self, x: T):
+        _, _, height, width = x.shape
+
+        y = F.conv2d(x, self.weight)
+        log_det = (
+            height * width * torch.slogdet(self.weight.squeeze().double())[1].float()
+        )
+
+        return y, log_det
+
+    def reverse(self, y):
+        return F.conv2d(
+            y, self.weight.squeeze().inverse().unsqueeze(2).unsqueeze(3)
+        )
 
 
 class ZeroConv1d(nn.Module):
@@ -58,6 +83,22 @@ class ZeroConv1d(nn.Module):
         out = self.conv(x)
         out = out * torch.exp(self.scale * 3)
         return out
+
+
+class ZeroConv2d(nn.Module):
+    def __init__(self, in_channel, out_channel, padding=1):
+        super().__init__()
+
+        self.conv = nn.Conv2d(in_channel, out_channel, 3, padding=padding)
+        self.conv.weight.data.zero_()
+        self.conv.bias.data.zero_()
+        self.scale = nn.Parameter(torch.zeros(1, out_channel, 1, 1))
+
+    def forward(self, x: T):
+        y = F.pad(x, [1, 1, 1, 1], value=1)
+        y = self.conv(y)
+        y = y * torch.exp(self.scale * 3)
+        return y
 
 
 class LinearInvert(nn.Linear):
