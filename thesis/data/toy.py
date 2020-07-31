@@ -21,15 +21,13 @@ class ToyData(Dataset):
         mel_source: Union[bool, int] = False,
         rand_amplitude: float = 0.0,
         noise: float = 0.0,
-        with_phase: int = False,
         length: int = False,
     ):
-        super(ToyData, self).__init__(n_mels=79 if with_phase else 80)
+        super(ToyData, self).__init__(n_mels=265)
         self.files = glob(f"{path}/{subset}/*npy")
         self.mix, self.mel_mix = mix, mel_mix
         self.rand_A = rand_amplitude
         self.noise = noise
-        self.with_phase = with_phase
         self.length = length
 
         self.source, self.mel_source = source is not False, mel_source is not False
@@ -71,12 +69,6 @@ class ToyData(Dataset):
 
         sources = self._mel_get(sources, self.source, self.mel_source)
         mix = self._mel_get(mix, self.mix, self.mel_mix)
-
-        if self.mel_source and self.with_phase:
-            add = torch.ones(4, 1, sources.shape[-1]) * torch.tensor(datum["φ"]).view(
-                4, 1, 1
-            )
-            sources = (sources[0], torch.cat([sources[1], add], dim=1))
 
         if self.mix:
             if self.source:

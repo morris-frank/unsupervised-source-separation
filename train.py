@@ -74,7 +74,9 @@ def train_prior_mel(args, noise=0.0):
     if noise > 0:
         name += "_noise"
 
-    model = Glow(4, 32, 4, groups=groups, name=name)
+    model = Glow(in_channel=4,
+                 n_flow=32 if args.musdb else 16,
+                 n_block=4, groups=groups, name=name)
 
     if args.musdb:
         train_set = MusDBSamples(args.data, "train", space="mel", length=args.length)
