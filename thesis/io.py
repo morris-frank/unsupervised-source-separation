@@ -98,7 +98,7 @@ def load_model(
     return (
         model.to(device),
         save_point["optimizer_state_dict"],
-        save_point["scheduler_state_dict"],
+        save_point["scheduler"],
         save_point["it"],
     )
 

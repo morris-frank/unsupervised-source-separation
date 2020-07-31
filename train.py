@@ -156,7 +156,8 @@ def main(args):
         spt = torch.load(get_newest_checkpoint(args.weights), map_location=torch.device(device))
         model.load_state_dict(spt['model_state_dict'])
         optimizer_state_dict = spt['optimizer_state_dict']
-        scheduler_state_dict = spt['scheduler_state_dict']
+        scheduler_state_dict = spt['scheduler']
+        start_it = spt["it"]
         for module in model.modules():
             if hasattr(module, "initialized"):
                 module.initialized = True
