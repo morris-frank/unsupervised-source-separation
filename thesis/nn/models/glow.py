@@ -257,7 +257,6 @@ class Glow(BaseModel):
         return z
 
     def test(self, x: T):
-        vprint(x)
         _, log_p, log_det = self.forward(x)
 
         self.ℒ.log_det = -torch.mean(log_det)
