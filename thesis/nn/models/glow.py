@@ -5,7 +5,7 @@ from torch import nn
 from . import BaseModel
 from ..modules import ZeroConv2d, InvConv2d
 from ...dist import norm_log_prob
-from ...functional import chunk, interleave
+from ...functional import chunk, interleave, flip
 from ...utils import clean_init_args
 from ...io import vprint
 from ...setup import DEFAULT
@@ -62,11 +62,11 @@ class AffineCoupling(nn.Module):
         self.groups = groups
 
         self.net = nn.Sequential(
-            nn.Conv2d(in_channel // 2, filter_size, 3, padding=1),
+            nn.Conv2d(in_channel // 2, filter_size, 3, padding=1, groups=groups),
             nn.ReLU(inplace=True),
-            nn.Conv2d(filter_size, filter_size, 1),
+            nn.Conv2d(filter_size, filter_size, 1, groups=groups),
             nn.ReLU(inplace=True),
-            ZeroConv2d(filter_size, in_channel),
+            ZeroConv2d(filter_size, in_channel, groups=groups),
         )
 
         self.net[0].weight.data.normal_(0, 0.05)
@@ -82,7 +82,7 @@ class AffineCoupling(nn.Module):
         s = torch.sigmoid(log_s + 2)
         out_b = (in_b + t) * s
 
-        log_det = torch.sum(torch.log(s).view(x.shape[0], -1), 1)
+        log_det = s.log().view(x.shape[0], -1).sum(1)
 
         return interleave((in_a, out_b), groups=self.groups), log_det
 
@@ -103,23 +103,25 @@ class Flow(nn.Module):
         self.groups = groups
 
         self.actnorm = ActNorm(in_channel)
-        self.invconv = InvConv2d(in_channel)
+        # self.invconv = InvConv2d(in_channel)
         self.coupling = AffineCoupling(in_channel, groups=groups)
 
     def forward(self, x):
         out, log_det = self.actnorm(x)
-        out, det1 = self.invconv(out)
+        # out, det1 = self.invconv(out)
         out, det2 = self.coupling(out)
+        out = flip(out, groups=self.groups)
 
-        log_det = log_det + det1
+        log_det = log_det
         if det2 is not None:
             log_det = log_det + det2
 
         return out, log_det
 
     def reverse(self, y):
+        y = flip(y, groups=self.groups)
         x = self.coupling.reverse(y)
-        x = self.invconv.reverse(x)
+        # x = self.invconv.reverse(x)
         x = self.actnorm.reverse(x)
         return x
 
@@ -138,9 +140,9 @@ class Block(nn.Module):
         self.split = split
 
         if split:
-            self.prior = ZeroConv2d(in_channel * 2, in_channel * 4)
+            self.prior = ZeroConv2d(in_channel * 2, in_channel * 4, groups=groups)
         else:
-            self.prior = ZeroConv2d(in_channel * 4, in_channel * 8)
+            self.prior = ZeroConv2d(in_channel * 4, in_channel * 8, groups=groups)
 
     def forward(self, x):
         N, C, H, W = x.shape
@@ -257,9 +259,10 @@ class Glow(BaseModel):
         return z
 
     def test(self, x: T):
+        n_pix = (x.shape[-1] * x.shape[-2])
         _, log_p, log_det = self.forward(x)
 
-        self.ℒ.log_det = -torch.mean(log_det)
+        self.ℒ.log_det = -torch.mean(log_det) / n_pix
         ℒ = self.ℒ.log_det
 
         log_p = -log_p.mean((0, 2, 3))

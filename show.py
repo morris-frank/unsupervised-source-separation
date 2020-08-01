@@ -236,11 +236,15 @@ def show_sample_from_prior(args):
 
     while True:
         z = torch.randn(zshape)
+        # z = torch.randn(1) * torch.ones(zshape)
         x = model.reverse(z)
+        x = x[0, :, 500:1500]
+        x.clamp_(-1.3, 1.3)
 
         fig, axs = plt.subplots(4)
         for k, ax in enumerate(axs):
-            ax.plot(x[0, k, 500:1500])
+            x[k, :] = x[k, :] / x[k, :].abs().max()
+            ax.plot(x[k, :])
         plt.show()
         plt.close(fig)
 
@@ -254,13 +258,14 @@ def show_interpolate_prior(args):
     else:
         opt = {"mel_source": True}
 
-    dset = ToyData(args.data, "test", noise=0., interpolate=False, rand_amplitude=0.2, length=length, **opt).loader(1)
+    dset = ToyData(args.data, "test", noise=0., rand_amplitude=0.2, length=length, **opt).loader(1)
     for a, b in combinations(dset, 2):
         α, *_ = model.forward(a)
         β, *_ = model.forward(b)
         γ = (α + β) / 2
 
         c = model.reverse(γ)
+        np.save("../thesis-tex/data/prior_toy_interpolate.npy", torch.cat((a,b,c)).numpy())
         fig = plot.toy.reconstruction(a, b, c, sharey=True, ylim=[-1, 1])
         plt.show()
         plt.close(fig)

@@ -16,9 +16,8 @@ from ...functional import (
     chunk,
     interleave,
 )
-from ...utils import clean_init_args
 from ...setup import DEFAULT
-from ...io import vprint
+from ...utils import clean_init_args
 
 
 class ActNorm(nn.Module):
@@ -32,18 +31,8 @@ class ActNorm(nn.Module):
     def initialize(self, x):
         with torch.no_grad():
             flatten = x.permute(1, 0, 2).contiguous().view(x.shape[1], -1)
-            mean = (
-                flatten.mean(1)
-                .unsqueeze(1)
-                .unsqueeze(2)
-                .permute(1, 0, 2)
-            )
-            std = (
-                flatten.std(1)
-                .unsqueeze(1)
-                .unsqueeze(2)
-                .permute(1, 0, 2)
-            )
+            mean = flatten.mean(1).unsqueeze(1).unsqueeze(2).permute(1, 0, 2)
+            std = flatten.std(1).unsqueeze(1).unsqueeze(2).permute(1, 0, 2)
 
             self.loc.data.copy_(-mean)
             self.scale.data.copy_(1 / (std + 1e-6))
@@ -298,9 +287,9 @@ class Flowavenet(BaseModel):
                 log_p_list.append(log_p_new)
 
         z_list.append(out)
-        log_p_out = -.5 * (log(τ) + out.pow(2))
+        log_p_out = -0.5 * (log(τ) + out.pow(2))
         log_p_list.append(log_p_out)
-        
+
         for i in range(len(log_p_list)):
             _log_p = log_p_list[i].mean((0, -1)).view(self.groups, -1).mean(-1)
             for k in range(self.groups):
