@@ -10,6 +10,7 @@ from colorama import Fore
 from torch import optim
 from torch.nn.utils import clip_grad_value_
 from torch.utils import data
+from torch import nn
 
 from functools import reduce
 from operator import add
@@ -115,9 +116,10 @@ def train(
     # Move model to device(s):
     device = f"cuda:{gpu[0]}" if gpu else "cpu"
     if gpu:
-        model = model.to(device)
-        # model = nn.DataParallel(model, device_ids=gpu)
-
+        if len(gpu) > 1:
+            model = nn.DataParallel(model, device_ids=gpu)
+        else:
+            model = model.to(device)
     if wandb:
         global _wandb
         import wandb as __wandb

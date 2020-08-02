@@ -3,12 +3,11 @@ from torch import Tensor as T
 from torch import nn
 
 from . import BaseModel
-from ..modules import ZeroConv2d, InvConv2d
+from ..modules import ZeroConv2d
 from ...dist import norm_log_prob
 from ...functional import chunk, interleave, flip
-from ...utils import clean_init_args
-from ...io import vprint
 from ...setup import DEFAULT
+from ...utils import clean_init_args
 
 
 class ActNorm(nn.Module):
