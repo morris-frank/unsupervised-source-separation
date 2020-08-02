@@ -16,7 +16,7 @@ from functools import reduce
 from operator import add
 from .io import glob_remove
 from .nn.models import BaseModel
-from .utils import max_grad, any_invalid_grad
+from .utils import max_grad, any_invalid_grad, _LossLogger
 
 LAST_LOG = defaultdict(float)
 LAST_LOG["start"] = True
@@ -24,32 +24,35 @@ LAST_LOG["start"] = True
 _wandb = None
 
 
-def run_test_with_batch(model, batch, device):
+def prepare_batch(batch, device):
     if isinstance(batch, list):
         if isinstance(batch[0], list) or isinstance(batch[0], tuple):
             (x1, x2), y = (
                 (batch[0][0].to(device), batch[0][1].to(device)),
                 batch[1].to(device),
             )
-            ℒ = model.test((x1, x2), y)
+            batch = ((x1, x2), y)
         else:
             x, y = batch[0].to(device), batch[1].to(device)
-            ℒ = model.test(x, y)
+            batch = (x, y)
     else:
         x = batch.to(device)
-        ℒ = model.test(x)
-    return ℒ
+        batch = (x,)
+    return batch
 
 
-def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = None):
+def print_log(LL, add_log: Dict, cat: str, step: Optional[int] = None):
     log = add_log.copy()
 
+    if hasattr(LL, "L"):
+        LL = LL.ℒ
+
     # Add new logs from ℒ logger
-    if hasattr(model, "L"):
-        for k, v in model.ℒ.log.items():
+    if isinstance(LL, _LossLogger):
+        for k, v in LL.log.items():
             if len(v):
                 log[f"{k}/{cat}"] = reduce(add, v) / len(v)
-                model.ℒ.log[k] = []
+                LL.log[k] = []
 
     # Print to console
     _step = step if step is not None else "---"
@@ -68,19 +71,6 @@ def print_log(model: BaseModel, add_log: Dict, cat: str, step: Optional[int] = N
 
     if _wandb is not None:
         _wandb.log(log, step=step)
-
-
-def test(model: BaseModel, test_loader: data.DataLoader, device: str):
-    test_time, test_losses = time.time(), []
-    model.eval()
-    with torch.no_grad():
-        for batch in test_loader:
-            ℒ = run_test_with_batch(model, batch, device)
-            test_losses.append(ℒ.detach().item())
-
-    log = {"Loss/test": mean(test_losses), "Time/test": time.time() - test_time}
-
-    print_log(model, log, "test")
 
 
 def train(
@@ -108,6 +98,9 @@ def train(
         keep_checkpoints: whether to keep all checkpoints not just the last one
         keep_optim: whether to also save the optimizer
         base_lr: the starting learing rate
+        start_it
+        optimizer_state_dict
+        scheduler_state_dict
     """
     model_id = f"{datetime.today():%b%d-%H%M}_{type(model).__name__}_{model.name}"
 
@@ -115,11 +108,17 @@ def train(
 
     # Move model to device(s):
     device = f"cuda:{gpu[0]}" if gpu else "cpu"
+    dataparallel = False
     if gpu:
-        if len(gpu) > 1:
+        dataparallel = len(gpu) > 1
+        if dataparallel:
+            modelclass = model.__class__
+            model = model.to(device)
             model = nn.DataParallel(model, device_ids=gpu)
+            LL = _LossLogger()
         else:
             model = model.to(device)
+            LL = model.ℒ
     if wandb:
         global _wandb
         import wandb as __wandb
@@ -157,7 +156,10 @@ def train(
             train_iterator = iter(train_loader)
             batch = next(train_iterator)
 
-        ℒ = run_test_with_batch(model, batch, device)
+        if dataparallel:
+            ℒ = modelclass.test(model, *prepare_batch(batch, device), LL)
+        else:
+            ℒ = model.test(*prepare_batch(batch, device))
         model.zero_grad()
 
         if torch.isnan(ℒ) or torch.isinf(ℒ):
@@ -200,7 +202,7 @@ def train(
                 "LR/train": optimizer.param_groups[0]["lr"],
                 "MaxGrad/train": max_grad(model.parameters()),
             }
-            print_log(model, log, "train", step=it)
+            print_log(LL if dataparallel else model, log, "train", step=it)
             losses, it_times = [], []
 
         # TEST AND SAVE THE MODEL (every 30min)
@@ -219,6 +221,20 @@ def train(
                      "test": ℒ}
                 )
             torch.save(save_point, f"checkpoints/{model_id}_{it:06}.pt")
-            test(model, test_loader, device)
+            test_time, test_losses = time.time(), []
+            model.eval()
+            with torch.no_grad():
+                for batch in test_loader:
+                    if dataparallel:
+                        ℒ = modelclass.test(model,
+                                            *prepare_batch(batch, device), LL)
+                    else:
+                        ℒ = model.test(*prepare_batch(batch, device))
+                    test_losses.append(ℒ.detach().item())
+
+            log = {"Loss/test": mean(test_losses),
+                   "Time/test": time.time() - test_time}
+
+            print_log(LL if dataparallel else model, log, "test")
             it_timer = time.time()
             model.train()

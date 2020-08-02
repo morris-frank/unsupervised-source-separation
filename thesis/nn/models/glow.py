@@ -257,17 +257,18 @@ class Glow(BaseModel):
         )
         return z
 
-    def test(self, x: T):
+    @staticmethod
+    def test(model, x: T, LL):
         n_pix = (x.shape[-1] * x.shape[-2])
-        _, log_p, log_det = self.forward(x)
+        _, log_p, log_det = model.forward(x)
 
-        self.ℒ.log_det = -torch.mean(log_det) / n_pix
-        ℒ = self.ℒ.log_det
+        LL.log_det = -torch.mean(log_det) / n_pix
+        ℒ = LL.log_det
 
         log_p = -log_p.mean((0, 2, 3))
-        for k in range(self.groups):
+        for k in range(x.shape[1]):
             ℒ += log_p[k]
-            setattr(self.ℒ, f"log_p/{DEFAULT.signals[k]}", log_p[k])
+            setattr(LL, f"log_p/{DEFAULT.signals[k]}", log_p[k])
         return ℒ
 
     def reverse(self, z_list, reconstruct=False):

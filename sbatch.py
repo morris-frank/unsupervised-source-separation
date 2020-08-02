@@ -36,7 +36,7 @@ def main(args):
         "output": f"./log/{datetime.today():%b%d-%H%M}_%x_{p}.out",
     }
     if not args.cpu:
-        c["gres"] = "gpu:1"
+        c["gres"] = f"gpu:{args.ngpu}"
 
     f = f"#!/usr/bin/env bash\n\n"
     f += "\n".join(f"#SBATCH --{k}={v}" for k, v in c.items()) + "\n"
@@ -54,7 +54,7 @@ def main(args):
     )
 
     if args.file == "train":
-        f += f" --batch_size={args.batch_size} -wandb --gpu 0"
+        f += f" --batch_size={args.batch_size} -wandb --gpu {' '.join(map(str, range(args.ngpu)))}"
         if args.lr is not None:
             f += f" -lr {args.lr}"
 
@@ -96,4 +96,5 @@ if __name__ == "__main__":
     parser.add_argument("--weights")
     parser.add_argument("-lr")
     parser.add_argument("-cpu", action="store_true")
+    parser.add_argument("-ngpu", default=1, type=int)
     main(parser.parse_args())
