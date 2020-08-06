@@ -103,8 +103,20 @@ def train(
         scheduler_state_dict
     """
     model_id = f"{datetime.today():%b%d-%H%M}_{type(model).__name__}_{model.name}"
+    params = model.params
 
     os.makedirs("./checkpoints/", exist_ok=True)
+
+    if wandb:
+        global _wandb
+        import wandb as __wandb
+
+        _wandb = __wandb
+        _wandb.init(
+            name=model_id,
+            config=params["kwargs"],
+            project=__name__.split(".")[0],
+        )
 
     # Move model to device(s):
     device = f"cuda:{gpu[0]}" if gpu else "cpu"
@@ -119,16 +131,6 @@ def train(
         else:
             model = model.to(device)
             LL = model.ℒ
-    if wandb:
-        global _wandb
-        import wandb as __wandb
-
-        _wandb = __wandb
-        _wandb.init(
-            name=model_id,
-            config=model.params["kwargs"],
-            project=__name__.split(".")[0],
-        )
 
     # Setup optimizer and learning rate scheduler
     optimizer = optim.Adam(model.parameters(), eps=1e-8, lr=base_lr)
@@ -178,7 +180,7 @@ def train(
                 )
                 save_point = {
                     "model_state_dict": model.state_dict(),
-                    "params": model.params,
+                    "params": params,
                     "batch": batch,
                     "optimizer_state_dict": optimizer.state_dict(),
                     "it": it,
@@ -212,7 +214,7 @@ def train(
             save_point = {
                 "it": it,
                 "model_state_dict": model.state_dict(),
-                "params": model.params,
+                "params": params,
             }
             if keep_optim:
                 save_point.update(

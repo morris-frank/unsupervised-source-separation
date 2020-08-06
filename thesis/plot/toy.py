@@ -12,8 +12,8 @@ from scipy.signal import sawtooth, square
 
 from ..utils import get_func_arguments
 
-PRINT_START = 0
-PRINT_LENGTH = 2000
+PRINT_START = 500
+PRINT_LENGTH = 3000
 
 
 def squeeze(tensor):
@@ -33,7 +33,7 @@ def reconstruction(*signals: torch.Tensor, sharey: bool = True, ylim=None):
     if not ylim:
         ylim = (min(map(np.min, signals)), max(map(np.max, signals)))
 
-    fig, axs = plt.subplots(C + hasM, N, sharex="all", sharey="none", squeeze=False)
+    fig, axs = plt.subplots(C + hasM, N, sharex="all", sharey="none", squeeze=False, figsize=(24, 7))
     for k, (signal, name) in enumerate(zip(signals, arguments)):
         for n in range(signal.shape[0]):
             if signal.shape[1] < C:
@@ -96,7 +96,7 @@ def plot_signal_heatmap(ax, data, symbols):
 
     cmap = sns.light_palette("#99961a")
     # ax.imshow(data, norm=colors.SymLogNorm(linthresh=0.03, base=np.e))
-    sns.heatmap(data, ax=ax, annot=True, linewidths=2, cbar=False, square=True, norm=colors.SymLogNorm(linthresh=0.03, base=np.e), cmap=cmap)
+    sns.heatmap(data, ax=ax, annot=True, linewidths=2, cbar=False, square=True, norm=colors.SymLogNorm(linthresh=0.03, base=4*np.e), cmap=cmap)
 
     # for edge, spine in ax.spines.items():
     #     spine.set_visible(False)

@@ -9,6 +9,8 @@ from random import random
 from typing import Any, Type
 from typing import Optional as Opt
 
+import ipdb
+import numpy as np
 import torch
 from colorama import Fore
 from torch.serialization import SourceChangeWarning
@@ -23,7 +25,9 @@ def get_newest_file(folder: str, match: str = "*pt"):
     try:
         chosen = sorted(glob(f"{folder}/{match}"), key=lambda x: path.getmtime(x))[-1]
     except IndexError:
-        print(f"{Fore.RED}Could not load weights\n\t{Fore.YELLOW}{folder}/{match}\n{Fore.GREEN}Give me something better{Fore.RESET}.")
+        print(
+            f"{Fore.RED}Could not load weights\n\t{Fore.YELLOW}{folder}/{match}\n{Fore.GREEN}Give me something better{Fore.RESET}."
+        )
         exit(1)
     print(
         f"{Fore.YELLOW}For {Fore.GREEN}{match} {Fore.YELLOW}we using\t{Fore.GREEN}{chosen}{Fore.RESET}"
@@ -126,8 +130,6 @@ def exit_prompt():
     if inp.lower().strip() == "q":
         exit()
     elif inp.lower().strip() == "h":
-        import ipdb
-
         ipdb.set_trace()
 
 
@@ -140,3 +142,38 @@ def vprint(*args):
             f"{Fore.YELLOW}{n}{Fore.WHITE} = {Fore.MAGENTA}{v}", end=f"{Fore.RESET}\t"
         )
     print(flush=True)
+
+
+def loadz(filename):
+    if Path(filename).exists():
+        return dict(np.load(filename))
+    else:
+        return dict()
+
+
+def appendz(filename, **kwargs):
+    npz = loadz(filename)
+    for key, value in kwargs.items():
+        if key in npz and isinstance(npz[key], list):
+            if isinstance(value, list):
+                npz[key].extend(value)
+            else:
+                npz[key].append(value)
+        else:
+            npz[key] = value
+    np.savez(filename, **npz)
+
+
+def log_call(level=0):
+    def wrapper(func):
+        def wrapped(*args):
+            start = time.time()
+            indent = "\t" * level
+            print(f"{indent}{Fore.YELLOW}{func.__name__}", end=Fore.RESET, flush=True)
+            result = func(*args)
+            print(f"{Fore.GREEN} 👍{Fore.RESET}({time.time() - start:.1f}sec)")
+            return result
+
+        return wrapped
+
+    return wrapper

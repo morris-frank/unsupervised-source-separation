@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
-from os import path
 from itertools import product, combinations
+from os import path
 
 import matplotlib as mpl
 import numpy as np
@@ -14,8 +14,7 @@ from torchaudio.functional import istft
 
 from thesis import plot
 from thesis.data.toy import ToyData
-from thesis.io import load_model, exit_prompt, get_newest_checkpoint, \
-    get_newest_file
+from thesis.io import load_model, exit_prompt, get_newest_checkpoint, get_newest_file
 from thesis.nn.modules import MelSpectrogram
 from thesis.setup import TOY_SIGNALS, DEFAULT_TOY, MUSDB_SIGNALS
 
@@ -61,19 +60,20 @@ def show_sample_denoiser(args):
 
 
 def show_cross_likelihood(args):
-    # log_p = np.load(get_newest_file("./figures", "Apr*_cross_likelihood.npy"))
-    log_p = np.load(get_newest_file("./figures", "*cross_likelihood.npy"))
+    log_p = np.load(get_newest_file("./figures", f"{args.k}*cross_likelihood.npy"))
     log_p[log_p == -np.inf] = -1e3
     log_p = np.maximum(log_p, -1e3)
     log_p = log_p.swapaxes(0, 1)
 
+    n = (log_p[0, 0, :] != 0).sum()
+
     # fig = plt.figure()
-    fig, (ax1) = plt.subplots(
+    fig, (ax) = plt.subplots(
         1, 1, gridspec_kw=dict(left=0.1, right=0.95, top=0.9, bottom=0.05, wspace=0.2)
     )
 
     # ax = fig.add_axes((0.15, 0.15, 0.7, 0.7))
-    plot.toy.plot_signal_heatmap(ax1, log_p.mean(-1), MUSDB_SIGNALS)
+    plot.toy.plot_signal_heatmap(ax, log_p[:, :, :n].mean(-1), TOY_SIGNALS)
     # ax1.set_title(r"mean of likelihood log p(s)")
 
     # ax = fig.add_axes((0.15, 0.15, 0.7, 0.7))
@@ -86,6 +86,11 @@ def show_cross_likelihood(args):
     # tikzplotlib.save('example.tex')
 
     fig.show()
+
+    import ipdb
+
+    ipdb.set_trace()
+
     exit_prompt()
     plt.close()
 
@@ -184,24 +189,31 @@ def show_posterior(args):
 
 
 def show_noise_plot(args):
-    pref = f'*{args.k}*' if args.k is not None else '**'
+    pref = f"*{args.k}*" if args.k is not None else "**"
     df = np.load(
-            get_newest_file("./figures", f"{pref}/noise_likelihood.npy"),
-            allow_pickle=True,
-        ).item()
+        get_newest_file("./figures", f"{pref}/noise_likelihood.npy"), allow_pickle=True,
+    ).item()
 
     l = []
     for σ, (i, k) in product(df.keys(), enumerate(TOY_SIGNALS)):
         l.extend([(σ, k, v) for v in df[σ][i].tolist()])
 
-    df = pd.DataFrame(l, columns=['noise-level', 'signal', 'log-likelihood'])
-    df = df[df['log-likelihood'] != 0]
-    df = df[df['noise-level'] != 0.001]
+    df = pd.DataFrame(l, columns=["noise-level", "signal", "log-likelihood"])
+    df = df[df["log-likelihood"] != 0]
+    df = df[df["noise-level"] != 0.001]
     # df = df[df['signal'] == 'triangle']
 
     _, ax = plt.subplots()
     # plot.toy.add_plot_tick(ax, symbol=args.k, size=0.1)
-    sns.boxplot(x="noise-level", y="log-likelihood", hue='signal', data=df, ax=ax, showfliers=False)
+    sns.boxplot(
+        x="noise-level",
+        y="log-likelihood",
+        hue="signal",
+        data=df,
+        ax=ax,
+        showfliers=False,
+    )
+    ax.set(yscale="log")
     plt.show()
 
 
@@ -225,30 +237,6 @@ def show_mel(args):
         plt.close(fig)
 
 
-def show_sample_from_prior(args):
-    length = 16_384
-    model = load_model(args.weights, args.device)
-
-    if "time" in model.name:
-        zshape = (1, 4, length)
-    else:
-        pass
-
-    while True:
-        z = torch.randn(zshape)
-        # z = torch.randn(1) * torch.ones(zshape)
-        x = model.reverse(z)
-        x = x[0, :, 500:1500]
-        x.clamp_(-1.3, 1.3)
-
-        fig, axs = plt.subplots(4)
-        for k, ax in enumerate(axs):
-            x[k, :] = x[k, :] / x[k, :].abs().max()
-            ax.plot(x[k, :])
-        plt.show()
-        plt.close(fig)
-
-
 def show_interpolate_prior(args):
     length = 16_384
     model = load_model(args.weights, args.device)
@@ -258,21 +246,32 @@ def show_interpolate_prior(args):
     else:
         opt = {"mel_source": True}
 
-    dset = ToyData(args.data, "test", noise=0., rand_amplitude=0.2, length=length, **opt).loader(1)
+    dset = ToyData(
+        args.data, "test", noise=0.0, rand_amplitude=0.2, length=length, **opt
+    ).loader(1)
     for a, b in combinations(dset, 2):
         α, *_ = model.forward(a)
         β, *_ = model.forward(b)
         γ = (α + β) / 2
 
         c = model.reverse(γ)
-        np.save("../thesis-tex/data/prior_toy_interpolate.npy", torch.cat((a,b,c)).numpy())
+        np.save(
+            "../thesis-tex/data/prior_toy_interpolate.npy", torch.cat((a, b, c)).numpy()
+        )
         fig = plot.toy.reconstruction(a, b, c, sharey=True, ylim=[-1, 1])
         plt.show()
         plt.close(fig)
 
 
 def show_data(args):
-    test_set = ToyData(args.data, "test", noise=0.1, interpolate=True, rand_amplitude=0.2, length=1000, source=True)
+    test_set = ToyData(
+        args.data,
+        "test",
+        noise=0.1,
+        rand_amplitude=0.2,
+        length=1000,
+        source=True,
+    )
     for s in test_set:
         fig = plot.toy.reconstruction(s, sharey=True, ylim=[-1, 1])
         plt.show()
@@ -292,14 +291,13 @@ def main(args):
 COMMANDS = {
     "sample": show_sample,
     "posterior": show_posterior,
-    "cross-likelihood": show_cross_likelihood,
+    "channels": show_cross_likelihood,
     "prior": show_prior,
     "prior-z": show_prior_z,
     "denoiser": show_sample_denoiser,
     "noise": show_noise_plot,
     "mel": show_mel,
     "discrprior_roc": show_discrprior_roc,
-    "sample-prior": show_sample_from_prior,
     "interpolate-prior": show_interpolate_prior,
     "data": show_data,
 }

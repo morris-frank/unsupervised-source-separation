@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
+from itertools import product
 from os import path, makedirs, getpid
 
 import matplotlib as mpl
@@ -12,48 +13,103 @@ from tqdm import tqdm, trange
 from thesis import plot
 from thesis.data.musdb import MusDBSamples
 from thesis.data.toy import ToyData, generate_toy
-from thesis.io import load_model, save_append, get_newest_checkpoint, FileLock
-from thesis.nn.modules import MelSpectrogram
+from thesis.io import load_model, save_append, get_newest_checkpoint, appendz, \
+    log_call
 from thesis.setup import DEFAULT
 
 mpl.use("agg")
 
 
-def make_noise_likelihood_plot(args):
-    suffix = f"*{args.k}*" if args.k else "*"
-    weights = get_newest_checkpoint(f"*Flowavenet{suffix}pt")
-    basename = path.basename(weights)[:-3]
-    model = load_model(weights, args.device)
-    mel = MelSpectrogram()
-    K = len(DEFAULT.signals)
+@log_call(1)
+def make_sample_from_prior(args, model=None):
+    if model is None:
+        model = load_model(args.weights, args.device)
+    length = 8_000
+    zshape = (1, 4, length)
 
-    batch_size = 50
+    z = torch.randn(zshape, device=args.device)
+    # z = torch.randn(1) * torch.ones(zshape)
+    x = model.reverse(z)
+    x = x[0, :, 3000:5000]
+    x = x.clamp(-1.5, 1.5)
+    x = x.cpu().numpy()
+
+    appendz(args.results_file, samples=[x])
+
+
+@log_call(1)
+def make_const_logp(args, model=None):
+    if model is None:
+        model = load_model(args.weights, args.device)
+    const_levels = np.linspace(-1, 1, 11)
+    results = np.zeros((len(const_levels), 4))
+
+    for i, level in enumerate(const_levels):
+        x = level * torch.ones((1, 4, 8_000), device=args.device)
+        log_p = model(x)[1][0, ...].mean(-1)
+        results[i] = log_p.cpu().numpy()
+
+    appendz(args.results_file, const_levels=const_levels, const_logp=results)
+
+
+@log_call(1)
+def make_noise_logp(args, model=None):
+    if model is None:
+        model = load_model(args.weights, args.device)
+    noise_levels = np.linspace(-1, 1, 5)
+    results = np.zeros((len(noise_levels), 4))
+
+    for i, level in enumerate(noise_levels):
+        x = level * torch.randn((1, 4, 8_000), device=args.device)
+        log_p = model(x)[1][0, ...].mean(-1)
+        results[i] = log_p.cpu().numpy()
+
+    appendz(args.results_file, noise_levels=noise_levels, noise_logp=results)
+
+
+@log_call(1)
+def make_rel_noised_logp(args, model=None):
+    if model is None:
+        model = load_model(args.weights, args.device)
+    batch_size = 5
+    data = ToyData(
+        args.data, "test", source=True, mel_source=False, length=4000
+    ).loader(batch_size, drop_last=True)
+    noise_levels = [0.0, 0.001, 0.01, 0.05, 0.1, 0.2, 0.3]
+    results = np.zeros((len(noise_levels), 4, len(data) * batch_size))
+    for σ, (i, s) in product(noise_levels, enumerate(tqdm(data, leave=False))):
+        s = s + σ * torch.randn_like(s)
+        log_p = model(s.to(args.device))[1].mean(-1)
+        results[σ][:, i * batch_size : (i + 1) * batch_size] = log_p.T.cpu().numpy()
+
+    appendz(args.results_file, noised=results)
+
+
+@log_call(1)
+def make_rel_source_logp(args, model=None):
+    if model is None:
+        model = load_model(args.weights, args.device)
+
+    N = 20
     if args.musdb:
-        data = MusDBSamples(args.data, "test").loader(batch_size, drop_last=True)
+        data = MusDBSamples(args.data, "test", space="time", length=16_384).loader(
+            N, drop_last=True
+        )
     else:
-        data = ToyData(
-            args.data, "test", source=True, mel_source=True, interpolate=True
-        ).loader(batch_size, drop_last=True)
+        data = ToyData(args.data, "test", source=True, length=4000).loader(
+            N, drop_last=True
+        )
 
-    results = {}
-    for σ in [0.0, 0.001, 0.01, 0.05, 0.1, 0.2, 0.3]:
-        results[σ] = np.zeros((K, len(data) * batch_size))
-        for i, (s, _) in enumerate(tqdm(data)):
-            L = s.shape[-1]
-            s = (s + σ * torch.randn_like(s)).clamp(-1, 1).view(batch_size * K, L)
-            m = (
-                mel(s, L)
-                .view(batch_size, K, 80, L)
-                .view(batch_size, K * 80, L)
-                .to(args.device)
-            )
-            logp = model(m)[1]
-            results[σ][:, i * batch_size : (i + 1) * batch_size] = (
-                logp.mean(-1).T.cpu().numpy()
-            )
+    results = np.zeros((4, 4, len(data) * N))
 
-    makedirs(f"./figures/{basename}", exist_ok=True)
-    np.save(f"./figures/{basename}/noise_likelihood.npy", results, allow_pickle=True)
+    for i, s in enumerate(tqdm(data, leave=False)):
+        *_, L = s.shape
+        s = s.view(N * 4, 1, L).repeat(1, 4, 1).to(args.device)
+        log_p = model(s)[1].mean(-1)
+        results[:, :, (i * N) : ((i + 1) * N)] = (
+            log_p.view(N, 4, 4).permute(1, 2, 0).squeeze().cpu().numpy()
+        )
+    appendz(args.results_file, channels=results)
 
 
 def make_test_discrprior(args):
@@ -74,47 +130,6 @@ def make_test_discrprior(args):
         results["y"].extend(y.squeeze().tolist())
         results["ŷ"].extend(ŷ.cpu().squeeze().tolist())
         results["logp"].extend(logp.cpu().squeeze().mean(-1).tolist())
-    np.save(fp, results)
-
-
-def make_cross_likelihood_plot(args):
-    weights = get_newest_checkpoint(f"*Flowavenet*pt")
-    fp = f"./figures/{path.basename(weights).split('-')[0]}_prior_cross_likelihood.npy"
-
-    print(f"{Fore.YELLOW}I'am building: {Fore.BLUE}{fp}{Fore.RESET}")
-
-    model = load_model(weights, args.device)
-
-    batch_size = 50
-    if args.musdb:
-        data = MusDBSamples(args.data, "test").loader(batch_size, drop_last=True)
-    else:
-        data = ToyData(args.data, "test", source=True, mel_source=True).loader(
-            batch_size, drop_last=True
-        )
-
-    K = len(DEFAULT.signals)
-    results = np.zeros((K, K, len(data) * batch_size))
-
-    for i, (_, m) in enumerate(tqdm(data)):
-        _, _, C, L = m.shape
-        m = m.view(batch_size * K, C, L)
-        m = m.repeat(1, K, 1).to(args.device)
-        res = model(m)
-        if len(res) > 2:
-            logp = res[1]
-        else:
-            logp = res[0]
-        results[:, :, i : i + batch_size] = (
-            logp.mean(-1)
-            .view(batch_size, K, K)
-            .permute(1, 2, 0)
-            .squeeze()
-            .cpu()
-            .numpy()
-        )
-
-    print(Fore.YELLOW + "Saving to " + fp + Fore.RESET)
     np.save(fp, results)
 
 
@@ -167,34 +182,8 @@ def make_musdb_dataset(args):
         for i, (wav, mel) in enumerate(
             tqdm(data.pre_save(n_per_song=n, length=length), total=len(data) * n)
         ):
-            np.save(f"{fp}/{i//n:03}_{i%n:03}_{pid}_mel.npy", mel.numpy())
-            np.save(f"{fp}/{i//n:03}_{i%n:03}_{pid}_time.npy", wav.numpy())
-
-
-def make_data_distribution(args):
-    from thesis.data.musdb import MusDB
-
-    # h = torch.load('musdb_histograms.pt')
-    # h = np.mean(h, axis=0)
-    # _, axs = plt.subplots(4)
-    # for i, ax in zip(range(4), axs):
-    #     ax.plot(h[i, :])
-    # plt.show()
-
-    fp = "musdb_histograms.pt"
-    hists = np.zeros((4, 100))
-    bins = np.linspace(-1, 1, 101)
-    data = MusDB(args.data, subsets="train")
-    n = 10
-    for i, track in enumerate(data):
-        for k in range(4):
-            hists[k, :] += np.histogram(track[k, :], bins=bins)[0] / (data.L * n)
-
-        if i % 10 == 0:
-            print(f"{getpid()}: {i}")
-            with FileLock(fp):
-                save_append(fp, hists)
-            hists = np.zeros((4, 100))
+            np.save(f"{fp}/{i // n:03}_{i % n:03}_{pid}_mel.npy", mel.numpy())
+            np.save(f"{fp}/{i // n:03}_{i % n:03}_{pid}_time.npy", wav.numpy())
 
 
 def make_langevin(args):
@@ -229,8 +218,21 @@ def make_langevin(args):
             plt.close(fig)
 
 
+def evaluate_prior(args):
+    print(f"{Fore.YELLOW}With {Fore.GREEN}{args.basename}{Fore.RESET}:")
+    model = load_model(args.weights, args.device)
+    make_noise_logp(args, model=model)
+    make_rel_source_logp(args, model=model)
+    make_rel_noised_logp(args, model=model)
+    for _ in range(10):
+        make_sample_from_prior(args, model=model)
+
+
 def main(args):
     makedirs("./figures", exist_ok=True)
+
+    args.basename = path.basename(args.weights)[:-10]
+    args.result_file = f"./figures/{args.basename}.npz"
 
     if args.command == "musdb":
         args.musdb = True
@@ -246,17 +248,18 @@ def main(args):
 
 
 COMMANDS = {
-    "cross-likelihood": make_cross_likelihood_plot,
+    "channels": make_rel_source_logp,
     "separate": make_separation_examples,
-    "noise": make_noise_likelihood_plot,
+    "noised": make_rel_noised_logp,
     "posterior": make_posterior_examples,
     "toy": make_toy_dataset,
-    "dist": make_data_distribution,
     "musdb": make_musdb_dataset,
     "discrprior": make_test_discrprior,
     "langevin": make_langevin,
+    "eval": evaluate_prior,
+    "noise": make_noise_logp,
+    "const": make_const_logp,
 }
-
 
 if __name__ == "__main__":
     parser = ArgumentParser()
