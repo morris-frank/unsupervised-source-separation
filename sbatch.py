@@ -57,6 +57,8 @@ def main(args):
         f += f" --batch_size={args.batch_size} -wandb --gpu {' '.join(map(str, range(args.ngpu)))}"
         if args.lr is not None:
             f += f" -lr {args.lr}"
+        if args.noise is not None:
+            f += f" -noise {args.noise}"
 
     if args.weights is not None:
         f += f" --weights=\"{args.weights}\""
@@ -97,4 +99,5 @@ if __name__ == "__main__":
     parser.add_argument("-lr")
     parser.add_argument("-cpu", action="store_true")
     parser.add_argument("-ngpu", default=1, type=int)
+    parser.add_argument("-noise")
     main(parser.parse_args())

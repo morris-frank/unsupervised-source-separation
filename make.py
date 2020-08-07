@@ -44,7 +44,7 @@ def make_const_logp(args, model=None):
     const_levels = np.linspace(-1, 1, 11)
     results = np.zeros((len(const_levels), 4))
 
-    for i, level in enumerate(const_levels):
+    for i, level in enumerate(tqdm(const_levels, leave=False)):
         x = level * torch.ones((1, 4, 8_000), device=args.device)
         log_p = model(x)[1][0, ...].mean(-1)
         results[i] = log_p.cpu().numpy()
@@ -71,16 +71,17 @@ def make_noise_logp(args, model=None):
 def make_rel_noised_logp(args, model=None):
     if model is None:
         model = load_model(args.weights, args.device)
-    batch_size = 5
+    N = 25
     data = ToyData(
         args.data, "test", source=True, mel_source=False, length=4000
-    ).loader(batch_size, drop_last=True)
+    ).loader(N, drop_last=True)
     noise_levels = [0.0, 0.001, 0.01, 0.05, 0.1, 0.2, 0.3]
-    results = np.zeros((len(noise_levels), 4, len(data) * batch_size))
-    for σ, (i, s) in product(noise_levels, enumerate(tqdm(data, leave=False))):
-        s = s + σ * torch.randn_like(s)
-        log_p = model(s.to(args.device))[1].mean(-1)
-        results[σ][:, i * batch_size : (i + 1) * batch_size] = log_p.T.cpu().numpy()
+    results = np.zeros((len(noise_levels), 4, len(data) * N))
+    for j, σ in enumerate(tqdm(noise_levels, leave=False)):
+        for i, s in enumerate(tqdm(data, leave=False)):
+            s = s + σ * torch.randn_like(s)
+            log_p = model(s.to(args.device))[1].mean(-1)
+            results[j, :, i * N : (i + 1) * N] = log_p.T.cpu().numpy()
 
     appendz(args.results_file, noised=results)
 
@@ -90,7 +91,7 @@ def make_rel_source_logp(args, model=None):
     if model is None:
         model = load_model(args.weights, args.device)
 
-    N = 20
+    N = 50
     if args.musdb:
         data = MusDBSamples(args.data, "test", space="time", length=16_384).loader(
             N, drop_last=True
@@ -158,7 +159,7 @@ def make_posterior_examples(args):
 
 def make_toy_dataset(args):
     length, ns = 48_000, 4
-    config = {"test": 500, "train": 5_000}
+    config = {"test": 1_500, "train": 5_000}
 
     for name, n in config.items():
         print(f"Generate Toy [{name}] n={n}, length={length}, ns={ns}")
@@ -219,11 +220,12 @@ def make_langevin(args):
 
 
 def evaluate_prior(args):
-    print(f"{Fore.YELLOW}With {Fore.GREEN}{args.basename}{Fore.RESET}:")
     model = load_model(args.weights, args.device)
-    make_noise_logp(args, model=model)
-    make_rel_source_logp(args, model=model)
+    print(f"\n\n{Fore.YELLOW}With {Fore.GREEN}{args.basename}{Fore.RESET}:\n", flush=True)
     make_rel_noised_logp(args, model=model)
+    make_rel_source_logp(args, model=model)
+    make_noise_logp(args, model=model)
+    make_const_logp(args, model=model)
     for _ in range(10):
         make_sample_from_prior(args, model=model)
 
@@ -231,8 +233,9 @@ def evaluate_prior(args):
 def main(args):
     makedirs("./figures", exist_ok=True)
 
-    args.basename = path.basename(args.weights)[:-10]
-    args.result_file = f"./figures/{args.basename}.npz"
+    if args.weights is not None:
+        args.basename = path.basename(args.weights)[:-10]
+        args.results_file = f"./figures/{args.basename}.npz"
 
     if args.command == "musdb":
         args.musdb = True

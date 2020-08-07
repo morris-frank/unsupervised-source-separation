@@ -14,7 +14,7 @@ from thesis.setup import IS_HERMES, DEFAULT
 from thesis.train import train
 
 
-def train_prior_time(args, noise=0.0, rand_ampl=0.2):
+def train_prior_time(args, rand_ampl=0.2):
     from thesis.nn.models.flowavenet import Flowavenet
 
     if args.signal is None:
@@ -27,8 +27,10 @@ def train_prior_time(args, noise=0.0, rand_ampl=0.2):
         source, groups = k, 1
 
     name += f"_time"
-    if noise > 0:
+    if args.noise is not None:
         name += "_noise"
+    else:
+        args.noise = 0
     if rand_ampl > 0:
         name += "_rand_ampl"
 
@@ -50,7 +52,7 @@ def train_prior_time(args, noise=0.0, rand_ampl=0.2):
         test_set = MusDBSamples(args.data, "test", space="time", length=args.length)
     else:
         opt = dict(
-            noise=noise, rand_amplitude=rand_ampl, length=args.length, source=source
+            noise=args.noise, rand_amplitude=rand_ampl, length=args.length, source=source
         )
         train_set = ToyData(args.data, "train", **opt)
         test_set = ToyData(args.data, "test", **opt)
@@ -191,8 +193,8 @@ def main(args):
 EXPERIMENTS = {
     "prior_time": train_prior_time,
     "prior_mel": train_prior_mel,
-    "prior_time_noised": partial(train_prior_time, noise=0.1),
-    "prior_mel_noised": partial(train_prior_mel, noise=0.1),
+    "prior_time_noised": train_prior_time,
+    "prior_mel_noised": train_prior_mel,
     "demixer": train_demixer,
     "denoiser": partial(train_denoiser, modelclass=Denoiser),
     "discprior": train_discprior,
@@ -214,4 +216,5 @@ if __name__ == "__main__":
     parser.add_argument("-L", type=int, default=16_384, dest='length')
     parser.add_argument("-lr", type=float, default=1e-4, dest='base_lr')
     parser.add_argument("--weights", type=str)
+    parser.add_argument("-noise", type=float)
     main(parser.parse_args())

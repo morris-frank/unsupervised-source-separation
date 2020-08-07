@@ -166,12 +166,13 @@ def appendz(filename, **kwargs):
 
 def log_call(level=0):
     def wrapper(func):
-        def wrapped(*args):
+        def wrapped(*args, **kwargs):
             start = time.time()
             indent = "\t" * level
             print(f"{indent}{Fore.YELLOW}{func.__name__}", end=Fore.RESET, flush=True)
-            result = func(*args)
-            print(f"{Fore.GREEN} 👍{Fore.RESET}({time.time() - start:.1f}sec)")
+            result = func(*args, **kwargs)
+
+            print(f"\r{indent}{Fore.YELLOW}{func.__name__}{Fore.GREEN} 👍{Fore.RESET}({time.time() - start:.1f}sec)")
             return result
 
         return wrapped
