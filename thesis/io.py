@@ -154,11 +154,8 @@ def loadz(filename):
 def appendz(filename, **kwargs):
     npz = loadz(filename)
     for key, value in kwargs.items():
-        if key in npz and isinstance(npz[key], list):
-            if isinstance(value, list):
-                npz[key].extend(value)
-            else:
-                npz[key].append(value)
+        if key in npz:
+            npz[key] = np.vstack((npz[key], value))
         else:
             npz[key] = value
     np.savez(filename, **npz)

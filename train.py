@@ -14,8 +14,9 @@ from thesis.setup import IS_HERMES, DEFAULT
 from thesis.train import train
 
 
-def train_prior_time(args, rand_ampl=0.2):
-    from thesis.nn.models.flowavenet import Flowavenet
+def train_prior_time(args, rand_ampl=0.2, classified=False):
+    from thesis.nn.models.flowavenet import Flowavenet, FlowavenetClassified
+    modelclass = FlowavenetClassified if classified else Flowavenet
 
     if args.signal is None:
         name = "musdb" if args.musdb else "toy"
@@ -28,7 +29,7 @@ def train_prior_time(args, rand_ampl=0.2):
 
     name += f"_time"
     if args.noise is not None:
-        name += "_noise"
+        name += f"_noise_{str(args.noise).replace('.', '-')}"
     else:
         args.noise = 0
     if rand_ampl > 0:
@@ -36,7 +37,7 @@ def train_prior_time(args, rand_ampl=0.2):
 
     width = 48 if args.musdb else 32
 
-    model = Flowavenet(
+    model = modelclass(
         in_channel=1,
         n_block=8 if args.musdb else 4,
         n_flow=6,
@@ -52,7 +53,7 @@ def train_prior_time(args, rand_ampl=0.2):
         test_set = MusDBSamples(args.data, "test", space="time", length=args.length)
     else:
         opt = dict(
-            noise=args.noise, rand_amplitude=rand_ampl, length=args.length, source=source
+            noise=args.noise, rand_amplitude=rand_ampl, length=args.length, source=source, shuffle_indexed=classified
         )
         train_set = ToyData(args.data, "train", **opt)
         test_set = ToyData(args.data, "test", **opt)
@@ -89,29 +90,6 @@ def train_prior_mel(args, noise=0.0):
         )
         train_set = ToyData(args.data, "train", **opt)
         test_set = ToyData(args.data, "test", **opt)
-    return model, train_set, test_set
-
-
-def train_discprior(args):
-    from thesis.nn.models.flowavenet import FlowavenetClassified
-
-    name = "musdb" if args.musdb else "toy"
-
-    model = FlowavenetClassified(
-        in_channel=80,
-        n_block=8 if args.musdb else 4,
-        n_flow=10 if args.musdb else 10,
-        n_layer=4 if args.musdb else 4,
-        block_per_split=2 if args.musdb else 2,
-        width=48 if args.musdb else 32,
-        name=name,
-    )
-
-    if args.musdb:
-        from thesis.data.musdb import MusDBSamples2
-
-        train_set = MusDBSamples2(args.data, "train")
-        test_set = MusDBSamples2(args.data, "test")
     return model, train_set, test_set
 
 
@@ -157,8 +135,10 @@ def main(args):
     if args.weights is not None:
         device = f"cuda:{args.gpu[0]}" if args.gpu else "cpu"
         spt = torch.load(get_newest_checkpoint(args.weights), map_location=torch.device(device))
-        model.load_state_dict(spt['model_state_dict'])
-        optimizer_state_dict = spt['optimizer_state_dict']
+        state = model.state_dict()
+        state.update(spt['model_state_dict'])
+        model.load_state_dict(state)
+        # optimizer_state_dict = spt['optimizer_state_dict']
         scheduler_state_dict = spt['scheduler']
         start_it = spt["it"]
         for module in model.modules():
@@ -197,7 +177,7 @@ EXPERIMENTS = {
     "prior_mel_noised": train_prior_mel,
     "demixer": train_demixer,
     "denoiser": partial(train_denoiser, modelclass=Denoiser),
-    "discprior": train_discprior,
+    "discrprior": partial(train_prior_time, classified=True),
 }
 
 if __name__ == "__main__":

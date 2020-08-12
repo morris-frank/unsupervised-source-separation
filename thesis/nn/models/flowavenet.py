@@ -356,25 +356,30 @@ class FlowavenetClassified(Flowavenet):
     def __init__(self, *args, **kwargs):
         super(FlowavenetClassified, self).__init__(*args, **kwargs)
         self.classifier = Wavenet(
-            in_channels=2560,
-            out_channels=4,
+            in_channels=self.groups,
+            out_channels=self.groups * self.groups,
             residual_channels=32,
             gate_channels=32,
             cin_channels=None,
+            groups=self.groups
         )
 
     def forward(self, x, c=None):
-        out = log_p, log_det = super(FlowavenetClassified, self).forward(x, c)
-        ŷ = self.classifier(out)
+        z, log_p, log_det = super(FlowavenetClassified, self).forward(x, c)
+        ŷ = self.classifier(z)
         ŷ = torch.sigmoid(ŷ).squeeze().mean(-1)
         return ŷ, log_p, log_det
 
-    def test(self, m, y):
-        ŷ, log_p, log_det = self.forward(m)
+    def test(self, x, y):
+        ŷ, log_p, log_det = self.forward(x)
 
-        self.ℒ.ce = F.cross_entropy(ŷ, y)
         self.ℒ.log_det = -torch.mean(log_det)
-        self.ℒ.log_p = -log_p.mean()
+        ℒ = self.ℒ.log_det
 
-        ℒ = self.ℒ.log_p + self.ℒ.log_det + self.ℒ.ce
+        log_p = -log_p.mean((0, -1))
+        for k in range(self.groups):
+            ce = F.cross_entropy(ŷ[:, k * self.groups : (k+1) * self.groups, ...], y[:, k])
+            ℒ += log_p[k] + ce
+            setattr(self.ℒ, f"log_p/{DEFAULT.signals[k]}", log_p[k])
+            setattr(self.ℒ, f"ce/{DEFAULT.signals[k]}", ce)
         return ℒ

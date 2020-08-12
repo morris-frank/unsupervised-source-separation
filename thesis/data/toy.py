@@ -22,6 +22,7 @@ class ToyData(Dataset):
         rand_amplitude: float = 0.0,
         noise: float = 0.0,
         length: int = False,
+        shuffle_indexed: bool = False,
     ):
         super(ToyData, self).__init__(n_mels=265)
         self.files = glob(f"{path}/{subset}/*npy")
@@ -29,6 +30,7 @@ class ToyData(Dataset):
         self.rand_A = rand_amplitude
         self.noise = noise
         self.length = length
+        self.shuffle_indexed = shuffle_indexed
 
         self.source, self.mel_source = source is not False, mel_source is not False
         if self.source is True and self.mel_source is True:
@@ -69,6 +71,10 @@ class ToyData(Dataset):
 
         sources = self._mel_get(sources, self.source, self.mel_source)
         mix = self._mel_get(mix, self.mix, self.mel_mix)
+
+        if self.shuffle_indexed:
+            idx = torch.randperm(sources.shape[0])
+            sources = sources[idx, ...], idx
 
         if self.mix:
             if self.source:

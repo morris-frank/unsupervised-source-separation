@@ -27,7 +27,13 @@ def make_sample_from_prior(args, model=None):
     length = 8_000
     zshape = (1, 4, length)
 
+    data = ToyData(
+        args.data, "test", source=True, mel_source=False, length=8_000
+    )
+    z_, *_ = model(data[0][None, ...].to(args.device))
+
     z = torch.randn(zshape, device=args.device)
+    z[:, 2, ...] = z_[:, 2, ...] + 0.4*torch.randn((1, 1, length), device=args.device)
     # z = torch.randn(1) * torch.ones(zshape)
     x = model.reverse(z)
     x = x[0, :, 3000:5000]
@@ -41,7 +47,7 @@ def make_sample_from_prior(args, model=None):
 def make_const_logp(args, model=None):
     if model is None:
         model = load_model(args.weights, args.device)
-    const_levels = np.linspace(-1, 1, 11)
+    const_levels = np.linspace(-1, 1, 31)
     results = np.zeros((len(const_levels), 4))
 
     for i, level in enumerate(tqdm(const_levels, leave=False)):
@@ -56,7 +62,7 @@ def make_const_logp(args, model=None):
 def make_noise_logp(args, model=None):
     if model is None:
         model = load_model(args.weights, args.device)
-    noise_levels = np.linspace(-1, 1, 5)
+    noise_levels = [0.0, 0.001, 0.01, 0.027, 0.077, 0.1, 0.3, 0.5, 0.7, 1.0]
     results = np.zeros((len(noise_levels), 4))
 
     for i, level in enumerate(noise_levels):
@@ -71,7 +77,7 @@ def make_noise_logp(args, model=None):
 def make_rel_noised_logp(args, model=None):
     if model is None:
         model = load_model(args.weights, args.device)
-    N = 25
+    N = 50
     data = ToyData(
         args.data, "test", source=True, mel_source=False, length=4000
     ).loader(N, drop_last=True)
@@ -222,12 +228,12 @@ def make_langevin(args):
 def evaluate_prior(args):
     model = load_model(args.weights, args.device)
     print(f"\n\n{Fore.YELLOW}With {Fore.GREEN}{args.basename}{Fore.RESET}:\n", flush=True)
+    for _ in range(3):
+        make_sample_from_prior(args, model=model)
     make_rel_noised_logp(args, model=model)
     make_rel_source_logp(args, model=model)
     make_noise_logp(args, model=model)
     make_const_logp(args, model=model)
-    for _ in range(10):
-        make_sample_from_prior(args, model=model)
 
 
 def main(args):
