@@ -18,7 +18,7 @@ def main(args):
     if args.cpu:
         p = "normal"
     else:
-        p = "gpu_short" if args.short else "gpu_titanrtx_shared"
+        p = "gpu_short" if args.short else "gpu_shared"
 
     t = "0:35:00" if args.short else f"{args.hours}:00:00"
     if args.short:

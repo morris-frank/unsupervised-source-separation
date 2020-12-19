@@ -80,6 +80,7 @@ def encode_μ_law(waveform: torch.Tensor, μ: int = 255) -> torch.Tensor:
         the encoded tensor
     """
     assert μ & 1
+    waveform.clamp_(-1,1)
     assert waveform.max() <= 1.0 and waveform.min() >= -1.0
     μ -= 1
     hμ = μ // 2

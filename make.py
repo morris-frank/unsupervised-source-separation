@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 from argparse import ArgumentParser
-from itertools import product
 from os import path, makedirs, getpid
 
 import matplotlib as mpl
@@ -16,6 +15,7 @@ from thesis.data.toy import ToyData, generate_toy
 from thesis.io import load_model, save_append, get_newest_checkpoint, appendz, \
     log_call
 from thesis.setup import DEFAULT
+from thesis.nn.models.flowavenet import FlowavenetClassified, Flowavenet
 
 mpl.use("agg")
 
@@ -24,21 +24,21 @@ mpl.use("agg")
 def make_sample_from_prior(args, model=None):
     if model is None:
         model = load_model(args.weights, args.device)
-    length = 8_000
+    length = 8_000 if not args.musdb else 16_384
     zshape = (1, 4, length)
-
-    data = ToyData(
-        args.data, "test", source=True, mel_source=False, length=8_000
-    )
-    z_, *_ = model(data[0][None, ...].to(args.device))
-
     z = torch.randn(zshape, device=args.device)
-    z[:, 2, ...] = z_[:, 2, ...] + 0.4*torch.randn((1, 1, length), device=args.device)
-    # z = torch.randn(1) * torch.ones(zshape)
+
+    if not args.musdb:
+        data = ToyData(
+            args.data, "test", source=True, length=8_000
+        )
+        z_, *_ = model(data[0][None, ...].to(args.device), _ce=False)
+        z[:, 2, ...] = z_[:, 2, ...] + 0.4*torch.randn((1, 1, length), device=args.device)
+
     x = model.reverse(z)
     x = x[0, :, 3000:5000]
     x = x.clamp(-1.5, 1.5)
-    x = x.cpu().numpy()
+    x = x.cpu().numpy().squeeze()
 
     appendz(args.results_file, samples=[x])
 
@@ -49,11 +49,12 @@ def make_const_logp(args, model=None):
         model = load_model(args.weights, args.device)
     const_levels = np.linspace(-1, 1, 31)
     results = np.zeros((len(const_levels), 4))
+    length = 8_000 if not args.musdb else 16_384
 
     for i, level in enumerate(tqdm(const_levels, leave=False)):
-        x = level * torch.ones((1, 4, 8_000), device=args.device)
-        log_p = model(x)[1][0, ...].mean(-1)
-        results[i] = log_p.cpu().numpy()
+        x = level * torch.ones((1, 4, length), device=args.device)
+        log_p = model(x, _ce=False)[1][0, ...].mean(-1)
+        results[i] = log_p.cpu().squeeze().numpy()
 
     appendz(args.results_file, const_levels=const_levels, const_logp=results)
 
@@ -64,11 +65,12 @@ def make_noise_logp(args, model=None):
         model = load_model(args.weights, args.device)
     noise_levels = [0.0, 0.001, 0.01, 0.027, 0.077, 0.1, 0.3, 0.5, 0.7, 1.0]
     results = np.zeros((len(noise_levels), 4))
+    length = 8_000 if not args.musdb else 16_384
 
     for i, level in enumerate(noise_levels):
-        x = level * torch.randn((1, 4, 8_000), device=args.device)
-        log_p = model(x)[1][0, ...].mean(-1)
-        results[i] = log_p.cpu().numpy()
+        x = level * torch.randn((1, 4, length), device=args.device)
+        log_p = model(x, _ce=False)[1][0, ...].mean(-1)
+        results[i] = log_p.cpu().squeeze().numpy()
 
     appendz(args.results_file, noise_levels=noise_levels, noise_logp=results)
 
@@ -77,16 +79,20 @@ def make_noise_logp(args, model=None):
 def make_rel_noised_logp(args, model=None):
     if model is None:
         model = load_model(args.weights, args.device)
-    N = 50
-    data = ToyData(
-        args.data, "test", source=True, mel_source=False, length=4000
-    ).loader(N, drop_last=True)
+    N = 5
+    print(N)
+    if args.musdb:
+        data = MusDBSamples(args.data, "test", space="time", length=16_384).loader(N, drop_last=True)
+    else:
+        data = ToyData(
+            args.data, "test", source=True, length=4000
+        ).loader(N, drop_last=True)
     noise_levels = [0.0, 0.001, 0.01, 0.05, 0.1, 0.2, 0.3]
     results = np.zeros((len(noise_levels), 4, len(data) * N))
     for j, σ in enumerate(tqdm(noise_levels, leave=False)):
         for i, s in enumerate(tqdm(data, leave=False)):
-            s = s + σ * torch.randn_like(s)
-            log_p = model(s.to(args.device))[1].mean(-1)
+            s = (s + σ * torch.randn_like(s)).to(args.device)
+            log_p = model(s, _ce=False)[1].mean(-1)
             results[j, :, i * N : (i + 1) * N] = log_p.T.cpu().numpy()
 
     appendz(args.results_file, noised=results)
@@ -97,7 +103,8 @@ def make_rel_source_logp(args, model=None):
     if model is None:
         model = load_model(args.weights, args.device)
 
-    N = 50
+    N = 10
+    print(N)
     if args.musdb:
         data = MusDBSamples(args.data, "test", space="time", length=16_384).loader(
             N, drop_last=True
@@ -112,32 +119,11 @@ def make_rel_source_logp(args, model=None):
     for i, s in enumerate(tqdm(data, leave=False)):
         *_, L = s.shape
         s = s.view(N * 4, 1, L).repeat(1, 4, 1).to(args.device)
-        log_p = model(s)[1].mean(-1)
+        log_p = model(s, _ce=False)[1].mean(-1)
         results[:, :, (i * N) : ((i + 1) * N)] = (
             log_p.view(N, 4, 4).permute(1, 2, 0).squeeze().cpu().numpy()
         )
     appendz(args.results_file, channels=results)
-
-
-def make_test_discrprior(args):
-    from thesis.data.musdb import MusDBSamples2
-    from thesis.nn.models.flowavenet import FlowavenetClassified
-
-    batch_size = 24
-    weights = get_newest_checkpoint("*FlowavenetClassified*")
-    model = load_model(weights, args.device, model_class=FlowavenetClassified)
-    test_set = MusDBSamples2(args.data, "test", complex=complex).loader(
-        batch_size, drop_last=False
-    )
-    fp = f"./figures/{path.basename(weights).split('-')[0]}_prior_cross_entropy.npy"
-
-    results = {"y": [], "ŷ": [], "logp": []}
-    for k, (m, y) in enumerate(tqdm(test_set)):
-        ŷ, logp, _ = model(m.to(args.device))
-        results["y"].extend(y.squeeze().tolist())
-        results["ŷ"].extend(ŷ.cpu().squeeze().tolist())
-        results["logp"].extend(logp.cpu().squeeze().mean(-1).tolist())
-    np.save(fp, results)
 
 
 def make_separation_examples(args):
@@ -226,14 +212,17 @@ def make_langevin(args):
 
 
 def evaluate_prior(args):
-    model = load_model(args.weights, args.device)
+    from thesis.nn.models.wavenet import WaveNet
+    model_class = FlowavenetClassified if "Classified" in args.weights else Flowavenet
+    model_class = WaveNet if "WaveNet" in args.weights else model_class
+    model = load_model(args.weights, args.device, model_class=model_class)
     print(f"\n\n{Fore.YELLOW}With {Fore.GREEN}{args.basename}{Fore.RESET}:\n", flush=True)
-    for _ in range(3):
-        make_sample_from_prior(args, model=model)
-    make_rel_noised_logp(args, model=model)
+    # for _ in range(3):
+    #     make_sample_from_prior(args, model=model)
+    # make_rel_noised_logp(args, model=model)
     make_rel_source_logp(args, model=model)
-    make_noise_logp(args, model=model)
-    make_const_logp(args, model=model)
+    # make_noise_logp(args, model=model)
+    # make_const_logp(args, model=model)
 
 
 def main(args):
@@ -263,7 +252,6 @@ COMMANDS = {
     "posterior": make_posterior_examples,
     "toy": make_toy_dataset,
     "musdb": make_musdb_dataset,
-    "discrprior": make_test_discrprior,
     "langevin": make_langevin,
     "eval": evaluate_prior,
     "noise": make_noise_logp,

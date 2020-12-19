@@ -271,7 +271,8 @@ class Flowavenet(BaseModel):
             if not split:
                 in_channel *= 2
 
-    def forward(self, x, c=None):
+    def forward(self, x, c=None, _ce=True):
+        del _ce
         N, C, L = x.size()
         out = x
         if c is not None:
@@ -364,8 +365,10 @@ class FlowavenetClassified(Flowavenet):
             groups=self.groups
         )
 
-    def forward(self, x, c=None):
+    def forward(self, x, c=None, _ce=True):
         z, log_p, log_det = super(FlowavenetClassified, self).forward(x, c)
+        if not _ce:
+            return z, log_p, log_det
         ŷ = self.classifier(z)
         ŷ = torch.sigmoid(ŷ).squeeze().mean(-1)
         return ŷ, log_p, log_det

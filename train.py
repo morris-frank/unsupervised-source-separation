@@ -14,6 +14,23 @@ from thesis.setup import IS_HERMES, DEFAULT
 from thesis.train import train
 
 
+def train_baseline(args, rand_ampl=0.2, length=3_074):
+    from thesis.nn.models.wavenet import WaveNet
+
+    name = ''
+    if args.noise is not None:
+        name += f"noise_{str(args.noise).replace('.', '-')}"
+    model = WaveNet(in_channels=4, name=name)
+
+    if args.musdb:
+        train_set = MusDBSamples(args.data, "train", space="time", length=args.length+1)
+        test_set = MusDBSamples(args.data, "test", space="time", length=args.length+1)
+    else:
+        train_set = ToyData(args.data, "train", noise=args.noise, rand_amplitude=rand_ampl, length=length + 1, source=True)
+        test_set = ToyData(args.data, "test", noise=args.noise, rand_amplitude=rand_ampl, length=length + 1, source=True)
+    return model, train_set, test_set
+
+
 def train_prior_time(args, rand_ampl=0.2, classified=False):
     from thesis.nn.models.flowavenet import Flowavenet, FlowavenetClassified
     modelclass = FlowavenetClassified if classified else Flowavenet
@@ -178,6 +195,7 @@ EXPERIMENTS = {
     "demixer": train_demixer,
     "denoiser": partial(train_denoiser, modelclass=Denoiser),
     "discrprior": partial(train_prior_time, classified=True),
+    "wavenet": train_baseline,
 }
 
 if __name__ == "__main__":
