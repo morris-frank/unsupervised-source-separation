@@ -2,7 +2,7 @@
 
 ![Python](https://img.shields.io/badge/Python-3.7.5-blue?logo=python)
 ![GitHub](https://img.shields.io/github/license/morris-frank/unsupervised-source-separation)
-[![Torch 1.5.0](https://img.shields.io/badge/PyTorch-1.5.0-orange)](https://pytorch.org/)
+[![Torch 1.5.0](https://img.shields.io/badge/PyTorch-1.5.0-orange?logo=pytorch)](https://pytorch.org/)
 
 [Maurice Frank](https://scholar.google.com/citations?user=jCHjpIsAAAAJ), [Maximilian Ilse](https://scholar.google.com/citations?user=KNJIRGkAAAAJ)  
 [[Pre-Print](https://arxiv.org/abs/2011.01761)] [[Poster](https://raw.githubusercontent.com/morris-frank/thesis-tex/master/poster.pdf)]
